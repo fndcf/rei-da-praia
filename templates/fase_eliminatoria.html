@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fase Eliminatória - Rei da Praia</title>
+    <link href="../static/style.css" rel="stylesheet">
+</head>
+<body>
+    <h1>Fase Eliminatória</h1>
+    
+    <div class="tabela-container">
+        <div class="tabela-colocacao">
+            <h2>Primeiros Colocados</h2>
+            <table class="tabela-jogadores">
+                <thead>
+                    <tr>
+                        <th>Pos.</th>
+                        <th>Jogador</th>
+                        <th>Vitórias</th>
+                        <th>Saldo Total</th>
+                        <th>Grupo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for jogador in primeiros %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ jogador['nome'] }}</td>
+                        <td>{{ jogador['vitorias'] }}</td>
+                        <td>{{ jogador['saldo_total'] }}</td>
+                        <td>Grupo {{ loop.index }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="tabela-colocacao">
+            <h2>Segundos Colocados</h2>
+            <table class="tabela-jogadores">
+                <thead>
+                    <tr>
+                        <th>Pos.</th>
+                        <th>Jogador</th>
+                        <th>Vitórias</th>
+                        <th>Saldo Total</th>
+                        <th>Grupo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for jogador in segundos %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ jogador['nome'] }}</td>
+                        <td>{{ jogador['vitorias'] }}</td>
+                        <td>{{ jogador['saldo_total'] }}</td>
+                        <td>Grupo {{ loop.index }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <button class="voltar-btn" onclick="window.close()">Fechar Esta Aba</button>
+    
+    <script>
+        // Abre em nova aba e mantém o foco na janela atual
+        if(window.opener) {
+            window.opener.focus();
+        }
+    </script>
+</body>
+</html>
