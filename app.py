@@ -175,27 +175,125 @@ def salvar_grupo(grupo_idx):
 # Adicione esta nova rota
 @app.route('/fase_eliminatoria')
 def fase_eliminatoria():
-    # Verifica se os grupos existem na sessão
-    if 'grupos' not in session or not session['grupos']:
+    if 'grupos' not in session:
         return redirect(url_for('index'))
     
-    # Coleta os primeiros e segundos colocados
-    primeiros_colocados = []
-    segundos_colocados = []
-    
-    for grupo in session['grupos']:
-        if len(grupo) >= 1:
-            primeiros_colocados.append(grupo[0])
-        if len(grupo) >= 2:
-            segundos_colocados.append(grupo[1])
-    
-    # Ordena os colocados pelos mesmos critérios
-    primeiros_colocados.sort(key=lambda x: (-x['vitorias'], -x['saldo_total']))
-    segundos_colocados.sort(key=lambda x: (-x['vitorias'], -x['saldo_total']))
-    
+    # Ordena colocados
+    primeiros = sorted([grupo[0] for grupo in session['grupos'] if len(grupo) > 0], 
+                      key=lambda x: (-x['vitorias'], -x['saldo_total']))
+    segundos = sorted([grupo[1] for grupo in session['grupos'] if len(grupo) > 1],
+                     key=lambda x: (-x['vitorias'], -x['saldo_total']))
+
+    # Confrontos iniciais
+    confrontos = [
+        {'timeA': [primeiros[6], segundos[0]], 'timeB': [segundos[1], segundos[2]], 'jogo': 1},
+        {'timeA': [primeiros[2], primeiros[3]], 'timeB': [segundos[5], segundos[6]], 'jogo': 2},
+        {'timeA': [primeiros[4], primeiros[5]], 'timeB': [segundos[3], segundos[4]], 'jogo': 3}
+    ]
+
+    # Verifica resultados para semi-finais
+    semi_finais = []
+    if all(f'eliminatoria_jogo{i}' in session for i in range(1, 4)):
+        vencedor_jogo1 = 'timeA' if session['eliminatoria_jogo1']['timeA'] > session['eliminatoria_jogo1']['timeB'] else 'timeB'
+        vencedor_jogo2 = 'timeA' if session['eliminatoria_jogo2']['timeA'] > session['eliminatoria_jogo2']['timeB'] else 'timeB'
+        vencedor_jogo3 = 'timeA' if session['eliminatoria_jogo3']['timeA'] > session['eliminatoria_jogo3']['timeB'] else 'timeB'
+        
+        semi_finais = [
+            {'timeA': [primeiros[0], primeiros[1]], 'timeB': confrontos[0][vencedor_jogo1], 'jogo': 4},
+            {'timeA': confrontos[1][vencedor_jogo2], 'timeB': confrontos[2][vencedor_jogo3], 'jogo': 5}
+        ]
+
+    # Verifica resultados para final
+    final = None
+    if all(f'eliminatoria_jogo{i}' in session for i in [4, 5]):
+        vencedor_jogo4 = 'timeA' if session['eliminatoria_jogo4']['timeA'] > session['eliminatoria_jogo4']['timeB'] else 'timeB'
+        vencedor_jogo5 = 'timeA' if session['eliminatoria_jogo5']['timeA'] > session['eliminatoria_jogo5']['timeB'] else 'timeB'
+        
+        final = {
+            'timeA': semi_finais[0][vencedor_jogo4],
+            'timeB': semi_finais[1][vencedor_jogo5],
+            'jogo': 6
+        }
+
     return render_template('fase_eliminatoria.html',
-                         primeiros=primeiros_colocados,
-                         segundos=segundos_colocados)
+                         primeiros=primeiros,
+                         segundos=segundos,
+                         confrontos=confrontos,
+                         semi_finais=semi_finais,
+                         final=final)
+
+@app.route('/salvar_eliminatorias', methods=['POST'])
+def salvar_eliminatorias():
+    try:
+        # Processa os resultados
+        for jogo in range(1, 4):
+            campo_timeA = f"jogo_{jogo}_timeA"
+            campo_timeB = f"jogo_{jogo}_timeB"
+            
+            # Aqui você pode salvar os resultados na sessão
+            session[f'eliminatoria_jogo{jogo}'] = {
+                'timeA': int(request.form.get(campo_timeA, 0)),
+                'timeB': int(request.form.get(campo_timeB, 0))
+            }
+        
+        session.modified = True
+        return redirect(url_for('fase_eliminatoria'))
+    
+    except Exception as e:
+        print(f"Erro: {str(e)}")
+        return redirect(url_for('fase_eliminatoria'))
+    
+@app.route('/salvar_semi_finais', methods=['POST'])
+def salvar_semi_finais():
+    try:
+        for jogo in [4, 5]:  # Jogos 4 e 5 são as semi-finais
+            campo_timeA = f"jogo_{jogo}_timeA"
+            campo_timeB = f"jogo_{jogo}_timeB"
+            
+            session[f'eliminatoria_jogo{jogo}'] = {
+                'timeA': int(request.form.get(campo_timeA, 0)),
+                'timeB': int(request.form.get(campo_timeB, 0))
+            }
+        
+        session.modified = True
+        return redirect(url_for('fase_eliminatoria'))
+    
+    except Exception as e:
+        print(f"Erro: {str(e)}")
+        return redirect(url_for('fase_eliminatoria'))
+    
+@app.route('/gerar_final', methods=['POST'])
+def gerar_final():
+    try:
+        # Salva os resultados das semi-finais antes de gerar a final
+        for jogo in [4, 5]:
+            campo_timeA = f"jogo_{jogo}_timeA"
+            campo_timeB = f"jogo_{jogo}_timeB"
+            
+            session[f'eliminatoria_jogo{jogo}'] = {
+                'timeA': int(request.form.get(campo_timeA, 0)),
+                'timeB': int(request.form.get(campo_timeB, 0))
+            }
+        
+        session.modified = True
+        return redirect(url_for('fase_eliminatoria'))
+    
+    except Exception as e:
+        print(f"Erro ao gerar final: {str(e)}")
+        return redirect(url_for('fase_eliminatoria'))
+
+@app.route('/salvar_final', methods=['POST'])
+def salvar_final():
+    try:
+        session['eliminatoria_jogo6'] = {
+            'timeA': int(request.form.get('jogo_6_timeA', 0)),
+            'timeB': int(request.form.get('jogo_6_timeB', 0))
+        }
+        session.modified = True
+        return redirect(url_for('fase_eliminatoria'))
+    except Exception as e:
+        print(f"Erro: {str(e)}")
+        return redirect(url_for('fase_eliminatoria'))
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
