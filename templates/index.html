@@ -4,22 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="static/style.css" rel="stylesheet" />
-    <title>Rei da Praia - Beach Tennis</title>
+    <title></title>
 </head>
 <body>
-    <h1>Campeonato Rei da Praia</h1>
-
+    
     <!-- Formulário de sorteio -->
     <form method="POST" action="/sorteio" id="formSorteio">
-        <label for="jogadores"><strong>Insira EXATAMENTE 28 jogadores únicos separados por vírgula:</strong></label><br>
-        <textarea id="jogadores" name="jogadores" required 
-                  oninput="this.value = this.value.replace(/[^a-zA-ZÀ-ú0-9\s,]/g, '')"
-                  style="width: 100%; padding: 10px; height: 100px; margin: 10px 0;"
-                  placeholder="Jogador1, Jogador2, Jogador3, ..., Jogador28"></textarea>
-        
-        <div id="contador-jogadores">0/28 jogadores</div>
-        
-        <button type="submit" id="btnSortear" disabled>Sortear Grupos</button>
+        <div class="main-container">
+            <h1 class="title">Rei da Praia</h1>
+            
+            <div class="form-container">
+                <p>Insira EXATAMENTE 28 jogadores únicos separados por vírgula:</p>
+                <textarea id="jogadores" name="jogadores" required
+                oninput="this.value = this.value.replace(/[^a-zA-ZÀ-ú0-9\s,]/g, '')" 
+                placeholder="Jogador1, Jogador2, Jogador3, ..., Jogador28"></textarea>
+                <p class="counter">0/28 jogadores</p>
+                <button type="submit" class="sortear-btn">Sortear Grupos</button>
+            </div>
+        </div>
     </form>
     
     {% if session.get('erro_validacao') %}
@@ -99,7 +101,7 @@
 
     <!-- Botão da Fase Eliminatória -->
     {% if grupos %}
-    <div style="text-align: center; margin: 30px 0;">
+    <div class="btn-div">
         <button id="btnAbrirEliminatoria" class="button-eliminatoria">
             Abrir Fase Eliminatória
         </button>

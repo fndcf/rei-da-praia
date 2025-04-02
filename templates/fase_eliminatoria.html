@@ -5,185 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fase Eliminatória - Rei da Praia</title>
     <link href="../static/style.css" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        
-        h1, h2, h3 {
-            color: #2c3e50;
-        }
-        
-        .tabela-container {
-            display: flex;
-            gap: 20px;
-            margin-top: 20px;
-            flex-wrap: wrap;
-        }
-        
-        .tabela-colocacao {
-            flex: 1;
-            min-width: 300px;
-            background-color: white;
-            border-radius: 8px;
-            padding: 15px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .tabela-jogadores {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-        
-        .tabela-jogadores th, .tabela-jogadores td {
-            padding: 12px;
-            text-align: center;
-            border: 1px solid #ddd;
-        }
-        
-        .tabela-jogadores th {
-            background-color: #2c3e50;
-            color: white;
-        }
-        
-        .tabel  a-jogadores tr:nth-child(even) {
-            background-color: #f2f2f2;
-        }
-        
-        .positivo {
-            color: #2ecc71;
-            font-weight: bold;
-        }
-        
-        .negativo {
-            color: #e74  c3c;
-        }
-        
-        .confronto-eliminatorio {
-            background-color: white;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 25px 0;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            border-left: 4px solid #e74c3c;
-        }
-        
-        .confronto-semi {
-            border-left-color: #f39c12;
-        }
-        
-        .confronto-final {
-            border-left-color: #9b59b6;
-            background-color: #f5e8ff;
-        }
-        
-        .confronto-jogadores {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
-            flex-wrap: wrap;
-            margin: 15px 0;
-        }
-        
-        .dupla {
-            font-weight: bold;
-            min-width: 200px;
-            text-align: center;
-            padding: 8px;
-            background-color: #f8f9fa;
-            border-radius: 5px;
-        }
-        
-        .vs {
-            font-size: 1.2em;
-            color: #e74c3c;
-            font-weight: bold;
-        }
-        
-        .vs-semi {
-            color: #f39c12;
-        }
-        
-        .vs-final {
-            color: #9b59b6;
-            font-size: 1.5em;
-        }
-        
-        input[type="number"] {
-            width: 70px;
-            text-align: center;
-            padding: 10px;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
-        }
-        
-        .button-salvar {
-            background-color: #27ae60;
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            margin-top: 20px;
-            transition: background-color 0.3s;
-        }
-        
-        .button-salvar:hover {
-            background-color: #2ecc71;
-        }
-        
-        .button-semi {
-            background-color: #e67e22;
-        }
-        
-        .button-semi:hover {
-            background-color: #d35400;
-        }
-        
-        .button-final {
-            background-color: #9b59b6;
-        }
-        
-        .button-final:hover {
-            background-color: #8e44ad;
-        }
-        
-        .voltar-btn {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-top: 30px;
-        }
-        
-        .voltar-btn:hover {
-            background-color: #2980b9;
-        }
-        
-        @media (max-width: 768px) {
-            .tabela-container {
-                flex-direction: column;
-            }
-            
-            .confronto-jogadores {
-                flex-direction: column;
-            }
-            
-            .dupla {
-                min-width: 100%;
-            }
-        }
-    </style>
 </head>
 <body>
     <h1>Fase Eliminatória</h1>
@@ -241,10 +62,79 @@
             </table>
         </div>
     </div>
+
+    <!-- Seção de Histórico de Resultados -->
+    <div class="historico-container">
+        <h2>Histórico de Jogos</h2>
+        
+        <!-- Quartas de Final -->
+        {% if session.get('eliminatoria_jogo1') or session.get('eliminatoria_jogo2') or session.get('eliminatoria_jogo3') %}
+        <div class="fase-historico">
+            <h3>Quartas de Final</h3>
+            {% for jogo in confrontos if session.get('eliminatoria_jogo' + jogo.jogo|string) %}
+            <div class="jogo-historico">
+                <div class="dupla-historico">
+                    {{ jogo.timeA[0]['nome'] }} & {{ jogo.timeA[1]['nome'] }}
+                </div>
+                <div class="placar-historico">
+                    {{ session['eliminatoria_jogo' + jogo.jogo|string]['timeA'] }} 
+                    x 
+                    {{ session['eliminatoria_jogo' + jogo.jogo|string]['timeB'] }}
+                </div>
+                <div class="dupla-historico">
+                    {{ jogo.timeB[0]['nome'] }} & {{ jogo.timeB[1]['nome'] }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <!-- Semi-Finais -->
+        {% if session.get('eliminatoria_jogo4') or session.get('eliminatoria_jogo5') %}
+        <div class="fase-historico">
+            <h3>Semi-Finais</h3>
+            {% for jogo in semi_finais if session.get('eliminatoria_jogo' + jogo.jogo|string) %}
+            <div class="jogo-historico">
+                <div class="dupla-historico">
+                    {{ jogo.timeA[0]['nome'] }} & {{ jogo.timeA[1]['nome'] }}
+                </div>
+                <div class="placar-historico">
+                    {{ session['eliminatoria_jogo' + jogo.jogo|string]['timeA'] }} 
+                    x 
+                    {{ session['eliminatoria_jogo' + jogo.jogo|string]['timeB'] }}
+                </div>
+                <div class="dupla-historico">
+                    {{ jogo.timeB[0]['nome'] }} & {{ jogo.timeB[1]['nome'] }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <!-- Final -->
+        {% if session.get('eliminatoria_jogo6') %}
+        <div class="fase-historico">
+            <h3>Final</h3>
+            <div class="jogo-historico final-historico">
+                <div class="dupla-historico">
+                    {{ final.timeA[0]['nome'] }} & {{ final.timeA[1]['nome'] }}
+                </div>
+                <div class="placar-historico">
+                    {{ session['eliminatoria_jogo6']['timeA'] }} 
+                    x 
+                    {{ session['eliminatoria_jogo6']['timeB'] }}
+                </div>
+                <div class="dupla-historico">
+                    {{ final.timeB[0]['nome'] }} & {{ final.timeB[1]['nome'] }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>    
     
     <!-- Fase Eliminatória (Jogos 1-3) -->
     {% if confrontos and not semi_finais %}
-    <h2 style="margin-top: 40px;">Fase Eliminatória</h2>
+    <h2 class="h2-fase-eliminatoria">Fase Eliminatória</h2>
     
     <form method="POST" action="/salvar_eliminatorias">
         {% for jogo in confrontos %}
@@ -280,7 +170,7 @@
     
     <!-- Semi-finais (Jogos 4-5) -->
     {% if semi_finais and not final %}
-    <h2 style="margin-top: 40px;">Semi-finais</h2>
+    <h2 class="h2-fase-eliminatoria">Semi-finais</h2>
     
     <form method="POST" action="/gerar_final">
         {% for jogo in semi_finais %}
@@ -316,7 +206,7 @@
     
     <!-- Final (Jogo 6) -->
     {% if final %}
-    <h2 style="margin-top: 40px;">Final</h2>
+    <h2 class="h2-fase-eliminatoria">Final</h2>
     
     <form method="POST" action="/salvar_final">
         <div class="confronto-eliminatorio confronto-final">
@@ -348,7 +238,9 @@
     </form>
     {% endif %}
     
-    <button class="voltar-btn" onclick="window.close()">Fechar Esta Aba</button>
+    <button class="voltar-btn" onclick="resetarEliminatorias()">
+        Fechar e Resetar Resultados
+    </button>
     
     <script>
         // Foca a janela principal ao abrir esta
@@ -363,6 +255,34 @@
                 if(this.value > 100) this.value = 100;
             });
         });
+        async function resetarEliminatorias() {
+            if (!confirm('Tem certeza que deseja resetar TODOS os resultados da fase eliminatória?')) {
+                return;
+            }
+
+            const btn = document.querySelector('.voltar-btn');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Processando...';
+
+            try {
+                const response = await fetch('/resetar_eliminatorias');
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Fecha a janela somente se o reset foi bem-sucedido
+                    window.close();
+                } else {
+                    alert('Erro ao resetar: ' + (data.error || 'Erro desconhecido'));
+                }
+            } catch (error) {
+                alert('Falha na comunicação com o servidor');
+                console.error('Erro:', error);
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
     </script>
 </body>
 </html>

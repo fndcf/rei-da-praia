@@ -184,12 +184,20 @@ def fase_eliminatoria():
     segundos = sorted([grupo[1] for grupo in session['grupos'] if len(grupo) > 1],
                      key=lambda x: (-x['vitorias'], -x['saldo_total']))
 
-    # Confrontos iniciais
+    # Inicializa histórico de jogos
+    historico_jogos = {}
+
+    # Confrontos iniciais (quartas)
     confrontos = [
         {'timeA': [primeiros[6], segundos[0]], 'timeB': [segundos[1], segundos[2]], 'jogo': 1},
         {'timeA': [primeiros[2], primeiros[3]], 'timeB': [segundos[5], segundos[6]], 'jogo': 2},
         {'timeA': [primeiros[4], primeiros[5]], 'timeB': [segundos[3], segundos[4]], 'jogo': 3}
     ]
+
+    # Adiciona resultados ao histórico se existirem
+    for jogo in [1, 2, 3]:
+        if f'eliminatoria_jogo{jogo}' in session:
+            historico_jogos[f'Quartas - Jogo {jogo}'] = session[f'eliminatoria_jogo{jogo}']
 
     # Verifica resultados para semi-finais
     semi_finais = []
@@ -203,6 +211,11 @@ def fase_eliminatoria():
             {'timeA': confrontos[1][vencedor_jogo2], 'timeB': confrontos[2][vencedor_jogo3], 'jogo': 5}
         ]
 
+        # Adiciona resultados das semi-finais ao histórico se existirem
+        for jogo in [4, 5]:
+            if f'eliminatoria_jogo{jogo}' in session:
+                historico_jogos[f'Semi-Final - Jogo {jogo}'] = session[f'eliminatoria_jogo{jogo}']
+
     # Verifica resultados para final
     final = None
     if all(f'eliminatoria_jogo{i}' in session for i in [4, 5]):
@@ -215,12 +228,17 @@ def fase_eliminatoria():
             'jogo': 6
         }
 
+        # Adiciona resultado da final ao histórico se existir
+        if 'eliminatoria_jogo6' in session:
+            historico_jogos['Final'] = session['eliminatoria_jogo6']
+
     return render_template('fase_eliminatoria.html',
                          primeiros=primeiros,
                          segundos=segundos,
                          confrontos=confrontos,
                          semi_finais=semi_finais,
-                         final=final)
+                         final=final,
+                         historico_jogos=historico_jogos)
 
 @app.route('/salvar_eliminatorias', methods=['POST'])
 def salvar_eliminatorias():
@@ -294,6 +312,20 @@ def salvar_final():
     except Exception as e:
         print(f"Erro: {str(e)}")
         return redirect(url_for('fase_eliminatoria'))
+
+@app.route('/resetar_eliminatorias')
+def resetar_eliminatorias():
+    try:
+        # Remove todos os dados da fase eliminatória
+        for i in range(1, 7):  # Jogos de 1 a 6
+            session.pop(f'eliminatoria_jogo{i}', None)
+        
+        # Adicione esta linha para garantir que a sessão seja salva
+        session.modified = True
+        
+        return {'success': True}, 200
+    except Exception as e:
+        return {'success': False, 'error': str(e)}, 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
