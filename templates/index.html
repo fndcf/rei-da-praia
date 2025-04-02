@@ -108,45 +108,48 @@
 
     <!-- JavaScript de Validação -->
     <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const textareaJogadores = document.getElementById('jogadores');
+            const contadorJogadores = document.getElementById('contador-jogadores');
+            const btnSortear = document.getElementById('btnSortear');
+
+            textareaJogadores.addEventListener('input', function() {
+                // Limpa e valida os nomes
+                const input = this.value;
+                const nomes = input.split(',')
+                    .map(nome => nome.trim())
+                    .filter(nome => nome !== '' && nome.replace(/\s/g, '').length > 0);
+                
+                // Verifica duplicados (case insensitive)
+                const nomesLower = nomes.map(nome => nome.toLowerCase());
+                const duplicados = [...new Set(
+                    nomesLower.filter((nome, index) => nomesLower.indexOf(nome) !== index)
+                )];
+                
+                // Atualiza contador
+                contadorJogadores.textContent = `${nomes.length}/28 jogadores`;
+                
+                // Atualiza estilo
+                if (duplicados.length > 0) {
+                    contadorJogadores.innerHTML += ` <span style="color:red">(Duplicados: ${duplicados.join(', ')})</span>`;
+                    contadorJogadores.style.color = '#c62828';
+                    btnSortear.disabled = true;
+                } else {
+                    contadorJogadores.style.color = 
+                        nomes.length === 28 ? '#2e7d32' : 
+                        nomes.length > 28 ? '#c62828' : '#ff8f00';
+                    btnSortear.disabled = nomes.length !== 28;
+                }
+            });
+        });
+
         document.getElementById('btnAbrirEliminatoria').addEventListener('click', function() {
             window.open(
                 '{{ url_for("fase_eliminatoria") }}',
                 '_blank',
                 'width=1000,height=700'
             );
-        });
-        // Validação do formulário de sorteio
-        document.getElementById('jogadores').addEventListener('input', function() {
-            const input = this.value;
-            const nomes = input.split(',').map(nome => nome.trim()).filter(nome => nome);
-            const nomesLower = nomes.map(nome => nome.toLowerCase());
-            const duplicados = new Set();
-            const contador = document.getElementById('contador-jogadores');
-            const btnSortear = document.getElementById('btnSortear');
-                
-            // Verifica duplicados
-            nomesLower.forEach((nome, index) => {
-                if (nomesLower.indexOf(nome) !== index) {
-                    duplicados.add(nomes[index]);
-                }
-            });
-                
-            // Atualiza contador
-            contador.textContent = `${nomes.length}/28 jogadores`;
-                
-            // Atualiza estilo
-            if (duplicados.size > 0) {
-                contador.innerHTML += ` <span style="color:red">(Duplicados: ${Array.from(duplicados).join(', ')})</span>`;
-                contador.style.color = '#c62828';
-                btnSortear.disabled = true;
-            } else if (nomes.length === 28) {
-                contador.style.color = '#2e7d32';
-                btnSortear.disabled = false;
-            } else {
-                contador.style.color = nomes.length > 28 ? '#c62828' : '#ff8f00';
-                btnSortear.disabled = true;
-            }
-        });
+        });        
 
         // Validação dos inputs numéricos
         document.querySelectorAll('input[type="number"]').forEach(input => {

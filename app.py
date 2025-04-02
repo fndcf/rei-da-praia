@@ -1,8 +1,10 @@
 from flask import Flask, render_template, request, redirect, session, url_for
+from dotenv import load_dotenv
 import random
 import re
 import os
 
+load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY')
 
