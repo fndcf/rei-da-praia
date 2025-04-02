@@ -3,126 +3,130 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="static/style.css" rel="stylesheet" />
-    <title></title>
+    <title>Rei da Praia - Sorteio de Grupos</title>
+    <link href="static/style.css" rel="stylesheet">
 </head>
 <body>
-    
-    <!-- Formulário de sorteio -->
-    <form method="POST" action="/sorteio" id="formSorteio">
-        <div class="main-container">
+    <!-- Container Principal -->
+    <div class="main-container">
+        <!-- Formulário de Sorteio -->
+        <form method="POST" action="/sorteio" id="formSorteio" class="card">
             <h1 class="title">Rei da Praia</h1>
             
-            <div class="form-container">
+            <div class="form-group">
                 <p>Insira EXATAMENTE 28 jogadores únicos separados por vírgula:</p>
-                <textarea id="jogadores" name="jogadores" required
-                oninput="this.value = this.value.replace(/[^a-zA-ZÀ-ú0-9\s,]/g, '')" 
-                placeholder="Jogador1, Jogador2, Jogador3, ..., Jogador28"></textarea>
-                <p class="counter">0/28 jogadores</p>
-                <button type="submit" class="sortear-btn">Sortear Grupos</button>
+                <textarea id="jogadores" name="jogadores" class="form-control" required
+                    oninput="this.value = this.value.replace(/[^a-zA-ZÀ-ú0-9\s,]/g, '')" 
+                    placeholder="Jogador1, Jogador2, Jogador3, ..., Jogador28"></textarea>
+                <p id="contador-jogadores" class="counter mt-1">0/28 jogadores</p>
             </div>
+            
+            <button type="submit" class="btn btn-success sortear-btn">Sortear Grupos</button>
+        </form>
+
+        <!-- Mensagens de Erro -->
+        {% if session.get('erro_validacao') %}
+        <div class="erro mt-3">
+            {{ session['erro_validacao'] }}
         </div>
-    </form>
-    
-    {% if session.get('erro_validacao') %}
-    <div class="erro">
-        {{ session['erro_validacao'] }}
+        {% endif %}
     </div>
-    {% endif %}
 
     <!-- Listagem de Grupos -->
     {% if grupos %}
-        <h2>Grupos Sorteados</h2>
+    <div class="container">
+        <h2 class="text-center mt-4">Grupos Sorteados</h2>
+        
         {% for grupo in grupos %}
-            <div class="grupo">
-                <h3>Grupo {{ loop.index }}</h3>
-                <table class="tabela-jogadores">
-                    <thead>
-                        <tr>
-                            <th>Posição</th>
-                            <th>Jogador</th>
-                            <th>Vitórias</th>
-                            <th>Saldo a Favor</th>
-                            <th>Saldo Contra</th>
-                            <th>Saldo Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for jogador in grupo %}
-                        <tr>
-                            <td>{{ loop.index }}</td>
-                            <td>{{ jogador['nome'] }}</td>
-                            <td>{{ jogador['vitorias'] }}</td>
-                            <td>{{ jogador['saldo_a_favor'] }}</td>
-                            <td>{{ jogador['saldo_contra'] }}</td>
-                            <td class="{% if jogador['saldo_total'] > 0 %}positivo{% elif jogador['saldo_total'] < 0 %}negativo{% endif %}">
-                                {{ jogador['saldo_total'] }}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+        <div class="grupo card mt-2">
+            <h3>Grupo {{ loop.index }}</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Posição</th>
+                        <th>Jogador</th>
+                        <th>Vitórias</th>
+                        <th>Saldo a Favor</th>
+                        <th>Saldo Contra</th>
+                        <th>Saldo Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for jogador in grupo %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ jogador['nome'] }}</td>
+                        <td>{{ jogador['vitorias'] }}</td>
+                        <td>{{ jogador['saldo_a_favor'] }}</td>
+                        <td>{{ jogador['saldo_contra'] }}</td>
+                        <td class="{% if jogador['saldo_total'] > 0 %}positivo{% elif jogador['saldo_total'] < 0 %}negativo{% endif %}">
+                            {{ jogador['saldo_total'] }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
         {% endfor %}
+    </div>
     {% endif %}
 
     <!-- Formulário de Confrontos -->
     {% if confrontos %}
-        <h2>Confrontos</h2>
+    <div class="container">
+        <h2 class="text-center mt-4">Confrontos</h2>
+        
         {% for grupo_idx, grupo_confrontos in enumerate(confrontos) %}
-            <form method="POST" action="{{ url_for('salvar_grupo', grupo_idx=grupo_idx) }}" 
-                  onsubmit="console.log('Enviando grupo {{ grupo_idx }}'); return true;">
-                <div class="grupo">
-                    <h3>Grupo {{ grupo_idx + 1 }}</h3>
-                    {% for confronto_idx, confronto in enumerate(grupo_confrontos) %}
-                        <div class="confronto">
-                            <div class="confronto-jogadores">
-                                <span class="dupla">{{ confronto[0]['nome'] }} & {{ confronto[1]['nome'] }}</span>
-                                <input class="saldo-inputs-esq"
-                                       type="number" 
-                                       name="grupo_{{ grupo_idx }}_confronto_{{ confronto_idx }}_duplaA_favor" 
-                                       value="{{ valores_salvos.get('grupo_{}_confronto_{}_duplaA_favor'.format(grupo_idx, confronto_idx), 0) }}" 
-                                       min="0" required>
-                                <span class="vs">⚔️</span>
-                                <input class="saldo-inputs-dir"
-                                       type="number" 
-                                       name="grupo_{{ grupo_idx }}_confronto_{{ confronto_idx }}_duplaB_favor" 
-                                       value="{{ valores_salvos.get('grupo_{}_confronto_{}_duplaB_favor'.format(grupo_idx, confronto_idx), 0) }}" 
-                                       min="0" required>
-                                <span class="dupla">{{ confronto[2]['nome'] }} & {{ confronto[3]['nome'] }}</span>
-                            </div>
-                        </div>
-                    {% endfor %}
-                    <button type="submit" class="button-salvar">Salvar Grupo {{ grupo_idx + 1 }}</button>
+        <form method="POST" action="{{ url_for('salvar_grupo', grupo_idx=grupo_idx) }}" class="card mt-2">
+            <h3>Grupo {{ grupo_idx + 1 }}</h3>
+            
+            {% for confronto_idx, confronto in enumerate(grupo_confrontos) %}
+            <div class="confronto">
+                <div class="confronto-jogadores">
+                    <span class="dupla">{{ confronto[0]['nome'] }} & {{ confronto[1]['nome'] }}</span>
+                    <input class="saldo-inputs-esq" type="number" 
+                           name="grupo_{{ grupo_idx }}_confronto_{{ confronto_idx }}_duplaA_favor" 
+                           value="{{ valores_salvos.get('grupo_{}_confronto_{}_duplaA_favor'.format(grupo_idx, confronto_idx), 0) }}" 
+                           min="0" required>
+                    <span class="vs">⚔️</span>
+                    <input class="saldo-inputs-dir" type="number" 
+                           name="grupo_{{ grupo_idx }}_confronto_{{ confronto_idx }}_duplaB_favor" 
+                           value="{{ valores_salvos.get('grupo_{}_confronto_{}_duplaB_favor'.format(grupo_idx, confronto_idx), 0) }}" 
+                           min="0" required>
+                    <span class="dupla">{{ confronto[2]['nome'] }} & {{ confronto[3]['nome'] }}</span>
                 </div>
-            </form>
+            </div>
+            {% endfor %}
+            
+            <button type="submit" class="btn btn-primary mt-2">Salvar Grupo {{ grupo_idx + 1 }}</button>
+        </form>
         {% endfor %}
+    </div>
     {% endif %}
 
     <!-- Botão da Fase Eliminatória -->
     {% if grupos %}
-    <div class="btn-div">
-        <button id="btnAbrirEliminatoria" class="button-eliminatoria">
+    <div class="container text-center mt-4">
+        <button id="btnAbrirEliminatoria" class="btn btn-warning">
             Abrir Fase Eliminatória
         </button>
     </div>
     {% endif %}
 
-    <!-- JavaScript de Validação -->
+    <!-- JavaScript -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Validação do textarea de jogadores
             const textareaJogadores = document.getElementById('jogadores');
             const contadorJogadores = document.getElementById('contador-jogadores');
-            const btnSortear = document.getElementById('btnSortear');
-
+            
             textareaJogadores.addEventListener('input', function() {
-                // Limpa e valida os nomes
                 const input = this.value;
                 const nomes = input.split(',')
                     .map(nome => nome.trim())
                     .filter(nome => nome !== '' && nome.replace(/\s/g, '').length > 0);
                 
-                // Verifica duplicados (case insensitive)
+                // Verifica duplicados
                 const nomesLower = nomes.map(nome => nome.toLowerCase());
                 const duplicados = [...new Set(
                     nomesLower.filter((nome, index) => nomesLower.indexOf(nome) !== index)
@@ -131,33 +135,32 @@
                 // Atualiza contador
                 contadorJogadores.textContent = `${nomes.length}/28 jogadores`;
                 
-                // Atualiza estilo
+                // Feedback visual
                 if (duplicados.length > 0) {
-                    contadorJogadores.innerHTML += ` <span style="color:red">(Duplicados: ${duplicados.join(', ')})</span>`;
-                    contadorJogadores.style.color = '#c62828';
-                    btnSortear.disabled = true;
+                    contadorJogadores.innerHTML += ` <span style="color:var(--danger-color)">(Duplicados: ${duplicados.join(', ')})</span>`;
+                    contadorJogadores.style.color = 'var(--danger-color)';
                 } else {
                     contadorJogadores.style.color = 
-                        nomes.length === 28 ? '#2e7d32' : 
-                        nomes.length > 28 ? '#c62828' : '#ff8f00';
-                    btnSortear.disabled = nomes.length !== 28;
+                        nomes.length === 28 ? 'var(--success-color)' : 
+                        nomes.length > 28 ? 'var(--danger-color)' : 'var(--warning-color)';
                 }
             });
-        });
 
-        document.getElementById('btnAbrirEliminatoria').addEventListener('click', function() {
-            window.open(
-                '{{ url_for("fase_eliminatoria") }}',
-                '_blank',
-                'width=1000,height=700'
-            );
-        });        
+            // Botão da fase eliminatória
+            document.getElementById('btnAbrirEliminatoria')?.addEventListener('click', function() {
+                window.open(
+                    '{{ url_for("fase_eliminatoria") }}',
+                    '_blank',
+                    'width=1000,height=700'
+                );
+            });        
 
-        // Validação dos inputs numéricos
-        document.querySelectorAll('input[type="number"]').forEach(input => {
-            input.addEventListener('change', function() {
-                if(this.value < 0) this.value = 0;
-                if(this.value > 100) this.value = 100; // Limite máximo opcional
+            // Validação dos inputs numéricos
+            document.querySelectorAll('input[type="number"]').forEach(input => {
+                input.addEventListener('change', function() {
+                    if(this.value < 0) this.value = 0;
+                    if(this.value > 100) this.value = 100;
+                });
             });
         });
     </script>

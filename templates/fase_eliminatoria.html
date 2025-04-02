@@ -6,241 +6,256 @@
     <title>Fase Eliminatória - Rei da Praia</title>
     <link href="../static/style.css" rel="stylesheet">
 </head>
-<body>
-    <h1>Fase Eliminatória</h1>
-    
-    <div class="tabela-container">
-        <div class="tabela-colocacao">
-            <h2>Primeiros Colocados</h2>
-            <table class="tabela-jogadores">
-                <thead>
-                    <tr>
-                        <th>Pos.</th>
-                        <th>Jogador</th>
-                        <th>Vitórias</th>
-                        <th>Saldo Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for jogador in primeiros %}
-                    <tr>
-                        <td>{{ loop.index }}</td>
-                        <td>{{ jogador['nome'] }}</td>
-                        <td>{{ jogador['vitorias'] }}</td>
-                        <td class="{% if jogador['saldo_total'] > 0 %}positivo{% elif jogador['saldo_total'] < 0 %}negativo{% endif %}">
-                            {{ jogador['saldo_total'] }}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+<body class="elimination-phase">
+    <div class="container">
+        <!-- Cabeçalho -->
+        <header class="header">
+            <h1>Fase Eliminatória</h1>
+        </header>
+
+        <!-- Tabelas de Classificação -->
+        <div class="tabela-container">
+            <div class="tabela-colocacao card">
+                <h2>Primeiros Colocados</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Pos.</th>
+                            <th>Jogador</th>
+                            <th>Vitórias</th>
+                            <th>Saldo Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for jogador in primeiros %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ jogador['nome'] }}</td>
+                            <td>{{ jogador['vitorias'] }}</td>
+                            <td class="{% if jogador['saldo_total'] > 0 %}positivo{% elif jogador['saldo_total'] < 0 %}negativo{% endif %}">
+                                {{ jogador['saldo_total'] }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="tabela-colocacao card">
+                <h2>Segundos Colocados</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Pos.</th>
+                            <th>Jogador</th>
+                            <th>Vitórias</th>
+                            <th>Saldo Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for jogador in segundos %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ jogador['nome'] }}</td>
+                            <td>{{ jogador['vitorias'] }}</td>
+                            <td class="{% if jogador['saldo_total'] > 0 %}positivo{% elif jogador['saldo_total'] < 0 %}negativo{% endif %}">
+                                {{ jogador['saldo_total'] }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
+
+        <!-- Histórico de Jogos -->
+        <div class="historico-container card">
+            <h2>Histórico de Jogos</h2>
+            
+            {% if session.get('eliminatoria_jogo1') or session.get('eliminatoria_jogo2') or session.get('eliminatoria_jogo3') %}
+            <div class="fase-historico">
+                <h3>Quartas de Final</h3>
+                {% for jogo in confrontos if session.get('eliminatoria_jogo' + jogo.jogo|string) %}
+                <div class="jogo-historico">
+                    <div class="dupla-historico">
+                        {{ jogo.timeA[0]['nome'] }} & {{ jogo.timeA[1]['nome'] }}
+                    </div>
+                    <div class="placar-historico">
+                        {{ session['eliminatoria_jogo' + jogo.jogo|string]['timeA'] }} x 
+                        {{ session['eliminatoria_jogo' + jogo.jogo|string]['timeB'] }}
+                    </div>
+                    <div class="dupla-historico">
+                        {{ jogo.timeB[0]['nome'] }} & {{ jogo.timeB[1]['nome'] }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            {% if session.get('eliminatoria_jogo4') or session.get('eliminatoria_jogo5') %}
+            <div class="fase-historico">
+                <h3>Semi-Finais</h3>
+                {% for jogo in semi_finais if session.get('eliminatoria_jogo' + jogo.jogo|string) %}
+                <div class="jogo-historico">
+                    <div class="dupla-historico">
+                        {{ jogo.timeA[0]['nome'] }} & {{ jogo.timeA[1]['nome'] }}
+                    </div>
+                    <div class="placar-historico">
+                        {{ session['eliminatoria_jogo' + jogo.jogo|string]['timeA'] }} x 
+                        {{ session['eliminatoria_jogo' + jogo.jogo|string]['timeB'] }}
+                    </div>
+                    <div class="dupla-historico">
+                        {{ jogo.timeB[0]['nome'] }} & {{ jogo.timeB[1]['nome'] }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            {% if session.get('eliminatoria_jogo6') %}
+            <div class="fase-historico">
+                <h3>Final</h3>
+                <div class="jogo-historico final-historico">
+                    <div class="dupla-historico">
+                        {{ final.timeA[0]['nome'] }} & {{ final.timeA[1]['nome'] }}
+                    </div>
+                    <div class="placar-historico">
+                        {{ session['eliminatoria_jogo6']['timeA'] }} x 
+                        {{ session['eliminatoria_jogo6']['timeB'] }}
+                    </div>
+                    <div class="dupla-historico">
+                        {{ final.timeB[0]['nome'] }} & {{ final.timeB[1]['nome'] }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Fase Eliminatória (Jogos 1-3) -->
+        {% if confrontos and not semi_finais %}
+        <section class="mt-4">
+            <h2>Fase Eliminatória</h2>
+            
+            <form method="POST" action="/salvar_eliminatorias" class="card">
+                {% for jogo in confrontos %}
+                <div class="confronto-eliminatorio">
+                    <h3>Jogo {{ jogo.jogo }}</h3>
+                    <div class="confronto-jogadores">
+                        <span class="dupla">
+                            {{ jogo.timeA[0]['nome'] }} & {{ jogo.timeA[1]['nome'] }}
+                        </span>
+                        <input type="number" 
+                               name="jogo_{{ jogo.jogo }}_timeA" 
+                               value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeA', 0) }}" 
+                               min="0" 
+                               class="saldo-inputs-esq"
+                               required>
+                        <span class="vs">⚔️</span>
+                        <input type="number" 
+                               name="jogo_{{ jogo.jogo }}_timeB" 
+                               value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeB', 0) }}" 
+                               min="0" 
+                               class="saldo-inputs-dir"
+                               required>
+                        <span class="dupla">
+                            {{ jogo.timeB[0]['nome'] }} & {{ jogo.timeB[1]['nome'] }}
+                        </span>
+                    </div>
+                </div>
+                {% endfor %}
+                
+                <button type="submit" class="btn btn-warning mt-3">
+                    Gerar Semi-finais
+                </button>
+            </form>
+        </section>
+        {% endif %}
         
-        <div class="tabela-colocacao">
-            <h2>Segundos Colocados</h2>
-            <table class="tabela-jogadores">
-                <thead>
-                    <tr>
-                        <th>Pos.</th>
-                        <th>Jogador</th>
-                        <th>Vitórias</th>
-                        <th>Saldo Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for jogador in segundos %}
-                    <tr>
-                        <td>{{ loop.index }}</td>
-                        <td>{{ jogador['nome'] }}</td>
-                        <td>{{ jogador['vitorias'] }}</td>
-                        <td class="{% if jogador['saldo_total'] > 0 %}positivo{% elif jogador['saldo_total'] < 0 %}negativo{% endif %}">
-                            {{ jogador['saldo_total'] }}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <!-- Semi-finais (Jogos 4-5) -->
+        {% if semi_finais and not final %}
+        <section class="mt-4">
+            <h2>Semi-finais</h2>
+            
+            <form method="POST" action="/gerar_final" class="card">
+                {% for jogo in semi_finais %}
+                <div class="confronto-eliminatorio confronto-semi">
+                    <h3>Jogo {{ jogo.jogo }} - Semi-final</h3>
+                    <div class="confronto-jogadores">
+                        <span class="dupla">
+                            {{ jogo.timeA[0]['nome'] }} & {{ jogo.timeA[1]['nome'] }}
+                        </span>
+                        <input type="number" 
+                               name="jogo_{{ jogo.jogo }}_timeA" 
+                               value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeA', 0) }}" 
+                               min="0" 
+                               class="saldo-inputs-esq"
+                               required>
+                        <span class="vs vs-semi">⚔️</span>
+                        <input type="number" 
+                               name="jogo_{{ jogo.jogo }}_timeB" 
+                               value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeB', 0) }}" 
+                               min="0" 
+                               class="saldo-inputs-dir"
+                               required>
+                        <span class="dupla">
+                            {{ jogo.timeB[0]['nome'] }} & {{ jogo.timeB[1]['nome'] }}
+                        </span>
+                    </div>
+                </div>
+                {% endfor %}
+                
+                <button type="submit" class="btn btn-info mt-3">
+                    Gerar Final
+                </button>
+            </form>
+        </section>
+        {% endif %}
+        
+        <!-- Final (Jogo 6) -->
+        {% if final %}
+        <section class="mt-4">
+            <h2>Final</h2>
+            
+            <form method="POST" action="/salvar_final" class="card">
+                <div class="confronto-eliminatorio confronto-final">
+                    <h3>Jogo {{ final.jogo }} - FINAL</h3>
+                    <div class="confronto-jogadores">
+                        <span class="dupla">
+                            {{ final.timeA[0]['nome'] }} & {{ final.timeA[1]['nome'] }}
+                        </span>
+                        <input type="number" 
+                               name="jogo_{{ final.jogo }}_timeA" 
+                               value="{{ session.get('eliminatoria_jogo' + final.jogo|string, {}).get('timeA', 0) }}" 
+                               min="0" 
+                               class="saldo-inputs-esq"
+                               required>
+                        <span class="vs vs-final">🏆</span>
+                        <input type="number" 
+                               name="jogo_{{ final.jogo }}_timeB" 
+                               value="{{ session.get('eliminatoria_jogo' + final.jogo|string, {}).get('timeB', 0) }}" 
+                               min="0" 
+                               class="saldo-inputs-dir"
+                               required>
+                        <span class="dupla">
+                            {{ final.timeB[0]['nome'] }} & {{ final.timeB[1]['nome'] }}
+                        </span>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-info mt-3">
+                    Salvar Resultado Final
+                </button>
+            </form>
+        </section>
+        {% endif %}
+        
+        <!-- Botão de Fechar -->
+        <div class="text-center mt-4">
+            <button onclick="resetarEliminatorias()" class="btn btn-primary">
+                Fechar e Resetar Resultados
+            </button>
         </div>
     </div>
-
-    <!-- Seção de Histórico de Resultados -->
-    <div class="historico-container">
-        <h2>Histórico de Jogos</h2>
-        
-        <!-- Quartas de Final -->
-        {% if session.get('eliminatoria_jogo1') or session.get('eliminatoria_jogo2') or session.get('eliminatoria_jogo3') %}
-        <div class="fase-historico">
-            <h3>Quartas de Final</h3>
-            {% for jogo in confrontos if session.get('eliminatoria_jogo' + jogo.jogo|string) %}
-            <div class="jogo-historico">
-                <div class="dupla-historico">
-                    {{ jogo.timeA[0]['nome'] }} & {{ jogo.timeA[1]['nome'] }}
-                </div>
-                <div class="placar-historico">
-                    {{ session['eliminatoria_jogo' + jogo.jogo|string]['timeA'] }} 
-                    x 
-                    {{ session['eliminatoria_jogo' + jogo.jogo|string]['timeB'] }}
-                </div>
-                <div class="dupla-historico">
-                    {{ jogo.timeB[0]['nome'] }} & {{ jogo.timeB[1]['nome'] }}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-        
-        <!-- Semi-Finais -->
-        {% if session.get('eliminatoria_jogo4') or session.get('eliminatoria_jogo5') %}
-        <div class="fase-historico">
-            <h3>Semi-Finais</h3>
-            {% for jogo in semi_finais if session.get('eliminatoria_jogo' + jogo.jogo|string) %}
-            <div class="jogo-historico">
-                <div class="dupla-historico">
-                    {{ jogo.timeA[0]['nome'] }} & {{ jogo.timeA[1]['nome'] }}
-                </div>
-                <div class="placar-historico">
-                    {{ session['eliminatoria_jogo' + jogo.jogo|string]['timeA'] }} 
-                    x 
-                    {{ session['eliminatoria_jogo' + jogo.jogo|string]['timeB'] }}
-                </div>
-                <div class="dupla-historico">
-                    {{ jogo.timeB[0]['nome'] }} & {{ jogo.timeB[1]['nome'] }}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-        
-        <!-- Final -->
-        {% if session.get('eliminatoria_jogo6') %}
-        <div class="fase-historico">
-            <h3>Final</h3>
-            <div class="jogo-historico final-historico">
-                <div class="dupla-historico">
-                    {{ final.timeA[0]['nome'] }} & {{ final.timeA[1]['nome'] }}
-                </div>
-                <div class="placar-historico">
-                    {{ session['eliminatoria_jogo6']['timeA'] }} 
-                    x 
-                    {{ session['eliminatoria_jogo6']['timeB'] }}
-                </div>
-                <div class="dupla-historico">
-                    {{ final.timeB[0]['nome'] }} & {{ final.timeB[1]['nome'] }}
-                </div>
-            </div>
-        </div>
-        {% endif %}
-    </div>    
-    
-    <!-- Fase Eliminatória (Jogos 1-3) -->
-    {% if confrontos and not semi_finais %}
-    <h2 class="h2-fase-eliminatoria">Fase Eliminatória</h2>
-    
-    <form method="POST" action="/salvar_eliminatorias">
-        {% for jogo in confrontos %}
-        <div class="confronto-eliminatorio">
-            <h3>Jogo {{ jogo.jogo }}</h3>
-            <div class="confronto-jogadores">
-                <span class="dupla">
-                    {{ jogo.timeA[0]['nome'] }} & {{ jogo.timeA[1]['nome'] }}
-                </span>
-                <input type="number" 
-                       name="jogo_{{ jogo.jogo }}_timeA" 
-                       value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeA', 0) }}" 
-                       min="0" 
-                       required>
-                <span class="vs">⚔️</span>
-                <input type="number" 
-                       name="jogo_{{ jogo.jogo }}_timeB" 
-                       value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeB', 0) }}" 
-                       min="0" 
-                       required>
-                <span class="dupla">
-                    {{ jogo.timeB[0]['nome'] }} & {{ jogo.timeB[1]['nome'] }}
-                </span>
-            </div>
-        </div>
-        {% endfor %}
-        
-        <button type="submit" class="button-salvar button-semi">
-            Gerar Semi-finais
-        </button>
-    </form>
-    {% endif %}
-    
-    <!-- Semi-finais (Jogos 4-5) -->
-    {% if semi_finais and not final %}
-    <h2 class="h2-fase-eliminatoria">Semi-finais</h2>
-    
-    <form method="POST" action="/gerar_final">
-        {% for jogo in semi_finais %}
-        <div class="confronto-eliminatorio confronto-semi">
-            <h3>Jogo {{ jogo.jogo }} - Semi-final</h3>
-            <div class="confronto-jogadores">
-                <span class="dupla">
-                    {{ jogo.timeA[0]['nome'] }} & {{ jogo.timeA[1]['nome'] }}
-                </span>
-                <input type="number" 
-                       name="jogo_{{ jogo.jogo }}_timeA" 
-                       value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeA', 0) }}" 
-                       min="0" 
-                       required>
-                <span class="vs vs-semi">⚔️</span>
-                <input type="number" 
-                       name="jogo_{{ jogo.jogo }}_timeB" 
-                       value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeB', 0) }}" 
-                       min="0" 
-                       required>
-                <span class="dupla">
-                    {{ jogo.timeB[0]['nome'] }} & {{ jogo.timeB[1]['nome'] }}
-                </span>
-            </div>
-        </div>
-        {% endfor %}
-        
-        <button type="submit" class="button-salvar button-final">
-            Gerar Final
-        </button>
-    </form>
-    {% endif %}
-    
-    <!-- Final (Jogo 6) -->
-    {% if final %}
-    <h2 class="h2-fase-eliminatoria">Final</h2>
-    
-    <form method="POST" action="/salvar_final">
-        <div class="confronto-eliminatorio confronto-final">
-            <h3>Jogo {{ final.jogo }} - FINAL</h3>
-            <div class="confronto-jogadores">
-                <span class="dupla">
-                    {{ final.timeA[0]['nome'] }} & {{ final.timeA[1]['nome'] }}
-                </span>
-                <input type="number" 
-                       name="jogo_{{ final.jogo }}_timeA" 
-                       value="{{ session.get('eliminatoria_jogo' + final.jogo|string, {}).get('timeA', 0) }}" 
-                       min="0" 
-                       required>
-                <span class="vs vs-final">🏆</span>
-                <input type="number" 
-                       name="jogo_{{ final.jogo }}_timeB" 
-                       value="{{ session.get('eliminatoria_jogo' + final.jogo|string, {}).get('timeB', 0) }}" 
-                       min="0" 
-                       required>
-                <span class="dupla">
-                    {{ final.timeB[0]['nome'] }} & {{ final.timeB[1]['nome'] }}
-                </span>
-            </div>
-        </div>
-        
-        <button type="submit" class="button-salvar button-final">
-            Salvar Resultado Final
-        </button>
-    </form>
-    {% endif %}
-    
-    <button class="voltar-btn" onclick="resetarEliminatorias()">
-        Fechar e Resetar Resultados
-    </button>
     
     <script>
         // Foca a janela principal ao abrir esta
@@ -255,22 +270,22 @@
                 if(this.value > 100) this.value = 100;
             });
         });
+
         async function resetarEliminatorias() {
             if (!confirm('Tem certeza que deseja resetar TODOS os resultados da fase eliminatória?')) {
                 return;
             }
 
-            const btn = document.querySelector('.voltar-btn');
+            const btn = document.querySelector('.btn-primary');
             const originalText = btn.textContent;
             btn.disabled = true;
-            btn.textContent = 'Processando...';
+            btn.innerHTML = '<span class="spinner">⌛</span> Processando...';
 
             try {
                 const response = await fetch('/resetar_eliminatorias');
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Fecha a janela somente se o reset foi bem-sucedido
                     window.close();
                 } else {
                     alert('Erro ao resetar: ' + (data.error || 'Erro desconhecido'));
