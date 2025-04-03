@@ -3,17 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Fase Eliminatória - Rei da Praia</title>
-    <link href="../static/style.css" rel="stylesheet">
+    <link href="../static/style.css?v={{ timestamp }}" rel="stylesheet">
 </head>
-<body class="elimination-phase">
+<body>
     <div class="container">
-        <!-- Cabeçalho -->
-        <header class="header">
-            <h1>Fase Eliminatória</h1>
-        </header>
-
-        <!-- Tabelas de Classificação -->
+        <h1>Fase Eliminatória - {% if modo_torneio == '28j' %}28 Jogadores{% else %}32 Jogadores{% endif %}</h1>
+        
         <div class="tabela-container">
             <div class="tabela-colocacao card">
                 <h2>Primeiros Colocados</h2>
@@ -68,73 +67,73 @@
             </div>
         </div>
 
-        <!-- Histórico de Jogos -->
+        <!-- Seção de Histórico de Jogos -->
         <div class="historico-container card">
             <h2>Histórico de Jogos</h2>
             
-            {% if session.get('eliminatoria_jogo1') or session.get('eliminatoria_jogo2') or session.get('eliminatoria_jogo3') %}
+            <!-- Quartas de Final -->
+            {% for key, jogo in historico_jogos.items() if 'Quartas' in key %}
             <div class="fase-historico">
+                {% if loop.first %}
                 <h3>Quartas de Final</h3>
-                {% for jogo in confrontos if session.get('eliminatoria_jogo' + jogo.jogo|string) %}
+                {% endif %}
                 <div class="jogo-historico">
                     <div class="dupla-historico">
-                        {{ jogo.timeA[0]['nome'] }} & {{ jogo.timeA[1]['nome'] }}
+                        {{ jogo.timeA_nomes[0] }} & {{ jogo.timeA_nomes[1] }}
                     </div>
                     <div class="placar-historico">
-                        {{ session['eliminatoria_jogo' + jogo.jogo|string]['timeA'] }} x 
-                        {{ session['eliminatoria_jogo' + jogo.jogo|string]['timeB'] }}
+                        {{ jogo.timeA }} x {{ jogo.timeB }}
                     </div>
                     <div class="dupla-historico">
-                        {{ jogo.timeB[0]['nome'] }} & {{ jogo.timeB[1]['nome'] }}
+                        {{ jogo.timeB_nomes[0] }} & {{ jogo.timeB_nomes[1] }}
                     </div>
                 </div>
-                {% endfor %}
             </div>
-            {% endif %}
+            {% endfor %}
             
-            {% if session.get('eliminatoria_jogo4') or session.get('eliminatoria_jogo5') %}
+            <!-- Semi-Finais -->
+            {% for key, jogo in historico_jogos.items() if 'Semi' in key %}
             <div class="fase-historico">
+                {% if loop.first %}
                 <h3>Semi-Finais</h3>
-                {% for jogo in semi_finais if session.get('eliminatoria_jogo' + jogo.jogo|string) %}
+                {% endif %}
                 <div class="jogo-historico">
                     <div class="dupla-historico">
-                        {{ jogo.timeA[0]['nome'] }} & {{ jogo.timeA[1]['nome'] }}
+                        {{ jogo.timeA_nomes[0] }} & {{ jogo.timeA_nomes[1] }}
                     </div>
                     <div class="placar-historico">
-                        {{ session['eliminatoria_jogo' + jogo.jogo|string]['timeA'] }} x 
-                        {{ session['eliminatoria_jogo' + jogo.jogo|string]['timeB'] }}
+                        {{ jogo.timeA }} x {{ jogo.timeB }}
                     </div>
                     <div class="dupla-historico">
-                        {{ jogo.timeB[0]['nome'] }} & {{ jogo.timeB[1]['nome'] }}
+                        {{ jogo.timeB_nomes[0] }} & {{ jogo.timeB_nomes[1] }}
                     </div>
                 </div>
-                {% endfor %}
             </div>
-            {% endif %}
+            {% endfor %}
             
-            {% if session.get('eliminatoria_jogo6') %}
+            <!-- Final -->
+            {% if 'Final' in historico_jogos %}
             <div class="fase-historico">
                 <h3>Final</h3>
                 <div class="jogo-historico final-historico">
                     <div class="dupla-historico">
-                        {{ final.timeA[0]['nome'] }} & {{ final.timeA[1]['nome'] }}
+                        {{ historico_jogos['Final'].timeA_nomes[0] }} & {{ historico_jogos['Final'].timeA_nomes[1] }}
                     </div>
                     <div class="placar-historico">
-                        {{ session['eliminatoria_jogo6']['timeA'] }} x 
-                        {{ session['eliminatoria_jogo6']['timeB'] }}
+                        {{ historico_jogos['Final'].timeA }} x {{ historico_jogos['Final'].timeB }}
                     </div>
                     <div class="dupla-historico">
-                        {{ final.timeB[0]['nome'] }} & {{ final.timeB[1]['nome'] }}
+                        {{ historico_jogos['Final'].timeB_nomes[0] }} & {{ historico_jogos['Final'].timeB_nomes[1] }}
                     </div>
                 </div>
             </div>
             {% endif %}
         </div>
-
-        <!-- Fase Eliminatória (Jogos 1-3) -->
+        
+        <!-- Fase Eliminatória (Quartas) -->
         {% if confrontos and not semi_finais %}
         <section class="mt-4">
-            <h2>Fase Eliminatória</h2>
+            <h2>{% if modo_torneio == '28j' %}Quartas de Final (3 jogos){% else %}Quartas de Final (4 jogos){% endif %}</h2>
             
             <form method="POST" action="/salvar_eliminatorias" class="card">
                 {% for jogo in confrontos %}
@@ -148,14 +147,12 @@
                                name="jogo_{{ jogo.jogo }}_timeA" 
                                value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeA', 0) }}" 
                                min="0" 
-                               class="saldo-inputs-esq"
                                required>
                         <span class="vs">⚔️</span>
                         <input type="number" 
                                name="jogo_{{ jogo.jogo }}_timeB" 
                                value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeB', 0) }}" 
                                min="0" 
-                               class="saldo-inputs-dir"
                                required>
                         <span class="dupla">
                             {{ jogo.timeB[0]['nome'] }} & {{ jogo.timeB[1]['nome'] }}
@@ -171,10 +168,10 @@
         </section>
         {% endif %}
         
-        <!-- Semi-finais (Jogos 4-5) -->
+        <!-- Semi-finais -->
         {% if semi_finais and not final %}
         <section class="mt-4">
-            <h2>Semi-finais</h2>
+            <h2>Semi-finais (2 jogos)</h2>
             
             <form method="POST" action="/gerar_final" class="card">
                 {% for jogo in semi_finais %}
@@ -188,14 +185,12 @@
                                name="jogo_{{ jogo.jogo }}_timeA" 
                                value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeA', 0) }}" 
                                min="0" 
-                               class="saldo-inputs-esq"
                                required>
                         <span class="vs vs-semi">⚔️</span>
                         <input type="number" 
                                name="jogo_{{ jogo.jogo }}_timeB" 
                                value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeB', 0) }}" 
                                min="0" 
-                               class="saldo-inputs-dir"
                                required>
                         <span class="dupla">
                             {{ jogo.timeB[0]['nome'] }} & {{ jogo.timeB[1]['nome'] }}
@@ -211,7 +206,7 @@
         </section>
         {% endif %}
         
-        <!-- Final (Jogo 6) -->
+        <!-- Final -->
         {% if final %}
         <section class="mt-4">
             <h2>Final</h2>
@@ -227,14 +222,12 @@
                                name="jogo_{{ final.jogo }}_timeA" 
                                value="{{ session.get('eliminatoria_jogo' + final.jogo|string, {}).get('timeA', 0) }}" 
                                min="0" 
-                               class="saldo-inputs-esq"
                                required>
                         <span class="vs vs-final">🏆</span>
                         <input type="number" 
                                name="jogo_{{ final.jogo }}_timeB" 
                                value="{{ session.get('eliminatoria_jogo' + final.jogo|string, {}).get('timeB', 0) }}" 
                                min="0" 
-                               class="saldo-inputs-dir"
                                required>
                         <span class="dupla">
                             {{ final.timeB[0]['nome'] }} & {{ final.timeB[1]['nome'] }}
@@ -249,7 +242,6 @@
         </section>
         {% endif %}
         
-        <!-- Botão de Fechar -->
         <div class="text-center mt-4">
             <button onclick="resetarEliminatorias()" class="btn btn-primary">
                 Fechar e Resetar Resultados
@@ -298,6 +290,37 @@
                 btn.disabled = false;
             }
         }
+        // Solução definitiva para problemas de cache
+        document.addEventListener('DOMContentLoaded', function() {
+            // 1. Força recarregamento quando a página vem do cache
+            window.onpageshow = function(event) {
+                if (event.persisted) {
+                    window.location.reload();
+                }
+            };
+            
+            // 2. Adiciona timestamp a todos os formulários
+            const forms = document.querySelectorAll('form');
+            forms.forEach(form => {
+                const timestamp = Date.now();
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'nocache';
+                input.value = timestamp;
+                form.appendChild(input);
+            });
+            
+            // 3. Previne duplo clique em botões de submit
+            forms.forEach(form => {
+                form.addEventListener('submit', function() {
+                    const submitBtn = this.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = 'Salvando...';
+                    }
+                });
+            });
+        });
     </script>
 </body>
 </html>

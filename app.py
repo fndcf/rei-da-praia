@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, session, url_for
 from dotenv import load_dotenv
+from datetime import datetime
 import random
 import re
 import os
@@ -7,6 +8,19 @@ import os
 load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY')
+
+@app.after_request
+def add_no_cache_headers(response):
+    """Garante que nenhuma página seja cachead"""
+    if request.path.startswith('/'):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
+@app.context_processor
+def inject_timestamp():
+    return {'timestamp': datetime.now().timestamp()}
 
 @app.context_processor
 def inject_enumerate():
@@ -22,10 +36,13 @@ def criar_jogador(nome):
         'saldo_total': 0
     }
 
-def criar_grupos(jogadores):
+def criar_grupos(jogadores, modo):
     """Divide os jogadores em grupos de 4"""
     random.shuffle(jogadores)
-    return [jogadores[i:i+4] for i in range(0, len(jogadores), 4)]
+    if modo == '28j':
+        return [jogadores[i:i+4] for i in range(0, 28, 4)]  # 7 grupos
+    else:  # 32j
+        return [jogadores[i:i+4] for i in range(0, 32, 4)]  # 8 grupos
 
 def gerar_confrontos(grupo):
     """Gera os 3 confrontos do grupo"""
@@ -41,6 +58,7 @@ def init_session():
     session.setdefault('jogadores', {})
     session.setdefault('grupos', [])
     session.setdefault('confrontos', [])
+    session.setdefault('modo_torneio', '28j')  # Default para 28 jogadores
 
 @app.route('/')
 def index():
@@ -65,33 +83,33 @@ def index():
     return render_template('index.html',
                          grupos=session.get('grupos', []),
                          confrontos=session.get('confrontos', []),
-                         valores_salvos=session.get('valores_salvos', {}))
+                         valores_salvos=session.get('valores_salvos', {}),
+                         modo_torneio=session.get('modo_torneio', '28j'))
 
 @app.route('/sorteio', methods=['POST'])
 def sorteio():
     try:
+        modo = request.form.get('modo_torneio', '28j')
         nomes = [nome.strip() for nome in request.form['jogadores'].split(',') if nome.strip() and re.match(r'^[a-zA-ZÀ-ú0-9\s,]+$', nome.strip())]
         
-        # Validação rigorosa
-        if len(nomes) < 28:
-            session['erro_validacao'] = f"Faltam jogadores! (Atual: {len(nomes)}, Necessário: 28)"
-        elif len(nomes) > 28:
-            session['erro_validacao'] = f"Jogadores excedentes! (Atual: {len(nomes)}, Máximo: 28)"
-        else:
-            # Só executa o sorteio se tiver 28 jogadores
-            session['jogadores'] = {nome: criar_jogador(nome) for nome in nomes}
-            grupos_nomes = criar_grupos(nomes)
-            session['grupos'] = []
-            session['confrontos'] = []
-            
-            for grupo_nomes in grupos_nomes:
-                grupo = [session['jogadores'][nome] for nome in grupo_nomes]
-                session['grupos'].append(grupo)
-                session['confrontos'].append(gerar_confrontos(grupo))
-            
-            session.pop('erro_validacao', None)
+        # Validação baseada no modo selecionado
+        esperado = 28 if modo == '28j' else 32
+        if len(nomes) != esperado:
+            session['erro_validacao'] = f"Jogadores incorretos! (Atual: {len(nomes)}, Esperado: {esperado})"
             return redirect('/')
         
+        session['modo_torneio'] = modo
+        session['jogadores'] = {nome: criar_jogador(nome) for nome in nomes}
+        grupos_nomes = criar_grupos(nomes, modo)
+        session['grupos'] = []
+        session['confrontos'] = []
+        
+        for grupo_nomes in grupos_nomes:
+            grupo = [session['jogadores'][nome] for nome in grupo_nomes]
+            session['grupos'].append(grupo)
+            session['confrontos'].append(gerar_confrontos(grupo))
+        
+        session.pop('erro_validacao', None)
         return redirect('/')
     
     except Exception as e:
@@ -178,59 +196,115 @@ def fase_eliminatoria():
     if 'grupos' not in session:
         return redirect(url_for('index'))
     
-    # Ordena colocados
+    modo = session.get('modo_torneio', '28j')
     primeiros = sorted([grupo[0] for grupo in session['grupos'] if len(grupo) > 0], 
                       key=lambda x: (-x['vitorias'], -x['saldo_total']))
     segundos = sorted([grupo[1] for grupo in session['grupos'] if len(grupo) > 1],
                      key=lambda x: (-x['vitorias'], -x['saldo_total']))
 
-    # Inicializa histórico de jogos
+    # Inicializa o histórico de jogos
     historico_jogos = {}
 
-    # Confrontos iniciais (quartas)
-    confrontos = [
-        {'timeA': [primeiros[6], segundos[0]], 'timeB': [segundos[1], segundos[2]], 'jogo': 1},
-        {'timeA': [primeiros[2], primeiros[3]], 'timeB': [segundos[5], segundos[6]], 'jogo': 2},
-        {'timeA': [primeiros[4], primeiros[5]], 'timeB': [segundos[3], segundos[4]], 'jogo': 3}
-    ]
+    # Configuração baseada no modo
+    if modo == '28j':
+        # 28 jogadores: 3 jogos nas quartas, 2 nas semis, final é o jogo 6
+        confrontos = [
+            {'timeA': [primeiros[6], segundos[0]], 'timeB': [segundos[1], segundos[2]], 'jogo': 1},
+            {'timeA': [primeiros[2], primeiros[3]], 'timeB': [segundos[5], segundos[6]], 'jogo': 2},
+            {'timeA': [primeiros[4], primeiros[5]], 'timeB': [segundos[3], segundos[4]], 'jogo': 3}
+        ]
+        num_jogos_quartas = 3
+        num_jogos_semis = 2
+        jogo_final = 6
+        inicio_semis = 4
+    else:
+        # 32 jogadores: 4 jogos nas quartas, 2 nas semis, final é o jogo 7
+        confrontos = [
+            {'timeA': [primeiros[0], primeiros[1]], 'timeB': [segundos[6], segundos[7]], 'jogo': 1},
+            {'timeA': [primeiros[2], primeiros[3]], 'timeB': [segundos[4], segundos[5]], 'jogo': 2},
+            {'timeA': [primeiros[4], primeiros[5]], 'timeB': [segundos[2], segundos[3]], 'jogo': 3},
+            {'timeA': [primeiros[6], primeiros[7]], 'timeB': [segundos[0], segundos[1]], 'jogo': 4}
+        ]
+        num_jogos_quartas = 4
+        num_jogos_semis = 2
+        jogo_final = 7
+        inicio_semis = 5
 
-    # Adiciona resultados ao histórico se existirem
-    for jogo in [1, 2, 3]:
-        if f'eliminatoria_jogo{jogo}' in session:
-            historico_jogos[f'Quartas - Jogo {jogo}'] = session[f'eliminatoria_jogo{jogo}']
+    # Adiciona quartas ao histórico
+    for jogo in range(1, num_jogos_quartas + 1):
+        jogo_key = f'eliminatoria_jogo{jogo}'
+        if jogo_key in session:
+            historico_jogos[f'Quartas - Jogo {jogo}'] = {
+                'timeA': session[jogo_key]['timeA'],
+                'timeB': session[jogo_key]['timeB'],
+                'timeA_nomes': [jogador['nome'] for jogador in confrontos[jogo-1]['timeA']],
+                'timeB_nomes': [jogador['nome'] for jogador in confrontos[jogo-1]['timeB']]
+            }
 
     # Verifica resultados para semi-finais
     semi_finais = []
-    if all(f'eliminatoria_jogo{i}' in session for i in range(1, 4)):
-        vencedor_jogo1 = 'timeA' if session['eliminatoria_jogo1']['timeA'] > session['eliminatoria_jogo1']['timeB'] else 'timeB'
-        vencedor_jogo2 = 'timeA' if session['eliminatoria_jogo2']['timeA'] > session['eliminatoria_jogo2']['timeB'] else 'timeB'
-        vencedor_jogo3 = 'timeA' if session['eliminatoria_jogo3']['timeA'] > session['eliminatoria_jogo3']['timeB'] else 'timeB'
-        
-        semi_finais = [
-            {'timeA': [primeiros[0], primeiros[1]], 'timeB': confrontos[0][vencedor_jogo1], 'jogo': 4},
-            {'timeA': confrontos[1][vencedor_jogo2], 'timeB': confrontos[2][vencedor_jogo3], 'jogo': 5}
-        ]
+    if all(f'eliminatoria_jogo{i}' in session for i in range(1, num_jogos_quartas + 1)):
+        if modo == '28j':
+            vencedor_jogo1 = 'timeA' if session['eliminatoria_jogo1']['timeA'] > session['eliminatoria_jogo1']['timeB'] else 'timeB'
+            vencedor_jogo2 = 'timeA' if session['eliminatoria_jogo2']['timeA'] > session['eliminatoria_jogo2']['timeB'] else 'timeB'
+            vencedor_jogo3 = 'timeA' if session['eliminatoria_jogo3']['timeA'] > session['eliminatoria_jogo3']['timeB'] else 'timeB'
+            
+            semi_finais = [
+                {'timeA': [primeiros[0], primeiros[1]], 'timeB': confrontos[0][vencedor_jogo1], 'jogo': 4},
+                {'timeA': confrontos[1][vencedor_jogo2], 'timeB': confrontos[2][vencedor_jogo3], 'jogo': 5}
+            ]
+        else:
+            vencedor_jogo1 = 'timeA' if session['eliminatoria_jogo1']['timeA'] > session['eliminatoria_jogo1']['timeB'] else 'timeB'
+            vencedor_jogo2 = 'timeA' if session['eliminatoria_jogo2']['timeA'] > session['eliminatoria_jogo2']['timeB'] else 'timeB'
+            vencedor_jogo3 = 'timeA' if session['eliminatoria_jogo3']['timeA'] > session['eliminatoria_jogo3']['timeB'] else 'timeB'
+            vencedor_jogo4 = 'timeA' if session['eliminatoria_jogo4']['timeA'] > session['eliminatoria_jogo4']['timeB'] else 'timeB'
+            
+            semi_finais = [
+                {'timeA': confrontos[0][vencedor_jogo1], 'timeB': confrontos[1][vencedor_jogo2], 'jogo': 5},
+                {'timeA': confrontos[2][vencedor_jogo3], 'timeB': confrontos[3][vencedor_jogo4], 'jogo': 6}
+            ]
 
-        # Adiciona resultados das semi-finais ao histórico se existirem
-        for jogo in [4, 5]:
-            if f'eliminatoria_jogo{jogo}' in session:
-                historico_jogos[f'Semi-Final - Jogo {jogo}'] = session[f'eliminatoria_jogo{jogo}']
+        # Adiciona semi-finais ao histórico
+        for jogo in range(inicio_semis, inicio_semis + num_jogos_semis):
+            jogo_key = f'eliminatoria_jogo{jogo}'
+            if jogo_key in session:
+                historico_jogos[f'Semi-Final - Jogo {jogo}'] = {
+                    'timeA': session[jogo_key]['timeA'],
+                    'timeB': session[jogo_key]['timeB'],
+                    'timeA_nomes': [jogador['nome'] for jogador in semi_finais[jogo-inicio_semis]['timeA']],
+                    'timeB_nomes': [jogador['nome'] for jogador in semi_finais[jogo-inicio_semis]['timeB']]
+                }
 
     # Verifica resultados para final
     final = None
-    if all(f'eliminatoria_jogo{i}' in session for i in [4, 5]):
-        vencedor_jogo4 = 'timeA' if session['eliminatoria_jogo4']['timeA'] > session['eliminatoria_jogo4']['timeB'] else 'timeB'
-        vencedor_jogo5 = 'timeA' if session['eliminatoria_jogo5']['timeA'] > session['eliminatoria_jogo5']['timeB'] else 'timeB'
-        
-        final = {
-            'timeA': semi_finais[0][vencedor_jogo4],
-            'timeB': semi_finais[1][vencedor_jogo5],
-            'jogo': 6
-        }
+    if all(f'eliminatoria_jogo{i}' in session for i in range(inicio_semis, inicio_semis + num_jogos_semis)):
+        if modo == '28j':
+            vencedor_jogo4 = 'timeA' if session['eliminatoria_jogo4']['timeA'] > session['eliminatoria_jogo4']['timeB'] else 'timeB'
+            vencedor_jogo5 = 'timeA' if session['eliminatoria_jogo5']['timeA'] > session['eliminatoria_jogo5']['timeB'] else 'timeB'
+            
+            final = {
+                'timeA': semi_finais[0][vencedor_jogo4],
+                'timeB': semi_finais[1][vencedor_jogo5],
+                'jogo': jogo_final
+            }
+        else:
+            vencedor_jogo5 = 'timeA' if session['eliminatoria_jogo5']['timeA'] > session['eliminatoria_jogo5']['timeB'] else 'timeB'
+            vencedor_jogo6 = 'timeA' if session['eliminatoria_jogo6']['timeA'] > session['eliminatoria_jogo6']['timeB'] else 'timeB'
+            
+            final = {
+                'timeA': semi_finais[0][vencedor_jogo5],
+                'timeB': semi_finais[1][vencedor_jogo6],
+                'jogo': jogo_final
+            }
 
-        # Adiciona resultado da final ao histórico se existir
-        if 'eliminatoria_jogo6' in session:
-            historico_jogos['Final'] = session['eliminatoria_jogo6']
+        # Adiciona final ao histórico
+        if f'eliminatoria_jogo{jogo_final}' in session:
+            historico_jogos['Final'] = {
+                'timeA': session[f'eliminatoria_jogo{jogo_final}']['timeA'],
+                'timeB': session[f'eliminatoria_jogo{jogo_final}']['timeB'],
+                'timeA_nomes': [jogador['nome'] for jogador in final['timeA']],
+                'timeB_nomes': [jogador['nome'] for jogador in final['timeB']]
+            }
 
     return render_template('fase_eliminatoria.html',
                          primeiros=primeiros,
@@ -238,13 +312,16 @@ def fase_eliminatoria():
                          confrontos=confrontos,
                          semi_finais=semi_finais,
                          final=final,
-                         historico_jogos=historico_jogos)
+                         historico_jogos=historico_jogos,
+                         modo_torneio=modo)
 
 @app.route('/salvar_eliminatorias', methods=['POST'])
 def salvar_eliminatorias():
+    modo = session.get('modo_torneio', '28j')
+    num_jogos_quartas = 3 if modo == '28j' else 4
     try:
         # Processa os resultados
-        for jogo in range(1, 4):
+        for jogo in range(1, num_jogos_quartas + 1):
             campo_timeA = f"jogo_{jogo}_timeA"
             campo_timeB = f"jogo_{jogo}_timeB"
             
@@ -263,8 +340,10 @@ def salvar_eliminatorias():
     
 @app.route('/salvar_semi_finais', methods=['POST'])
 def salvar_semi_finais():
+    modo = session.get('modo_torneio', '28j')
+    inicio_semis = 4 if modo == '28j' else 5
     try:
-        for jogo in [4, 5]:  # Jogos 4 e 5 são as semi-finais
+        for jogo in [inicio_semis, inicio_semis + 1]:
             campo_timeA = f"jogo_{jogo}_timeA"
             campo_timeB = f"jogo_{jogo}_timeB"
             
@@ -282,9 +361,11 @@ def salvar_semi_finais():
     
 @app.route('/gerar_final', methods=['POST'])
 def gerar_final():
+    modo = session.get('modo_torneio', '28j')
+    inicio_semis = 4 if modo == '28j' else 5
     try:
         # Salva os resultados das semi-finais antes de gerar a final
-        for jogo in [4, 5]:
+        for jogo in [inicio_semis, inicio_semis + 1]:
             campo_timeA = f"jogo_{jogo}_timeA"
             campo_timeB = f"jogo_{jogo}_timeB"
             
@@ -302,10 +383,12 @@ def gerar_final():
 
 @app.route('/salvar_final', methods=['POST'])
 def salvar_final():
+    modo = session.get('modo_torneio', '28j')
+    jogo_final = 6 if modo == '28j' else 7
     try:
-        session['eliminatoria_jogo6'] = {
-            'timeA': int(request.form.get('jogo_6_timeA', 0)),
-            'timeB': int(request.form.get('jogo_6_timeB', 0))
+        session[f'eliminatoria_jogo{jogo_final}'] = {
+            'timeA': int(request.form.get(f'jogo_{jogo_final}_timeA', 0)),  # Corrigido
+            'timeB': int(request.form.get(f'jogo_{jogo_final}_timeB', 0))   # Corrigido
         }
         session.modified = True
         return redirect(url_for('fase_eliminatoria'))
@@ -317,7 +400,7 @@ def salvar_final():
 def resetar_eliminatorias():
     try:
         # Remove todos os dados da fase eliminatória
-        for i in range(1, 7):  # Jogos de 1 a 6
+        for i in range(1, 8):  # Jogos de 1 a 7
             session.pop(f'eliminatoria_jogo{i}', None)
         
         # Adicione esta linha para garantir que a sessão seja salva
@@ -326,7 +409,7 @@ def resetar_eliminatorias():
         return {'success': True}, 200
     except Exception as e:
         return {'success': False, 'error': str(e)}, 500
-
+    
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)

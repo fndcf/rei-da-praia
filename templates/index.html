@@ -3,28 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rei da Praia - Sorteio de Grupos</title>
-    <link href="static/style.css" rel="stylesheet">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Rei da Praia</title>
+    <link href="../static/style.css?v={{ timestamp }}" rel="stylesheet">
 </head>
 <body>
-    <!-- Container Principal -->
     <div class="main-container">
-        <!-- Formulário de Sorteio -->
+        <h1 class="title">Rei da Praia</h1>
+        
         <form method="POST" action="/sorteio" id="formSorteio" class="card">
-            <h1 class="title">Rei da Praia</h1>
-            
             <div class="form-group">
-                <p>Insira EXATAMENTE 28 jogadores únicos separados por vírgula:</p>
-                <textarea id="jogadores" name="jogadores" class="form-control" required
-                    oninput="this.value = this.value.replace(/[^a-zA-ZÀ-ú0-9\s,]/g, '')" 
-                    placeholder="Jogador1, Jogador2, Jogador3, ..., Jogador28"></textarea>
-                <p id="contador-jogadores" class="counter mt-1">0/28 jogadores</p>
+                <label for="modo_torneio">Formato do Torneio:</label>
+                <select id="modo_torneio" name="modo_torneio" class="form-control" required>
+                    <option value="">Selecione o formato</option>
+                    <option value="28j" {% if modo_torneio == '28j' %}selected{% endif %}>28 Jogadores (7 grupos de 4)</option>
+                    <option value="32j" {% if modo_torneio == '32j' %}selected{% endif %}>32 Jogadores (8 grupos de 4)</option>
+                </select>
             </div>
             
-            <button type="submit" class="btn btn-success sortear-btn">Sortear Grupos</button>
+            <div class="form-group">
+                <p id="instrucoes">Insira os jogadores separados por vírgula:</p>
+                <textarea id="jogadores" name="jogadores" class="form-control" required
+                    oninput="this.value = this.value.replace(/[^a-zA-ZÀ-ú0-9\s,]/g, '')" 
+                    placeholder="Jogador1, Jogador2, Jogador3, ..."></textarea>
+                <p id="contador-jogadores" class="counter">0 jogadores</p>
+            </div>
+            
+            <button type="submit" class="btn btn-success" id="btnSortear">Sortear Grupos</button>
         </form>
 
-        <!-- Mensagens de Erro -->
         {% if session.get('erro_validacao') %}
         <div class="erro mt-3">
             {{ session['erro_validacao'] }}
@@ -35,7 +44,7 @@
     <!-- Listagem de Grupos -->
     {% if grupos %}
     <div class="container">
-        <h2 class="text-center mt-4">Grupos Sorteados</h2>
+        <h2 class="text-center mt-4">Grupos Sorteados - {{ grupos|length }} Grupos</h2>
         
         {% for grupo in grupos %}
         <div class="grupo card mt-2">
@@ -79,7 +88,6 @@
         {% for grupo_idx, grupo_confrontos in enumerate(confrontos) %}
         <form method="POST" action="{{ url_for('salvar_grupo', grupo_idx=grupo_idx) }}" class="card mt-2">
             <h3>Grupo {{ grupo_idx + 1 }}</h3>
-            
             {% for confronto_idx, confronto in enumerate(grupo_confrontos) %}
             <div class="confronto">
                 <div class="confronto-jogadores">
@@ -97,7 +105,6 @@
                 </div>
             </div>
             {% endfor %}
-            
             <button type="submit" class="btn btn-primary mt-2">Salvar Grupo {{ grupo_idx + 1 }}</button>
         </form>
         {% endfor %}
@@ -112,17 +119,42 @@
         </button>
     </div>
     {% endif %}
-
-    <!-- JavaScript -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Validação do textarea de jogadores
-            const textareaJogadores = document.getElementById('jogadores');
-            const contadorJogadores = document.getElementById('contador-jogadores');
+            const modoSelect = document.getElementById('modo_torneio');
+            const instrucoes = document.getElementById('instrucoes');
+            const contador = document.getElementById('contador-jogadores');
+            const textarea = document.getElementById('jogadores');
+            const btnSortear = document.getElementById('btnSortear');
             
-            textareaJogadores.addEventListener('input', function() {
-                const input = this.value;
-                const nomes = input.split(',')
+            // Atualiza interface quando muda o modo
+            function atualizarInterface() {
+                const modo = modoSelect.value;
+                if (!modo) {
+                    instrucoes.textContent = "Selecione o formato do torneio primeiro";
+                    textarea.placeholder = "Selecione o formato acima";
+                    textarea.disabled = true;
+                    btnSortear.disabled = true;
+                    return;
+                }
+                
+                const numJogadores = modo === '28j' ? 28 : 32;
+                instrucoes.textContent = `Insira EXATAMENTE ${numJogadores} jogadores únicos separados por vírgula:`;
+                textarea.placeholder = `Jogador1, Jogador2, ..., Jogador${numJogadores}`;
+                textarea.disabled = false;
+                btnSortear.disabled = false;
+                
+                // Força a validação do textarea
+                textarea.dispatchEvent(new Event('input'));
+            }
+            
+            // Validação do textarea
+            textarea.addEventListener('input', function() {
+                const modo = modoSelect.value;
+                if (!modo) return;
+                
+                const numEsperado = modo === '28j' ? 28 : 32;
+                const nomes = this.value.split(',')
                     .map(nome => nome.trim())
                     .filter(nome => nome !== '' && nome.replace(/\s/g, '').length > 0);
                 
@@ -133,19 +165,27 @@
                 )];
                 
                 // Atualiza contador
-                contadorJogadores.textContent = `${nomes.length}/28 jogadores`;
+                contador.textContent = `${nomes.length}/${numEsperado} jogadores`;
                 
                 // Feedback visual
                 if (duplicados.length > 0) {
-                    contadorJogadores.innerHTML += ` <span style="color:var(--danger-color)">(Duplicados: ${duplicados.join(', ')})</span>`;
-                    contadorJogadores.style.color = 'var(--danger-color)';
+                    contador.innerHTML += ` <span style="color:var(--danger-color)">(Duplicados: ${duplicados.join(', ')})</span>`;
+                    contador.style.color = 'var(--danger-color)';
+                    btnSortear.disabled = true;
                 } else {
-                    contadorJogadores.style.color = 
-                        nomes.length === 28 ? 'var(--success-color)' : 
-                        nomes.length > 28 ? 'var(--danger-color)' : 'var(--warning-color)';
+                    contador.style.color = 
+                        nomes.length === numEsperado ? 'var(--success-color)' : 
+                        nomes.length > numEsperado ? 'var(--danger-color)' : 'var(--warning-color)';
+                    btnSortear.disabled = nomes.length !== numEsperado;
                 }
             });
-
+            
+            // Observa mudanças no seletor
+            modoSelect.addEventListener('change', atualizarInterface);
+            
+            // Inicializa a interface
+            atualizarInterface();
+            
             // Botão da fase eliminatória
             document.getElementById('btnAbrirEliminatoria')?.addEventListener('click', function() {
                 window.open(
@@ -153,13 +193,37 @@
                     '_blank',
                     'width=1000,height=700'
                 );
-            });        
+            });
+        });
 
-            // Validação dos inputs numéricos
-            document.querySelectorAll('input[type="number"]').forEach(input => {
-                input.addEventListener('change', function() {
-                    if(this.value < 0) this.value = 0;
-                    if(this.value > 100) this.value = 100;
+        // Solução definitiva para problemas de cache
+        document.addEventListener('DOMContentLoaded', function() {
+            // 1. Força recarregamento quando a página vem do cache
+            window.onpageshow = function(event) {
+                if (event.persisted) {
+                    window.location.reload();
+                }
+            };
+            
+            // 2. Adiciona timestamp a todos os formulários
+            const forms = document.querySelectorAll('form');
+            forms.forEach(form => {
+                const timestamp = Date.now();
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'nocache';
+                input.value = timestamp;
+                form.appendChild(input);
+            });
+            
+            // 3. Previne duplo clique em botões de submit
+            forms.forEach(form => {
+                form.addEventListener('submit', function() {
+                    const submitBtn = this.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = 'Salvando...';
+                    }
                 });
             });
         });
