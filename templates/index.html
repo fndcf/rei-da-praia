@@ -12,6 +12,8 @@
                     <option value="">Selecione o formato</option>
                     <option value="28j" {% if modo_torneio == '28j' %}selected{% endif %}>28 Jogadores (7 grupos de 4)</option>
                     <option value="32j" {% if modo_torneio == '32j' %}selected{% endif %}>32 Jogadores (8 grupos de 4)</option>
+                    <option value="24j" {% if modo_torneio == '24j' %}selected{% endif %}>24 Jogadores (6 grupos de 4)</option>
+
                 </select>
             </div>
             
@@ -125,6 +127,7 @@
         
         // Atualiza interface quando muda o modo
         function atualizarInterface() {
+            console.log("Modo selecionado:", modoSelect.value);
             const modo = modoSelect.value;
             if (!modo) {
                 instrucoes.textContent = "Selecione o formato do torneio primeiro";
@@ -134,7 +137,14 @@
                 return;
             }
             
-            const numJogadores = modo === '28j' ? 28 : 32;
+            let numJogadores;
+            if (modo === '24j') {
+                numJogadores = 24;
+            } else if (modo === '28j') {
+                numJogadores = 28;
+            } else {
+                numJogadores = 32;
+            }
             instrucoes.textContent = `Insira EXATAMENTE ${numJogadores} jogadores únicos separados por vírgula:`;
             textarea.placeholder = `Jogador1, Jogador2, ..., Jogador${numJogadores}`;
             textarea.disabled = false;
@@ -149,10 +159,27 @@
             const modo = modoSelect.value;
             if (!modo) return;
             
-            const numEsperado = modo === '28j' ? 28 : 32;
+            let numEsperado;
+            if (modo === '24j') {
+                numEsperado = 24;
+            } else if (modo === '28j') {
+                numEsperado = 28;
+            } else {
+                numEsperado = 32;
+            }
             const nomes = this.value.split(',')
                 .map(nome => nome.trim())
                 .filter(nome => nome !== '' && nome.replace(/\s/g, '').length > 0);
+
+                if (nomes.length === numEsperado) {
+                    this.classList.remove('is-invalid');
+                    this.classList.add('is-valid');
+                    btnSortear.disabled = false;
+                } else {
+                    this.classList.remove('is-valid');
+                    this.classList.add('is-invalid');
+                    btnSortear.disabled = true;
+                }
             
             // Verifica duplicados
             const nomesLower = nomes.map(nome => nome.toLowerCase());
@@ -190,16 +217,6 @@
                 'width=1000,height=700'
             );
         });
-    });
-    // 3. Previne duplo clique em botões de submit
-    forms.forEach(form => {
-            form.addEventListener('submit', function() {
-                const submitBtn = this.querySelector('button[type="submit"]');
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                    submitBtn.innerHTML = 'Salvando...';
-                }
-            });
     });
 </script>
 {% endblock %}

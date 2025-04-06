@@ -17,10 +17,14 @@ def criar_jogador(nome):
 def criar_grupos(jogadores, modo):
     """Divide os jogadores em grupos de 4"""
     random.shuffle(jogadores)
-    if modo == '28j':
+    
+    if modo == '24j':
+        return [jogadores[i:i+4] for i in range(0, 24, 4)]  # 6 grupos
+    elif modo == '28j':
         return [jogadores[i:i+4] for i in range(0, 28, 4)]  # 7 grupos
     else:  # 32j
         return [jogadores[i:i+4] for i in range(0, 32, 4)]  # 8 grupos
+
     
 def gerar_confrontos(grupo):
     """Gera os 3 confrontos do grupo"""
@@ -34,10 +38,18 @@ def gerar_confrontos(grupo):
 def sorteio():
     try:
         modo = request.form.get('modo_torneio', '28j')
-        nomes = [nome.strip() for nome in request.form['jogadores'].split(',') if nome.strip() and re.match(r'^[a-zA-ZÀ-ú0-9\s,]+$', nome.strip())]
+        nomes = [nome.strip() for nome in request.form['jogadores'].split(',') if nome.strip() and re.match(r'^[a-zA-ZÀ-ú0-9\s,]+$', nome.strip())]   
         
         # Validação baseada no modo selecionado
-        esperado = 28 if modo == '28j' else 32
+        if modo == '24j':
+            esperado = 24
+        elif modo == '28j':
+            esperado = 28
+        elif modo == '32j':
+            esperado = 32
+        else:
+            session['erro_validacao'] = f"Modo de torneio inválido: {modo}"
+            return redirect('/')
         if len(nomes) != esperado:
             session['erro_validacao'] = f"Jogadores incorretos! (Atual: {len(nomes)}, Esperado: {esperado})"
             return redirect('/')

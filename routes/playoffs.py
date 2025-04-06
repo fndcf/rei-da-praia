@@ -4,33 +4,30 @@ bp = Blueprint('playoffs', __name__)
 
 @bp.route('/fase_eliminatoria')
 def fase_eliminatoria():
-    # Verificação extra de segurança
-    if 'valores_salvos' not in session:
-        return redirect(url_for('main.index'))
-    
-    for grupo_idx in range(len(session['grupos'])):
-        for confronto_idx in range(3):
-            chave_a = f'grupo_{grupo_idx}_confronto_{confronto_idx}_duplaA_favor'
-            chave_b = f'grupo_{grupo_idx}_confronto_{confronto_idx}_duplaB_favor'
-            
-            if chave_a not in session['valores_salvos'] or chave_b not in session['valores_salvos']:
-                flash('Preencha todos os confrontos antes de acessar a fase eliminatória', 'error')
-                return redirect(url_for('main.index'))
-
+    modo = session.get('modo_torneio', request.form.get('modo', '28j'))
     if 'grupos' not in session:
         return redirect(url_for('main.index'))
-    
-    modo = session.get('modo_torneio', '28j')
     primeiros = sorted([grupo[0] for grupo in session['grupos'] if len(grupo) > 0], 
                       key=lambda x: (-x['vitorias'], -x['saldo_total']))
     segundos = sorted([grupo[1] for grupo in session['grupos'] if len(grupo) > 1],
-                     key=lambda x: (-x['vitorias'], -x['saldo_total']))
-
+                     key=lambda x: (-x['vitorias'], -x['saldo_total'])) 
+    
     # Inicializa o histórico de jogos
     historico_jogos = {}
 
     # Configuração baseada no modo
-    if modo == '28j':
+    if modo == '24j':
+        # 24 jogadores: 2 jogos nas quartas, 2 nas semis, final é o jogo 5
+        confrontos = [
+            {'timeA': [segundos[0], segundos[1]], 'timeB': [segundos[2], segundos[3]], 'jogo': 1},
+            {'timeA': [primeiros[4], primeiros[5]], 'timeB': [segundos[4], segundos[5]], 'jogo': 2}
+        ]
+        num_jogos_quartas = 2
+        num_jogos_semis = 2
+        jogo_final = 5
+        inicio_semis = 3
+
+    elif modo == '28j':
         # 28 jogadores: 3 jogos nas quartas, 2 nas semis, final é o jogo 6
         confrontos = [
             {'timeA': [primeiros[6], segundos[0]], 'timeB': [segundos[1], segundos[2]], 'jogo': 1},
@@ -41,6 +38,7 @@ def fase_eliminatoria():
         num_jogos_semis = 2
         jogo_final = 6
         inicio_semis = 4
+
     else:
         # 32 jogadores: 4 jogos nas quartas, 2 nas semis, final é o jogo 7
         confrontos = [
@@ -68,7 +66,15 @@ def fase_eliminatoria():
     # Verifica resultados para semi-finais
     semi_finais = []
     if all(f'eliminatoria_jogo{i}' in session for i in range(1, num_jogos_quartas + 1)):
-        if modo == '28j':
+        if modo == '24j':
+            vencedor_jogo1 = 'timeA' if session['eliminatoria_jogo1']['timeA'] > session['eliminatoria_jogo1']['timeB'] else 'timeB'
+            vencedor_jogo2 = 'timeA' if session['eliminatoria_jogo2']['timeA'] > session['eliminatoria_jogo2']['timeB'] else 'timeB'
+            
+            semi_finais = [
+                {'timeA': [primeiros[0], primeiros[1]], 'timeB': confrontos[0][vencedor_jogo1], 'jogo': 3},
+                {'timeA': [primeiros[2], primeiros[3]], 'timeB': confrontos[1][vencedor_jogo2], 'jogo': 4}
+            ]
+        elif modo == '28j':
             vencedor_jogo1 = 'timeA' if session['eliminatoria_jogo1']['timeA'] > session['eliminatoria_jogo1']['timeB'] else 'timeB'
             vencedor_jogo2 = 'timeA' if session['eliminatoria_jogo2']['timeA'] > session['eliminatoria_jogo2']['timeB'] else 'timeB'
             vencedor_jogo3 = 'timeA' if session['eliminatoria_jogo3']['timeA'] > session['eliminatoria_jogo3']['timeB'] else 'timeB'
@@ -102,7 +108,16 @@ def fase_eliminatoria():
     # Verifica resultados para final
     final = None
     if all(f'eliminatoria_jogo{i}' in session for i in range(inicio_semis, inicio_semis + num_jogos_semis)):
-        if modo == '28j':
+        if modo == '24j':
+            vencedor_jogo3 = 'timeA' if session['eliminatoria_jogo3']['timeA'] > session['eliminatoria_jogo3']['timeB'] else 'timeB'
+            vencedor_jogo4 = 'timeA' if session['eliminatoria_jogo4']['timeA'] > session['eliminatoria_jogo4']['timeB'] else 'timeB'
+            
+            final = {
+                'timeA': semi_finais[0][vencedor_jogo3],
+                'timeB': semi_finais[1][vencedor_jogo4],
+                'jogo': jogo_final
+            }
+        elif modo == '28j':
             vencedor_jogo4 = 'timeA' if session['eliminatoria_jogo4']['timeA'] > session['eliminatoria_jogo4']['timeB'] else 'timeB'
             vencedor_jogo5 = 'timeA' if session['eliminatoria_jogo5']['timeA'] > session['eliminatoria_jogo5']['timeB'] else 'timeB'
             
@@ -141,8 +156,13 @@ def fase_eliminatoria():
 
 @bp.route('/salvar_eliminatorias', methods=['POST'])
 def salvar_eliminatorias():
-    modo = session.get('modo_torneio', '28j')
-    num_jogos_quartas = 3 if modo == '28j' else 4
+    modo = session.get('modo_torneio', request.form.get('modo', '28j'))
+    if modo == '28j':
+        num_jogos_quartas = 3
+    elif modo == '24j':
+        num_jogos_quartas = 2
+    else:
+        num_jogos_quartas = 4
     try:
         # Processa os resultados
         for jogo in range(1, num_jogos_quartas + 1):
@@ -164,8 +184,13 @@ def salvar_eliminatorias():
     
 @bp.route('/salvar_semi_finais', methods=['POST'])
 def salvar_semi_finais():
-    modo = session.get('modo_torneio', '28j')
-    inicio_semis = 4 if modo == '28j' else 5
+    modo = request.form.get('modo')    
+    if modo == '28j':
+        inicio_semis = 4
+    elif modo == '24j':
+        inicio_semis = 3
+    else:
+        inicio_semis = 5
     try:
         for jogo in [inicio_semis, inicio_semis + 1]:
             campo_timeA = f"jogo_{jogo}_timeA"
@@ -185,8 +210,18 @@ def salvar_semi_finais():
     
 @bp.route('/gerar_final', methods=['POST'])
 def gerar_final():
-    modo = session.get('modo_torneio', '28j')
-    inicio_semis = 4 if modo == '28j' else 5
+    modo = request.form.get('modo')
+    print(f"Modo selecionado: {modo}")
+    print("Dados recebidos no POST:")
+    for key in request.form:
+        print(f"{key}: {request.form[key]}")
+        
+    if modo == '28j':
+        inicio_semis = 4
+    elif modo == '24j':
+        inicio_semis = 3
+    else:
+        inicio_semis = 5
     try:
         # Salva os resultados das semi-finais antes de gerar a final
         for jogo in [inicio_semis, inicio_semis + 1]:
@@ -207,8 +242,13 @@ def gerar_final():
 
 @bp.route('/salvar_final', methods=['POST'])
 def salvar_final():
-    modo = session.get('modo_torneio', '28j')
-    jogo_final = 6 if modo == '28j' else 7
+    modo = request.form.get('modo')
+    if modo == '28j':
+        jogo_final = 6
+    elif modo == '24j':
+        jogo_final = 5
+    else:
+        jogo_final = 7
     try:
         session[f'eliminatoria_jogo{jogo_final}'] = {
             'timeA': int(request.form.get(f'jogo_{jogo_final}_timeA', 0)),  # Corrigido

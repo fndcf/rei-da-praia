@@ -5,7 +5,15 @@
 {% block content %}
 <body>
     <div class="container">
-        <h1>Fase Eliminatória - {% if modo_torneio == '28j' %}28 Jogadores{% else %}32 Jogadores{% endif %}</h1>
+        <h1>Fase Eliminatória - 
+            {% if modo_torneio == '24j' %}
+                24 Jogadores
+            {% elif modo_torneio == '28j' %}
+                28 Jogadores
+            {% else %}
+                32 Jogadores
+            {% endif %}
+        </h1>
         
         <div class="tabela-container">
             <div class="tabela-colocacao card">
@@ -127,7 +135,16 @@
         <!-- Fase Eliminatória (Quartas) -->
         {% if confrontos and not semi_finais %}
         <section class="mt-4">
-            <h2>{% if modo_torneio == '28j' %}Quartas de Final (3 jogos){% else %}Quartas de Final (4 jogos){% endif %}</h2>
+            <h2>
+                {% if modo_torneio == '24j' %}
+                    Quartas de Final (2 jogos)
+                {% elif modo_torneio == '28j' %}
+                    Quartas de Final (3 jogos)
+                {% else %}
+                    Quartas de Final (4 jogos)
+                {% endif %}
+            </h2>
+            
             
             <form method="POST" action="{{ url_for('playoffs.salvar_eliminatorias') }}" class="card">
                 {% for jogo in confrontos %}
@@ -170,6 +187,8 @@
             <h2>Semi-finais (2 jogos)</h2>
             
             <form method="POST" action="{{ url_for('playoffs.gerar_final') }}" class="card">
+                <input type="hidden" name="modo" value="{{ modo_torneio }}">  <!-- ISSO É ESSENCIAL -->
+            
                 {% for jogo in semi_finais %}
                 <div class="confronto-eliminatorio confronto-semi">
                     <h3>Jogo {{ jogo.jogo }} - Semi-final</h3>
@@ -210,6 +229,7 @@
             <h2>Final</h2>
             
             <form method="POST" action="{{ url_for('playoffs.salvar_final') }}" class="card">
+                <input type="hidden" name="modo" value="{{ modo_torneio }}">
                 <div class="confronto-eliminatorio confronto-final">
                     <h3>Jogo {{ final.jogo }} - FINAL</h3>
                     <div class="confronto-jogadores">
@@ -293,16 +313,6 @@
             btn.disabled = false;
         }
     }
-    // 3. Previne duplo clique em botões de submit
-    forms.forEach(form => {
-            form.addEventListener('submit', function() {
-                const submitBtn = this.querySelector('button[type="submit"]');
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                    submitBtn.innerHTML = 'Salvando...';
-                }
-            });
-    });
     
 </script>
 {% endblock %}
