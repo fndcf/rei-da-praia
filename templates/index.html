@@ -1,19 +1,11 @@
-<!DOCTYPE html>
-<html lang="pt">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <title>Rei da Praia</title>
-    <link href="../static/style.css?v={{ timestamp }}" rel="stylesheet">
-</head>
+{% extends "base.html" %}
+
+{% block content %}
 <body>
     <div class="main-container">
         <h1 class="title">Rei da Praia</h1>
         
-        <form method="POST" action="/sorteio" id="formSorteio" class="card">
+        <form method="POST" action="{{ url_for('groups.sorteio') }}" id="formSorteio" class="card">
             <div class="form-group">
                 <label for="modo_torneio">Formato do Torneio:</label>
                 <select id="modo_torneio" name="modo_torneio" class="form-control" required>
@@ -52,11 +44,11 @@
             <table class="table">
                 <thead>
                     <tr>
-                        <th>Posição</th>
+                        <th>Pos</th>
                         <th>Jogador</th>
                         <th>Vitórias</th>
-                        <th>Saldo a Favor</th>
-                        <th>Saldo Contra</th>
+                        <th>Saldo+</th>
+                        <th>Saldo-</th>
                         <th>Saldo Total</th>
                     </tr>
                 </thead>
@@ -86,18 +78,18 @@
         <h2 class="text-center mt-4">Confrontos</h2>
         
         {% for grupo_idx, grupo_confrontos in enumerate(confrontos) %}
-        <form method="POST" action="{{ url_for('salvar_grupo', grupo_idx=grupo_idx) }}" class="card mt-2">
+        <form method="POST" action="{{ url_for('groups.salvar_grupo', grupo_idx=grupo_idx) }}" class="card mt-2">
             <h3>Grupo {{ grupo_idx + 1 }}</h3>
             {% for confronto_idx, confronto in enumerate(grupo_confrontos) %}
             <div class="confronto">
                 <div class="confronto-jogadores">
                     <span class="dupla">{{ confronto[0]['nome'] }} & {{ confronto[1]['nome'] }}</span>
-                    <input class="saldo-inputs-esq" type="number" 
+                    <input class="saldo-inputs-esq"  
                            name="grupo_{{ grupo_idx }}_confronto_{{ confronto_idx }}_duplaA_favor" 
                            value="{{ valores_salvos.get('grupo_{}_confronto_{}_duplaA_favor'.format(grupo_idx, confronto_idx), 0) }}" 
                            min="0" required>
                     <span class="vs">⚔️</span>
-                    <input class="saldo-inputs-dir" type="number" 
+                    <input class="saldo-inputs-dir"  
                            name="grupo_{{ grupo_idx }}_confronto_{{ confronto_idx }}_duplaB_favor" 
                            value="{{ valores_salvos.get('grupo_{}_confronto_{}_duplaB_favor'.format(grupo_idx, confronto_idx), 0) }}" 
                            min="0" required>
@@ -115,118 +107,99 @@
     {% if grupos %}
     <div class="container text-center mt-4">
         <button id="btnAbrirEliminatoria" class="btn btn-warning">
-            Abrir Fase Eliminatória
+            <span id="btn-text">Abrir Fase Eliminatória</span>
         </button>
     </div>
     {% endif %}
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const modoSelect = document.getElementById('modo_torneio');
-            const instrucoes = document.getElementById('instrucoes');
-            const contador = document.getElementById('contador-jogadores');
-            const textarea = document.getElementById('jogadores');
-            const btnSortear = document.getElementById('btnSortear');
-            
-            // Atualiza interface quando muda o modo
-            function atualizarInterface() {
-                const modo = modoSelect.value;
-                if (!modo) {
-                    instrucoes.textContent = "Selecione o formato do torneio primeiro";
-                    textarea.placeholder = "Selecione o formato acima";
-                    textarea.disabled = true;
-                    btnSortear.disabled = true;
-                    return;
-                }
-                
-                const numJogadores = modo === '28j' ? 28 : 32;
-                instrucoes.textContent = `Insira EXATAMENTE ${numJogadores} jogadores únicos separados por vírgula:`;
-                textarea.placeholder = `Jogador1, Jogador2, ..., Jogador${numJogadores}`;
-                textarea.disabled = false;
-                btnSortear.disabled = false;
-                
-                // Força a validação do textarea
-                textarea.dispatchEvent(new Event('input'));
+</body>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const modoSelect = document.getElementById('modo_torneio');
+        const instrucoes = document.getElementById('instrucoes');
+        const contador = document.getElementById('contador-jogadores');
+        const textarea = document.getElementById('jogadores');
+        const btnSortear = document.getElementById('btnSortear');
+        
+        // Atualiza interface quando muda o modo
+        function atualizarInterface() {
+            const modo = modoSelect.value;
+            if (!modo) {
+                instrucoes.textContent = "Selecione o formato do torneio primeiro";
+                textarea.placeholder = "Selecione o formato acima";
+                textarea.disabled = true;
+                btnSortear.disabled = true;
+                return;
             }
             
-            // Validação do textarea
-            textarea.addEventListener('input', function() {
-                const modo = modoSelect.value;
-                if (!modo) return;
-                
-                const numEsperado = modo === '28j' ? 28 : 32;
-                const nomes = this.value.split(',')
-                    .map(nome => nome.trim())
-                    .filter(nome => nome !== '' && nome.replace(/\s/g, '').length > 0);
-                
-                // Verifica duplicados
-                const nomesLower = nomes.map(nome => nome.toLowerCase());
-                const duplicados = [...new Set(
-                    nomesLower.filter((nome, index) => nomesLower.indexOf(nome) !== index)
-                )];
-                
-                // Atualiza contador
-                contador.textContent = `${nomes.length}/${numEsperado} jogadores`;
-                
-                // Feedback visual
-                if (duplicados.length > 0) {
-                    contador.innerHTML += ` <span style="color:var(--danger-color)">(Duplicados: ${duplicados.join(', ')})</span>`;
-                    contador.style.color = 'var(--danger-color)';
-                    btnSortear.disabled = true;
-                } else {
-                    contador.style.color = 
-                        nomes.length === numEsperado ? 'var(--success-color)' : 
-                        nomes.length > numEsperado ? 'var(--danger-color)' : 'var(--warning-color)';
-                    btnSortear.disabled = nomes.length !== numEsperado;
+            const numJogadores = modo === '28j' ? 28 : 32;
+            instrucoes.textContent = `Insira EXATAMENTE ${numJogadores} jogadores únicos separados por vírgula:`;
+            textarea.placeholder = `Jogador1, Jogador2, ..., Jogador${numJogadores}`;
+            textarea.disabled = false;
+            btnSortear.disabled = false;
+            
+            // Força a validação do textarea
+            textarea.dispatchEvent(new Event('input'));
+        }
+        
+        // Validação do textarea
+        textarea.addEventListener('input', function() {
+            const modo = modoSelect.value;
+            if (!modo) return;
+            
+            const numEsperado = modo === '28j' ? 28 : 32;
+            const nomes = this.value.split(',')
+                .map(nome => nome.trim())
+                .filter(nome => nome !== '' && nome.replace(/\s/g, '').length > 0);
+            
+            // Verifica duplicados
+            const nomesLower = nomes.map(nome => nome.toLowerCase());
+            const duplicados = [...new Set(
+                nomesLower.filter((nome, index) => nomesLower.indexOf(nome) !== index)
+            )];
+            
+            // Atualiza contador
+            contador.textContent = `${nomes.length}/${numEsperado} jogadores`;
+            
+            // Feedback visual
+            if (duplicados.length > 0) {
+                contador.innerHTML += ` <span style="color:var(--danger-color)">(Duplicados: ${duplicados.join(', ')})</span>`;
+                contador.style.color = 'var(--danger-color)';
+                btnSortear.disabled = true;
+            } else {
+                contador.style.color = 
+                    nomes.length === numEsperado ? 'var(--success-color)' : 
+                    nomes.length > numEsperado ? 'var(--danger-color)' : 'var(--warning-color)';
+                btnSortear.disabled = nomes.length !== numEsperado;
+            }
+        });
+        
+        // Observa mudanças no seletor
+        modoSelect.addEventListener('change', atualizarInterface);
+        
+        // Inicializa a interface
+        atualizarInterface();
+        
+        // Botão da fase eliminatória
+        document.getElementById('btnAbrirEliminatoria')?.addEventListener('click', function() {
+            window.open(
+                '{{ url_for("playoffs.fase_eliminatoria") }}',
+                '_blank',
+                'width=1000,height=700'
+            );
+        });
+    });
+    // 3. Previne duplo clique em botões de submit
+    forms.forEach(form => {
+            form.addEventListener('submit', function() {
+                const submitBtn = this.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = 'Salvando...';
                 }
             });
-            
-            // Observa mudanças no seletor
-            modoSelect.addEventListener('change', atualizarInterface);
-            
-            // Inicializa a interface
-            atualizarInterface();
-            
-            // Botão da fase eliminatória
-            document.getElementById('btnAbrirEliminatoria')?.addEventListener('click', function() {
-                window.open(
-                    '{{ url_for("fase_eliminatoria") }}',
-                    '_blank',
-                    'width=1000,height=700'
-                );
-            });
-        });
-
-        // Solução definitiva para problemas de cache
-        document.addEventListener('DOMContentLoaded', function() {
-            // 1. Força recarregamento quando a página vem do cache
-            window.onpageshow = function(event) {
-                if (event.persisted) {
-                    window.location.reload();
-                }
-            };
-            
-            // 2. Adiciona timestamp a todos os formulários
-            const forms = document.querySelectorAll('form');
-            forms.forEach(form => {
-                const timestamp = Date.now();
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'nocache';
-                input.value = timestamp;
-                form.appendChild(input);
-            });
-            
-            // 3. Previne duplo clique em botões de submit
-            forms.forEach(form => {
-                form.addEventListener('submit', function() {
-                    const submitBtn = this.querySelector('button[type="submit"]');
-                    if (submitBtn) {
-                        submitBtn.disabled = true;
-                        submitBtn.innerHTML = 'Salvando...';
-                    }
-                });
-            });
-        });
-    </script>
-</body>
-</html>
+    });
+</script>
+{% endblock %}

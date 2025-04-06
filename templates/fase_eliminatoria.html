@@ -1,14 +1,8 @@
-<!DOCTYPE html>
-<html lang="pt">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <title>Fase Eliminatória - Rei da Praia</title>
-    <link href="../static/style.css?v={{ timestamp }}" rel="stylesheet">
-</head>
+{% extends "base.html" %}
+
+{% block title %}Fase Eliminatória - Rei da Praia{% endblock %}
+
+{% block content %}
 <body>
     <div class="container">
         <h1>Fase Eliminatória - {% if modo_torneio == '28j' %}28 Jogadores{% else %}32 Jogadores{% endif %}</h1>
@@ -135,7 +129,7 @@
         <section class="mt-4">
             <h2>{% if modo_torneio == '28j' %}Quartas de Final (3 jogos){% else %}Quartas de Final (4 jogos){% endif %}</h2>
             
-            <form method="POST" action="/salvar_eliminatorias" class="card">
+            <form method="POST" action="{{ url_for('playoffs.salvar_eliminatorias') }}" class="card">
                 {% for jogo in confrontos %}
                 <div class="confronto-eliminatorio">
                     <h3>Jogo {{ jogo.jogo }}</h3>
@@ -143,16 +137,18 @@
                         <span class="dupla">
                             {{ jogo.timeA[0]['nome'] }} & {{ jogo.timeA[1]['nome'] }}
                         </span>
-                        <input type="number" 
+                        <input  
                                name="jogo_{{ jogo.jogo }}_timeA" 
                                value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeA', 0) }}" 
-                               min="0" 
+                               min="0"
+                               class="saldo-inputs-esq" 
                                required>
                         <span class="vs">⚔️</span>
-                        <input type="number" 
+                        <input  
                                name="jogo_{{ jogo.jogo }}_timeB" 
                                value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeB', 0) }}" 
                                min="0" 
+                               class="saldo-inputs-dir"
                                required>
                         <span class="dupla">
                             {{ jogo.timeB[0]['nome'] }} & {{ jogo.timeB[1]['nome'] }}
@@ -173,7 +169,7 @@
         <section class="mt-4">
             <h2>Semi-finais (2 jogos)</h2>
             
-            <form method="POST" action="/gerar_final" class="card">
+            <form method="POST" action="{{ url_for('playoffs.gerar_final') }}" class="card">
                 {% for jogo in semi_finais %}
                 <div class="confronto-eliminatorio confronto-semi">
                     <h3>Jogo {{ jogo.jogo }} - Semi-final</h3>
@@ -181,16 +177,18 @@
                         <span class="dupla">
                             {{ jogo.timeA[0]['nome'] }} & {{ jogo.timeA[1]['nome'] }}
                         </span>
-                        <input type="number" 
+                        <input  
                                name="jogo_{{ jogo.jogo }}_timeA" 
                                value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeA', 0) }}" 
                                min="0" 
+                               class="saldo-inputs-esq"
                                required>
                         <span class="vs vs-semi">⚔️</span>
-                        <input type="number" 
+                        <input  
                                name="jogo_{{ jogo.jogo }}_timeB" 
                                value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeB', 0) }}" 
                                min="0" 
+                               class="saldo-inputs-dir"
                                required>
                         <span class="dupla">
                             {{ jogo.timeB[0]['nome'] }} & {{ jogo.timeB[1]['nome'] }}
@@ -211,23 +209,25 @@
         <section class="mt-4">
             <h2>Final</h2>
             
-            <form method="POST" action="/salvar_final" class="card">
+            <form method="POST" action="{{ url_for('playoffs.salvar_final') }}" class="card">
                 <div class="confronto-eliminatorio confronto-final">
                     <h3>Jogo {{ final.jogo }} - FINAL</h3>
                     <div class="confronto-jogadores">
                         <span class="dupla">
                             {{ final.timeA[0]['nome'] }} & {{ final.timeA[1]['nome'] }}
                         </span>
-                        <input type="number" 
+                        <input  
                                name="jogo_{{ final.jogo }}_timeA" 
                                value="{{ session.get('eliminatoria_jogo' + final.jogo|string, {}).get('timeA', 0) }}" 
                                min="0" 
+                               class="saldo-inputs-esq"
                                required>
                         <span class="vs vs-final">🏆</span>
-                        <input type="number" 
+                        <input  
                                name="jogo_{{ final.jogo }}_timeB" 
                                value="{{ session.get('eliminatoria_jogo' + final.jogo|string, {}).get('timeB', 0) }}" 
                                min="0" 
+                               class="saldo-inputs-dir"
                                required>
                         <span class="dupla">
                             {{ final.timeB[0]['nome'] }} & {{ final.timeB[1]['nome'] }}
@@ -248,79 +248,61 @@
             </button>
         </div>
     </div>
-    
-    <script>
-        // Foca a janela principal ao abrir esta
-        if(window.opener) {
-            window.opener.focus();
-        }
-        
-        // Validação dos inputs
-        document.querySelectorAll('input[type="number"]').forEach(input => {
-            input.addEventListener('change', function() {
-                if(this.value < 0) this.value = 0;
-                if(this.value > 100) this.value = 100;
-            });
-        });
-
-        async function resetarEliminatorias() {
-            if (!confirm('Tem certeza que deseja resetar TODOS os resultados da fase eliminatória?')) {
-                return;
-            }
-
-            const btn = document.querySelector('.btn-primary');
-            const originalText = btn.textContent;
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner">⌛</span> Processando...';
-
-            try {
-                const response = await fetch('/resetar_eliminatorias');
-                const data = await response.json();
-                
-                if (data.success) {
-                    window.close();
-                } else {
-                    alert('Erro ao resetar: ' + (data.error || 'Erro desconhecido'));
-                }
-            } catch (error) {
-                alert('Falha na comunicação com o servidor');
-                console.error('Erro:', error);
-            } finally {
-                btn.textContent = originalText;
-                btn.disabled = false;
-            }
-        }
-        // Solução definitiva para problemas de cache
-        document.addEventListener('DOMContentLoaded', function() {
-            // 1. Força recarregamento quando a página vem do cache
-            window.onpageshow = function(event) {
-                if (event.persisted) {
-                    window.location.reload();
-                }
-            };
-            
-            // 2. Adiciona timestamp a todos os formulários
-            const forms = document.querySelectorAll('form');
-            forms.forEach(form => {
-                const timestamp = Date.now();
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'nocache';
-                input.value = timestamp;
-                form.appendChild(input);
-            });
-            
-            // 3. Previne duplo clique em botões de submit
-            forms.forEach(form => {
-                form.addEventListener('submit', function() {
-                    const submitBtn = this.querySelector('button[type="submit"]');
-                    if (submitBtn) {
-                        submitBtn.disabled = true;
-                        submitBtn.innerHTML = 'Salvando...';
-                    }
-                });
-            });
-        });
-    </script>
 </body>
-</html>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Foca a janela principal ao abrir esta
+    if(window.opener) {
+        window.opener.focus();
+    }
+    
+    // Validação dos inputs
+    document.querySelectorAll('input[type="number"]').forEach(input => {
+        input.addEventListener('change', function() {
+            if(this.value < 0) this.value = 0;
+            if(this.value > 100) this.value = 100;
+        });
+    });
+
+    async function resetarEliminatorias() {
+        if (!confirm('Tem certeza que deseja resetar TODOS os resultados da fase eliminatória?')) {
+            return;
+        }
+
+        const btn = document.querySelector('.btn-primary');
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner">⌛</span> Processando...';
+
+        try {
+            const response = await fetch('/resetar_eliminatorias');
+            const data = await response.json();
+            
+            if (data.success) {
+                window.close();
+            } else {
+                alert('Erro ao resetar: ' + (data.error || 'Erro desconhecido'));
+            }
+        } catch (error) {
+            alert('Falha na comunicação com o servidor');
+            console.error('Erro:', error);
+        } finally {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    }
+    // 3. Previne duplo clique em botões de submit
+    forms.forEach(form => {
+            form.addEventListener('submit', function() {
+                const submitBtn = this.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = 'Salvando...';
+                }
+            });
+    });
+    
+</script>
+{% endblock %}
