@@ -192,7 +192,7 @@
         <section class="mt-4">
             <h2>Semi-finais (2 jogos)</h2>
             
-            <form method="POST" action="{{ url_for('playoffs.gerar_final') }}" class="card">
+            <form method="POST" action="{{ url_for('playoffs.salvar_semi_finais') }}" class="card">
                 <input type="hidden" name="modo" value="{{ modo_torneio }}">  <!-- ISSO É ESSENCIAL -->
             
                 {% for jogo in semi_finais %}
