@@ -18,7 +18,9 @@ def criar_grupos(jogadores, modo):
     """Divide os jogadores em grupos de 4"""
     random.shuffle(jogadores)
     
-    if modo == '24j':
+    if modo == '20j':
+        return [jogadores[i:i+4] for i in range(0, 20, 4)]  # 5 grupos
+    elif modo == '24j':
         return [jogadores[i:i+4] for i in range(0, 24, 4)]  # 6 grupos
     elif modo == '28j':
         return [jogadores[i:i+4] for i in range(0, 28, 4)]  # 7 grupos
@@ -41,7 +43,9 @@ def sorteio():
         nomes = [nome.strip() for nome in request.form['jogadores'].split(',') if nome.strip() and re.match(r'^[a-zA-ZÀ-ú0-9\s,]+$', nome.strip())]   
         
         # Validação baseada no modo selecionado
-        if modo == '24j':
+        if modo == '20j':
+            esperado = 20
+        elif modo == '24j':
             esperado = 24
         elif modo == '28j':
             esperado = 28

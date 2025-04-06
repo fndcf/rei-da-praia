@@ -391,3 +391,60 @@
       margin: 5px 0;
     }
   }
+
+  .saldo-inputs-esq, .saldo-inputs-dir {
+    background-color: #fff8e1; /* amarelo claro de fundo */
+  }
+
+  .saldo-inputs-esq:placeholder-shown, 
+  .saldo-inputs-dir:placeholder-shown {
+      color: #d32f2f; /* vermelho para placeholder */
+      font-weight: bold;
+  }
+
+  .confronto-jogadores {
+      position: relative;
+  }
+
+  .confronto-jogadores::after {
+      content: "⚠️";
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #d32f2f;
+      font-size: 0.8em;
+      opacity: 0.6;
+      display: none;
+  }
+
+  .confronto-jogadores:has(input:placeholder-shown)::after {
+      display: block;
+  }
+
+  .campo-vazio {
+    border: 2px solid #d32f2f !important;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { background-color: #fff8e1; }
+    50% { background-color: #ffcdd2; }
+    100% { background-color: #fff8e1; }
+}
+
+input:placeholder-shown {
+    color: #d32f2f;
+    font-weight: bold;
+}
+/* Esconde as setas nos inputs number */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Para Firefox */
+input[type="number"] {
+    -moz-appearance: textfield;
+}

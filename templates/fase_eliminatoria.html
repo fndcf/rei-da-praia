@@ -6,7 +6,9 @@
 <body>
     <div class="container">
         <h1>Fase Eliminatória - 
-            {% if modo_torneio == '24j' %}
+            {% if modo_torneio == '20j' %}
+                20 Jogadores
+            {% elif modo_torneio == '24j' %}
                 24 Jogadores
             {% elif modo_torneio == '28j' %}
                 28 Jogadores
@@ -136,7 +138,9 @@
         {% if confrontos and not semi_finais %}
         <section class="mt-4">
             <h2>
-                {% if modo_torneio == '24j' %}
+                {% if modo_torneio == '20j' %}
+                    Quartas de Final (1 jogo)
+                {% elif modo_torneio == '24j' %}
                     Quartas de Final (2 jogos)
                 {% elif modo_torneio == '28j' %}
                     Quartas de Final (3 jogos)
@@ -154,19 +158,21 @@
                         <span class="dupla">
                             {{ jogo.timeA[0]['nome'] }} & {{ jogo.timeA[1]['nome'] }}
                         </span>
-                        <input  
+                        <input type="number" 
                                name="jogo_{{ jogo.jogo }}_timeA" 
-                               value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeA', 0) }}" 
+                               value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeA', '') }}" 
                                min="0"
                                class="saldo-inputs-esq" 
-                               required>
+                               required
+                               oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                         <span class="vs">⚔️</span>
-                        <input  
+                        <input type="number" 
                                name="jogo_{{ jogo.jogo }}_timeB" 
-                               value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeB', 0) }}" 
+                               value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeB', '') }}" 
                                min="0" 
                                class="saldo-inputs-dir"
-                               required>
+                               required
+                               oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                         <span class="dupla">
                             {{ jogo.timeB[0]['nome'] }} & {{ jogo.timeB[1]['nome'] }}
                         </span>
@@ -174,7 +180,7 @@
                 </div>
                 {% endfor %}
                 
-                <button type="submit" class="btn btn-warning mt-3">
+                <button id= "btnEliminatoria" type="submit" class="btn btn-warning mt-3">
                     Gerar Semi-finais
                 </button>
             </form>
@@ -196,19 +202,21 @@
                         <span class="dupla">
                             {{ jogo.timeA[0]['nome'] }} & {{ jogo.timeA[1]['nome'] }}
                         </span>
-                        <input  
+                        <input type="number"  
                                name="jogo_{{ jogo.jogo }}_timeA" 
-                               value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeA', 0) }}" 
+                               value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeA', '') }}" 
                                min="0" 
                                class="saldo-inputs-esq"
-                               required>
+                               required
+                               oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                         <span class="vs vs-semi">⚔️</span>
-                        <input  
+                        <input type="number"  
                                name="jogo_{{ jogo.jogo }}_timeB" 
-                               value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeB', 0) }}" 
+                               value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeB', '') }}" 
                                min="0" 
                                class="saldo-inputs-dir"
-                               required>
+                               required
+                               oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                         <span class="dupla">
                             {{ jogo.timeB[0]['nome'] }} & {{ jogo.timeB[1]['nome'] }}
                         </span>
@@ -216,7 +224,7 @@
                 </div>
                 {% endfor %}
                 
-                <button type="submit" class="btn btn-info mt-3">
+                <button id= "btnEliminatoria" type="submit" class="btn btn-info mt-3">
                     Gerar Final
                 </button>
             </form>
@@ -236,19 +244,21 @@
                         <span class="dupla">
                             {{ final.timeA[0]['nome'] }} & {{ final.timeA[1]['nome'] }}
                         </span>
-                        <input  
+                        <input type="number" 
                                name="jogo_{{ final.jogo }}_timeA" 
-                               value="{{ session.get('eliminatoria_jogo' + final.jogo|string, {}).get('timeA', 0) }}" 
+                               value="{{ session.get('eliminatoria_jogo' + final.jogo|string, {}).get('timeA', '') }}" 
                                min="0" 
                                class="saldo-inputs-esq"
-                               required>
+                               required
+                               oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                         <span class="vs vs-final">🏆</span>
-                        <input  
+                        <input type="number"  
                                name="jogo_{{ final.jogo }}_timeB" 
-                               value="{{ session.get('eliminatoria_jogo' + final.jogo|string, {}).get('timeB', 0) }}" 
+                               value="{{ session.get('eliminatoria_jogo' + final.jogo|string, {}).get('timeB', '') }}" 
                                min="0" 
                                class="saldo-inputs-dir"
-                               required>
+                               required
+                               oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                         <span class="dupla">
                             {{ final.timeB[0]['nome'] }} & {{ final.timeB[1]['nome'] }}
                         </span>
@@ -285,6 +295,30 @@
             if(this.value > 100) this.value = 100;
         });
     });
+
+    // Adiciona verificação ao botão de abrir eliminatória
+    document.getElementById('btnEliminatoria')?.addEventListener('click', function(e) {
+        const inputsVazios = Array.from(document.querySelectorAll('.saldo-inputs-esq, .saldo-inputs-dir')).filter(input => input.value.trim() === '');
+            if (inputsVazios.length > 0) {
+                e.preventDefault();
+                
+                // Destacar campos vazios
+                inputsVazios.forEach(input => {
+                    input.classList.add('campo-vazio');
+                    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+                // Focar no primeiro campo vazio
+                inputsVazios[0]?.focus();
+
+                // Alert mais informativo
+                if (!confirm(`⚠️ Existem ${inputsVazios.length} resultados não preenchidos. Você deve preencher todos os resultados antes de avançar. Deseja rolar para o primeiro campo vazio?`)) {
+                    return;
+                }
+            }
+
+            // Se chegou aqui, todos estão preenchidos - enviar formulário
+            this.form.submit();
+        });
 
     async function resetarEliminatorias() {
         if (!confirm('Tem certeza que deseja resetar TODOS os resultados da fase eliminatória?')) {

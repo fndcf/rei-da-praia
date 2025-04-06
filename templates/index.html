@@ -10,9 +10,10 @@
                 <label for="modo_torneio">Formato do Torneio:</label>
                 <select id="modo_torneio" name="modo_torneio" class="form-control" required>
                     <option value="">Selecione o formato</option>
-                    <option value="28j" {% if modo_torneio == '28j' %}selected{% endif %}>28 Jogadores (7 grupos de 4)</option>
-                    <option value="32j" {% if modo_torneio == '32j' %}selected{% endif %}>32 Jogadores (8 grupos de 4)</option>
+                    <option value="20j" {% if modo_torneio == '20j' %}selected{% endif %}>20 Jogadores (5 grupos de 4)</option>
                     <option value="24j" {% if modo_torneio == '24j' %}selected{% endif %}>24 Jogadores (6 grupos de 4)</option>
+                    <option value="28j" {% if modo_torneio == '28j' %}selected{% endif %}>28 Jogadores (7 grupos de 4)</option>
+                    <option value="32j" {% if modo_torneio == '32j' %}selected{% endif %}>32 Jogadores (8 grupos de 4)</option>                   
 
                 </select>
             </div>
@@ -88,13 +89,15 @@
                     <span class="dupla">{{ confronto[0]['nome'] }} & {{ confronto[1]['nome'] }}</span>
                     <input class="saldo-inputs-esq"  
                            name="grupo_{{ grupo_idx }}_confronto_{{ confronto_idx }}_duplaA_favor" 
-                           value="{{ valores_salvos.get('grupo_{}_confronto_{}_duplaA_favor'.format(grupo_idx, confronto_idx), 0) }}" 
-                           min="0" required>
+                           value="{{ valores_salvos.get('grupo_{}_confronto_{}_duplaA_favor'.format(grupo_idx, confronto_idx), '') }}" 
+                           min="0" required
+                           oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                     <span class="vs">⚔️</span>
                     <input class="saldo-inputs-dir"  
                            name="grupo_{{ grupo_idx }}_confronto_{{ confronto_idx }}_duplaB_favor" 
-                           value="{{ valores_salvos.get('grupo_{}_confronto_{}_duplaB_favor'.format(grupo_idx, confronto_idx), 0) }}" 
-                           min="0" required>
+                           value="{{ valores_salvos.get('grupo_{}_confronto_{}_duplaB_favor'.format(grupo_idx, confronto_idx), '') }}" 
+                           min="0" required
+                           oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                     <span class="dupla">{{ confronto[2]['nome'] }} & {{ confronto[3]['nome'] }}</span>
                 </div>
             </div>
@@ -124,7 +127,7 @@
         const contador = document.getElementById('contador-jogadores');
         const textarea = document.getElementById('jogadores');
         const btnSortear = document.getElementById('btnSortear');
-        
+
         // Atualiza interface quando muda o modo
         function atualizarInterface() {
             console.log("Modo selecionado:", modoSelect.value);
@@ -138,7 +141,9 @@
             }
             
             let numJogadores;
-            if (modo === '24j') {
+            if (modo === '20j') {
+                numJogadores = 20;
+            } else if (modo === '24j') {
                 numJogadores = 24;
             } else if (modo === '28j') {
                 numJogadores = 28;
@@ -160,9 +165,11 @@
             if (!modo) return;
             
             let numEsperado;
-            if (modo === '24j') {
+            if (modo === '20j') {
+                numEsperado = 20;
+            }  else if (modo === '24j') {
                 numEsperado = 24;
-            } else if (modo === '28j') {
+            }  else if (modo === '28j') {
                 numEsperado = 28;
             } else {
                 numEsperado = 32;
@@ -208,15 +215,36 @@
         
         // Inicializa a interface
         atualizarInterface();
-        
-        // Botão da fase eliminatória
-        document.getElementById('btnAbrirEliminatoria')?.addEventListener('click', function() {
-            window.open(
-                '{{ url_for("playoffs.fase_eliminatoria") }}',
-                '_blank',
-                'width=1000,height=700'
-            );
+
+        // Adiciona verificação ao botão de abrir eliminatória
+        document.getElementById('btnAbrirEliminatoria')?.addEventListener('click', function(e) {
+            const inputsVazios = document.querySelectorAll('.saldo-inputs-esq[value=""], .saldo-inputs-dir[value=""]');
+            if (inputsVazios.length > 0) {
+                e.preventDefault();
+                
+                // Destacar campos vazios
+                inputsVazios.forEach(input => {
+                    input.classList.add('campo-vazio');
+                    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+                // Focar no primeiro campo vazio
+                inputsVazios[0]?.focus();
+
+                // Alert mais informativo
+                if (!confirm(`⚠️ Existem ${inputsVazios.length} resultados não preenchidos. Você deve preencher todos os resultados antes de avançar para a fase eliminatória. Deseja rolar para o primeiro campo vazio?`)) {
+                    return;
+                }
+            } else {
+                // Todos preenchidos, pode abrir normalmente
+                window.open(
+                    '{{ url_for("playoffs.fase_eliminatoria") }}',
+                    '_blank',
+                    'width=1000,height=700'
+                );
+            }
         });
+
+
     });
 </script>
 {% endblock %}

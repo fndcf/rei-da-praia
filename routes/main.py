@@ -17,7 +17,7 @@ def index():
     session.setdefault('valores_salvos', {})
     
     # Configurações padrão para cada modo
-    modos_validos = ['24j', '28j', '32j']
+    modos_validos = ['20j', '24j', '28j', '32j']
     modo_atual = session.get('modo_torneio', '28j')
     
     # Garante que o modo atual é válido
@@ -43,6 +43,7 @@ def index():
         modo_torneio=modo_atual,
         erro_validacao=erro_validacao,
         modos_disponiveis=[
+            {'value': '20j', 'text': '20 Jogadores (5 grupos de 4)'},
             {'value': '24j', 'text': '24 Jogadores (6 grupos de 4)'},
             {'value': '28j', 'text': '28 Jogadores (7 grupos de 4)'},
             {'value': '32j', 'text': '32 Jogadores (8 grupos de 4)'}
