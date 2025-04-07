@@ -20,7 +20,12 @@ def inject_enumerate():
     return dict(enumerate=enumerate)
 
 @bp.route('/')
-def index():
+def home():
+    log_route_access('home')
+    return render_template('home.html')
+
+@bp.route('/novo-torneio')
+def novo_torneio():
     try:
         # Inicialização de sessão
         session.setdefault('valores_salvos', {})
@@ -36,7 +41,7 @@ def index():
             session['modo_torneio'] = modo_atual
 
         # Log de acesso à rota
-        log_route_access('index')
+        log_route_access('novo-torneio')
         
         # Atualização de jogadores
         if 'jogadores' in session:
@@ -60,13 +65,13 @@ def index():
 
         # Log antes do render
         current_app.logger.debug(
-            f"Renderizando index | "
+            f"Renderizando novo-torneio | "
             f"Grupos: {len(session.get('grupos', []))} | "
             f"Confrontos: {len(session.get('confrontos', []))}"
         )
         
         return render_template(
-            'index.html',
+            'sorteio-grupos.html',
             grupos=session.get('grupos', []),
             confrontos=session.get('confrontos', []),
             valores_salvos=session.get('valores_salvos', {}),

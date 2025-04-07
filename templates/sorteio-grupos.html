@@ -7,7 +7,7 @@
         
         <form method="POST" action="{{ url_for('groups.sorteio') }}" id="formSorteio" class="card">
             <div class="form-group">
-                <label for="modo_torneio">Formato do Torneio:</label>
+                <label for="modo_torneio" class="form-text">Formato do Torneio:</label>
                 <select id="modo_torneio" name="modo_torneio" class="form-control" required>
                     <option value="">Selecione o formato</option>
                     <option value="20j" {% if modo_torneio == '20j' %}selected{% endif %}>20 Jogadores (5 grupos de 4)</option>
@@ -24,8 +24,8 @@
                     oninput="this.value = this.value.replace(/[^a-zA-ZÀ-ú0-9\s,]/g, '')" 
                     placeholder="Jogador1, Jogador2, Jogador3, ..."></textarea>
                 <p id="contador-jogadores" class="counter">0 jogadores</p>
-                <label for="nome_torneio">Nome do Torneio:</label>
-                <input type="text" id="nome_torneio" name="nome_torneio" required>  
+                <label for="nome_torneio" class="form-text">Nome do Torneio:</label>
+                <input type="text" id="nome_torneio" name="nome_torneio" class="form-control" required>  
             </div>
               
             <button type="submit" class="btn btn-success" id="btnSortear">Sortear Grupos</button>
@@ -114,7 +114,7 @@
 
         <!-- Botão Salvar Todos os Grupos -->
         <div class="text-center mb-3">
-            <button type="button" id="btnSalvarTodos" class="btn btn-primary btn-lg">Salvar Todos os Grupos</button>
+            <button type="button" id="btnSalvarTodos" class="btn btn-primary btn-lg">Salvar Confrontos (Parciais ou Completos)</button>
         </div>
 
     </div>
@@ -376,6 +376,40 @@
 
     // Lógica para Salvar Todos os Grupos
     document.getElementById('btnSalvarTodos')?.addEventListener('click', function() {
+        // Validar confrontos: esquerda e direita devem ser preenchidos juntos
+        const inputsEsq = document.querySelectorAll('.saldo-inputs-esq');
+        const inputsDir = document.querySelectorAll('.saldo-inputs-dir');
+
+        const errosConfronto = [];
+        let temConfrontoPreenchido = false;
+
+        for (let i = 0; i < inputsEsq.length; i++) {
+            const valorEsq = inputsEsq[i].value.trim();
+            const valorDir = inputsDir[i].value.trim();
+
+            const preenchidoEsq = valorEsq !== "";
+            const preenchidoDir = valorDir !== "";
+
+            if (preenchidoEsq && preenchidoDir) {
+                temConfrontoPreenchido = true; // pelo menos um par preenchido corretamente
+            } else if (preenchidoEsq || preenchidoDir) {
+                errosConfronto.push(i + 1); // erro: preenchido só um lado
+            }
+        }
+
+        if (errosConfronto.length > 0) {
+            let mensagem = '⚠️ Preencha os dois lados (esquerdo e direito) para os seguintes confrontos:\n\n';
+            errosConfronto.forEach(num => {
+                mensagem += `- Confronto ${num}\n`;
+            });
+            alert(mensagem);
+            return;
+        }
+
+        if (!temConfrontoPreenchido) {
+            alert("⚠️ Nenhum confronto foi preenchido. Por favor, preencha pelo menos um confronto completo antes de salvar.");
+            return;
+        }
         // Verificar se há empates
         const empates = validarSemEmpates();
         if (empates.length > 0) {
@@ -395,21 +429,6 @@
                 primeiroInputComErro.focus();
             }
             return;
-        }
-        
-        // Verificar se todos os campos estão preenchidos
-        const inputsVazios = document.querySelectorAll('.saldo-inputs-esq[value=""], .saldo-inputs-dir[value=""]');
-        if (inputsVazios.length > 0) {
-            if (!confirm(`⚠️ Existem ${inputsVazios.length} resultados não preenchidos. Deseja salvar assim mesmo?`)) {
-                // Destacar campos vazios
-                inputsVazios.forEach(input => {
-                    input.classList.add('campo-vazio');
-                });
-                // Focar no primeiro campo vazio
-                inputsVazios[0]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                inputsVazios[0]?.focus();
-                return;
-            }
         }
         
         // Capturar todos os inputs de todos os grupos

@@ -2,7 +2,7 @@ from flask import Blueprint, request, redirect, url_for, session, current_app
 import random
 import re
 from datetime import datetime
-from database.models import Jogador, Torneio
+from database.models import Jogador, Torneio, Confronto
 from database.db import db
 
 
@@ -62,7 +62,7 @@ def sorteio():
         torneio_existente = Torneio.query.filter_by(nome=nome_torneio).order_by(Torneio.id.desc()).first()
         if torneio_existente and torneio_existente.finalizado:
             session['erro_validacao'] = "Este torneio já foi finalizado. Crie um novo com outro nome."
-            return redirect('/')
+            return redirect(url_for('main.home'))
         
         # Validação e processamento de nomes
         nomes = [nome.strip() for nome in request.form['jogadores'].split(',') 
@@ -77,7 +77,7 @@ def sorteio():
             error_msg = f"Jogadores incorretos! Esperado: {expected_players}, Recebido: {len(nomes)}"
             current_app.logger.error(error_msg)
             session['erro_validacao'] = error_msg
-            return redirect('/')
+            return redirect(url_for('main.novo_torneio'))
         
         # Cria novo torneio
         novo_torneio = Torneio(nome=nome_torneio)
@@ -99,6 +99,7 @@ def sorteio():
             'jogadores': {
                 nome: {
                     'nome': jogador.nome,
+                    'id': jogador.id,  # Adicionamos o ID para referência
                     'vitorias': jogador.vitorias,
                     'saldo_a_favor': jogador.saldo_a_favor,
                     'saldo_contra': jogador.saldo_contra,
@@ -111,21 +112,42 @@ def sorteio():
         })
         
         grupos_nomes = criar_grupos(list(nomes), modo)
-        for grupo_nomes in grupos_nomes:
+        for grupo_idx, grupo_nomes in enumerate(grupos_nomes):
             grupo = [session['jogadores'][nome] for nome in grupo_nomes]
             session['grupos'].append(grupo)
-            session['confrontos'].append(gerar_confrontos(grupo))
+            confrontos_grupo = gerar_confrontos(grupo)
+            session['confrontos'].append(confrontos_grupo)
+            
+            # Salvar confrontos no banco
+            for confronto_idx, confronto in enumerate(confrontos_grupo):
+                # Criando o confronto no banco
+                novo_confronto = Confronto(
+                    torneio_id=novo_torneio.id,
+                    grupo_idx=grupo_idx,
+                    confronto_idx=confronto_idx,
+                    jogador_a1_id=session['jogadores'][confronto[0]['nome']]['id'],
+                    jogador_a2_id=session['jogadores'][confronto[1]['nome']]['id'],
+                    jogador_b1_id=session['jogadores'][confronto[2]['nome']]['id'],
+                    jogador_b2_id=session['jogadores'][confronto[3]['nome']]['id']
+                )
+                db.session.add(novo_confronto)
+                log_action("confronto_created", 
+                          f"Confronto DB: G{grupo_idx+1}-C{confronto_idx+1} - "
+                          f"{confronto[0]['nome']}&{confronto[1]['nome']} x "
+                          f"{confronto[2]['nome']}&{confronto[3]['nome']}")
+        
+        db.session.commit()
         
         log_action("tournament_created", 
                   f"Torneio criado com sucesso - {len(grupos_nomes)} grupos")
         session.pop('erro_validacao', None)
-        return redirect('/')
+        return redirect(url_for('main.novo_torneio'))
     
     except Exception as e:
         error_msg = f"Erro no sorteio: {str(e)}"
         current_app.logger.error(error_msg, exc_info=True)
         session['erro_validacao'] = error_msg
-        return redirect('/')
+        return redirect(url_for('main.novo_torneio'))
     
 @bp.route('/salvar_grupo/<int:grupo_idx>', methods=['POST'])
 def salvar_grupo(grupo_idx):
@@ -140,7 +162,7 @@ def salvar_grupo(grupo_idx):
         for key, value in request.form.items():
             if key.startswith(f'grupo_{grupo_idx}_'):
                 session['valores_salvos'][key] = value
-                if not value.isdigit():
+                if not value.isdigit() and value:
                     current_app.logger.warning(f"Valor inválido no campo {key}: {value}")
 
         # Reset estatísticas
@@ -159,8 +181,8 @@ def salvar_grupo(grupo_idx):
             campo_B = f"grupo_{grupo_idx}_confronto_{confronto_idx}_duplaB_favor"
 
             try:
-                saldoA = int(session['valores_salvos'].get(campo_A, 0))
-                saldoB = int(session['valores_salvos'].get(campo_B, 0))
+                saldoA = int(session['valores_salvos'].get(campo_A, 0)) if session['valores_salvos'].get(campo_A, '') else 0
+                saldoB = int(session['valores_salvos'].get(campo_B, 0)) if session['valores_salvos'].get(campo_B, '') else 0
                 
                 # Atualiza estatísticas para cada jogador
                 jogadores = {
@@ -181,6 +203,38 @@ def salvar_grupo(grupo_idx):
                     jogador['saldo_contra'] += saldoA
                     if saldoB > saldoA:
                         jogador['vitorias'] += 1
+
+                # Atualiza o confronto no banco de dados
+                torneio_id = session.get('torneio_id')
+                confronto_db = Confronto.query.filter_by(
+                    torneio_id=torneio_id, 
+                    grupo_idx=grupo_idx, 
+                    confronto_idx=confronto_idx
+                ).first()
+                
+                if confronto_db:
+                    # Se o confronto já existe, atualize os resultados
+                    confronto_db.pontos_dupla_a = saldoA
+                    confronto_db.pontos_dupla_b = saldoB
+                    log_action("confronto_updated", 
+                              f"Confronto DB atualizado: G{grupo_idx+1}-C{confronto_idx+1} - "
+                              f"Placar: {saldoA} x {saldoB}")
+                else:
+                    # Se o confronto não existe (não deveria acontecer), crie-o
+                    novo_confronto = Confronto(
+                        torneio_id=torneio_id,
+                        grupo_idx=grupo_idx,
+                        confronto_idx=confronto_idx,
+                        jogador_a1_id=session['jogadores'][confronto[0]['nome']]['id'],
+                        jogador_a2_id=session['jogadores'][confronto[1]['nome']]['id'],
+                        jogador_b1_id=session['jogadores'][confronto[2]['nome']]['id'],
+                        jogador_b2_id=session['jogadores'][confronto[3]['nome']]['id'],
+                        pontos_dupla_a=saldoA,
+                        pontos_dupla_b=saldoB
+                    )
+                    db.session.add(novo_confronto)
+                    log_action("confronto_created_late", 
+                              f"Confronto DB criado tardiamente: G{grupo_idx+1}-C{confronto_idx+1}")
             
             except (KeyError, ValueError) as e:
                 current_app.logger.error(f"Erro processando confronto {confronto_idx}: {str(e)}")
@@ -202,23 +256,28 @@ def salvar_grupo(grupo_idx):
         # Atualiza o banco com os dados salvos
         for nome, dados in session['jogadores'].items():
             dados['saldo_total'] = dados['saldo_a_favor'] - dados['saldo_contra']
-            jogador = Jogador.query.filter_by(nome=nome).first()
+            jogador = Jogador.query.filter_by(
+                nome=nome, 
+                torneio_id=session.get('torneio_id')
+            ).first()
+            
             if jogador:
                 jogador.vitorias = dados['vitorias']
                 jogador.saldo_a_favor = dados['saldo_a_favor']
                 jogador.saldo_contra = dados['saldo_contra']
                 jogador.saldo_total = dados['saldo_total']
+        
         db.session.commit()
         
         log_action("group_saved", 
                   f"Grupo {grupo_idx + 1} salvo - Resultados: {session['grupos'][grupo_idx]}")
-        return redirect(url_for('main.index'))
+        return redirect(url_for('main.novo_torneio'))
     
     except Exception as e:
         error_msg = f"Erro ao salvar Grupo {grupo_idx + 1}: {str(e)}"
         current_app.logger.error(error_msg, exc_info=True)
         session['erro_validacao'] = error_msg
-        return redirect(url_for('main.index'))
+        return redirect(url_for('main.novo_torneio'))
 
 @bp.route('/salvar_todos_grupos', methods=['POST'])
 def salvar_todos_grupos():
@@ -251,8 +310,8 @@ def salvar_todos_grupos():
                 campo_B = f"grupo_{grupo_idx}_confronto_{confronto_idx}_duplaB_favor"
 
                 try:
-                    saldoA = int(session['valores_salvos'].get(campo_A, 0))
-                    saldoB = int(session['valores_salvos'].get(campo_B, 0))
+                    saldoA = int(session['valores_salvos'].get(campo_A, 0)) if session['valores_salvos'].get(campo_A, '') else 0
+                    saldoB = int(session['valores_salvos'].get(campo_B, 0)) if session['valores_salvos'].get(campo_B, '') else 0
                     
                     # Atualiza estatísticas para cada jogador
                     jogadores = {
@@ -273,6 +332,38 @@ def salvar_todos_grupos():
                         jogador['saldo_contra'] += saldoA
                         if saldoB > saldoA:
                             jogador['vitorias'] += 1
+
+                    # Atualiza o confronto no banco de dados
+                    torneio_id = session.get('torneio_id')
+                    confronto_db = Confronto.query.filter_by(
+                        torneio_id=torneio_id, 
+                        grupo_idx=grupo_idx, 
+                        confronto_idx=confronto_idx
+                    ).first()
+                    
+                    if confronto_db:
+                        # Se o confronto já existe, atualize os resultados
+                        confronto_db.pontos_dupla_a = saldoA
+                        confronto_db.pontos_dupla_b = saldoB
+                        log_action("confronto_updated", 
+                                  f"Confronto DB atualizado: G{grupo_idx+1}-C{confronto_idx+1} - "
+                                  f"Placar: {saldoA} x {saldoB}")
+                    else:
+                        # Caso o confronto não exista (não deveria acontecer), crie-o
+                        novo_confronto = Confronto(
+                            torneio_id=torneio_id,
+                            grupo_idx=grupo_idx,
+                            confronto_idx=confronto_idx,
+                            jogador_a1_id=session['jogadores'][confronto[0]['nome']]['id'],
+                            jogador_a2_id=session['jogadores'][confronto[1]['nome']]['id'],
+                            jogador_b1_id=session['jogadores'][confronto[2]['nome']]['id'],
+                            jogador_b2_id=session['jogadores'][confronto[3]['nome']]['id'],
+                            pontos_dupla_a=saldoA,
+                            pontos_dupla_b=saldoB
+                        )
+                        db.session.add(novo_confronto)
+                        log_action("confronto_created_late", 
+                                  f"Confronto DB criado tardiamente: G{grupo_idx+1}-C{confronto_idx+1}")
                 
                 except (KeyError, ValueError) as e:
                     current_app.logger.error(f"Erro processando confronto {confronto_idx} do grupo {grupo_idx}: {str(e)}")
@@ -310,10 +401,84 @@ def salvar_todos_grupos():
         db.session.commit()
         
         log_action("all_groups_saved", f"Todos os {len(session['grupos'])} grupos salvos com sucesso")
-        return redirect(url_for('main.index'))
+        return redirect(url_for('main.novo_torneio'))
     
     except Exception as e:
         error_msg = f"Erro ao salvar todos os grupos: {str(e)}"
         current_app.logger.error(error_msg, exc_info=True)
         session['erro_validacao'] = error_msg
-        return redirect(url_for('main.index'))
+        return redirect(url_for('main.novo_torneio'))
+
+# Função auxiliar para obter confrontos do banco de dados
+def obter_confrontos_db(torneio_id):
+    """Recupera os confrontos do banco de dados para um determinado torneio"""
+    confrontos_db = {}
+    try:
+        # Busca todos os confrontos do torneio
+        confrontos = Confronto.query.filter_by(torneio_id=torneio_id).all()
+        
+        # Organiza confrontos por grupo e índice
+        for confronto in confrontos:
+            grupo_idx = confronto.grupo_idx
+            confronto_idx = confronto.confronto_idx
+            
+            if grupo_idx not in confrontos_db:
+                confrontos_db[grupo_idx] = {}
+            
+            # Armazena os dados do confronto
+            confrontos_db[grupo_idx][confronto_idx] = {
+                'jogador_a1_id': confronto.jogador_a1_id,
+                'jogador_a2_id': confronto.jogador_a2_id,
+                'jogador_b1_id': confronto.jogador_b1_id,
+                'jogador_b2_id': confronto.jogador_b2_id,
+                'pontos_dupla_a': confronto.pontos_dupla_a,
+                'pontos_dupla_b': confronto.pontos_dupla_b
+            }
+        
+        log_action("confrontos_loaded", f"Carregados {len(confrontos)} confrontos do torneio {torneio_id}")
+        return confrontos_db
+    
+    except Exception as e:
+        log_action("confrontos_load_error", f"Erro ao carregar confrontos: {str(e)}")
+        return {}
+
+# Você pode adicionar ainda uma rota para recuperar dados de um torneio existente
+@bp.route('/carregar_torneio/<int:torneio_id>', methods=['GET'])
+def carregar_torneio(torneio_id):
+    try:
+        # Recupera o torneio
+        torneio = Torneio.query.get_or_404(torneio_id)
+        
+        # Recupera os jogadores do torneio
+        jogadores = Jogador.query.filter_by(torneio_id=torneio_id).all()
+        
+        # Recupera os confrontos do torneio
+        confrontos_db = obter_confrontos_db(torneio_id)
+        
+        # Popula a sessão com os dados
+        session['torneio_id'] = torneio_id
+        session['modo_torneio'] = torneio.modo  # Você precisa adicionar este campo ao modelo Torneio
+        
+        # Configura jogadores na sessão
+        session['jogadores'] = {
+            jogador.nome: {
+                'nome': jogador.nome,
+                'id': jogador.id,
+                'vitorias': jogador.vitorias,
+                'saldo_a_favor': jogador.saldo_a_favor,
+                'saldo_contra': jogador.saldo_contra,
+                'saldo_total': jogador.saldo_total
+            } for jogador in jogadores
+        }
+        
+        # TODO: Reconstruir grupos e confrontos da sessão a partir dos dados do banco
+        # Isso exigiria recuperar a configuração de grupos do torneio
+        
+        log_action("torneio_loaded", f"Torneio {torneio_id} carregado na sessão")
+        return redirect(url_for('main.novo_torneio'))
+        
+    except Exception as e:
+        error_msg = f"Erro ao carregar torneio: {str(e)}"
+        current_app.logger.error(error_msg, exc_info=True)
+        session['erro_validacao'] = error_msg
+        return redirect(url_for('main.home'))

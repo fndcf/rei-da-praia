@@ -31,7 +31,7 @@ def fase_eliminatoria():
         if 'grupos' not in session or not session['grupos']:
             current_app.logger.error("Nenhum grupo encontrado na sessão!")
             flash("Erro: Torneio não foi gerado corretamente", "error")
-            return redirect(url_for('main.index'))
+            return redirect(url_for('main.novo_torneio'))
 
         # Classificação segura
         primeiros = []
@@ -111,7 +111,7 @@ def fase_eliminatoria():
         if not config:
             current_app.logger.error(f"Modo de torneio inválido: {modo}")
             flash("Modo de torneio inválido", "error")
-            return redirect(url_for('main.index'))
+            return redirect(url_for('main.novo_torneio'))
 
         # Validação de jogadores suficientes
         req = config['required_players']
@@ -121,7 +121,7 @@ def fase_eliminatoria():
                        f"Encontrado: {len(primeiros)}P/{len(segundos)}S")
             current_app.logger.error(error_msg)
             flash("Erro: Configuração de torneio incompleta", "error")
-            return redirect(url_for('main.index'))
+            return redirect(url_for('main.novo_torneio'))
 
         # Geração de confrontos
         confrontos = config['quartas']
@@ -295,7 +295,7 @@ def fase_eliminatoria():
             exc_info=True
         )
         flash("Erro crítico ao gerar a fase eliminatória", "error")
-        return redirect(url_for('main.index'))
+        return redirect(url_for('main.novo_torneio'))
 
 @bp.route('/salvar_eliminatorias', methods=['POST'])
 def salvar_eliminatorias():
@@ -456,7 +456,7 @@ def campeoes():
         dados = session.get('campeoes_finais')
         if not dados:
             flash("Nenhum torneio finalizado encontrado!", "error")
-            return redirect(url_for('main.index'))
+            return redirect(url_for('main.novo_torneio'))
         
         return render_template('campeoes.html',
                             campeoes=dados['campeoes'],
@@ -468,10 +468,10 @@ def campeoes():
     except Exception as e:
         current_app.logger.error(f"Erro na tela de campeões: {str(e)}")
         flash("Erro ao exibir os campeões", "error")
-        return redirect(url_for('main.index'))
+        return redirect(url_for('main.novo_torneio'))
     
 # Adicione esta rota no seu blueprint playoffs
-@bp.route('/novo_torneio')
-def novo_torneio():
+@bp.route('/home_page')
+def home_page():
     session.clear()
-    return redirect(url_for('main.index'))
+    return redirect(url_for('main.home'))

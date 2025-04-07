@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10 text-center">
+            <h1 class="display-4 mb-4">🏆 Bem-vindo ao Torneio Rei da Praia! 🏆</h1>
+
+            <!-- Destaque para botão Novo Torneio -->
+            <div class="card mb-5 p-4 bg-warning-subtle shadow">
+                <h2 class="mb-3">Iniciar um Novo Torneio</h2>
+                <form action="{{ url_for('main.novo_torneio') }}" method="get">
+                    <button type="submit" class="btn btn-lg btn-success px-5 py-2 fs-4">Novo Torneio</button>
+                </form>
+            </div>
+
+            <!-- Histórico de Torneios -->
+            <div class="card">
+                <h2>Histórico de Torneios</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Campeão</th>
+                            <th>Vice</th>
+                            <th>Detalhes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Loop de torneios do banco de dados -->
+                        <!-- Exemplo: -->
+                        <!--
+                        {% for torneio in torneios %}
+                        <tr>
+                            <td>{{ torneio.data }}</td>
+                            <td>{{ torneio.campeao }}</td>
+                            <td>{{ torneio.vice }}</td>
+                            <td><a href="{{ url_for('main.detalhes_torneio', id=torneio.id) }}">Ver</a></td>
+                        </tr>
+                        {% endfor %}
+                        -->
+                        <tr>
+                            <td colspan="4">Nenhum torneio registrado ainda.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Ranking de Jogadores -->
+            <div class="card mt-4">
+                <h2>Ranking de Jogadores</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Posição</th>
+                            <th>Nome</th>
+                            <th>Pontos</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Loop de jogadores do banco de dados -->
+                        <tr>
+                            <td colspan="3">Ranking ainda não disponível.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pesquisa de Jogador -->
+            <div class="card mt-4">
+                <h2 class="text-center">Pesquisar Jogador</h2>
+                <div class="d-flex justify-content-center">
+                    <form method="get" action="{{ url_for('main.novo_torneio') }}" class="d-flex flex-column align-items-center w-50">
+                        <input type="text" name="nome_jogador" class="form-control mb-2 text-center" placeholder="Digite o nome do jogador">
+                        <button type="submit" class="btn btn-primary">Buscar</button>
+                    </form>
+                </div>
+            </div>
+    </div>
+</div>
+{% endblock %}
