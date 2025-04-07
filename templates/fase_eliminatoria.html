@@ -320,6 +320,29 @@
         }, 500);
     }
 
+    // Adiciona validação na entrada de valores dos confrontos
+    document.querySelectorAll('.saldo-inputs-esq, .saldo-inputs-dir').forEach(input => {
+        input.addEventListener('change', function() {
+            const confronto = this.closest('.confronto-eliminatorio');
+            const inputEsq = confronto.querySelector('.saldo-inputs-esq');
+            const inputDir = confronto.querySelector('.saldo-inputs-dir');
+            
+            if (inputEsq.value && inputDir.value) {
+                const valorEsq = parseInt(inputEsq.value);
+                const valorDir = parseInt(inputDir.value);
+                
+                if (valorEsq === valorDir) {
+                    inputEsq.classList.add('erro-empate');
+                    inputDir.classList.add('erro-empate');
+                    alert('Não é permitido empate! Ambas as equipes devem ter pontuações diferentes.');
+                } else {
+                    inputEsq.classList.remove('erro-empate');
+                    inputDir.classList.remove('erro-empate');
+                }
+            }
+        });
+    });
+
     // Adiciona verificação ao botão de abrir eliminatória
     document.getElementById('btnEliminatoria')?.addEventListener('click', function(e) {
         const inputsVazios = Array.from(document.querySelectorAll('.saldo-inputs-esq, .saldo-inputs-dir')).filter(input => input.value.trim() === '');
@@ -342,7 +365,7 @@
 
             // Se chegou aqui, todos estão preenchidos - enviar formulário
             this.form.submit();
-        });
+    });
 
     async function resetarEliminatorias() {
         if (!confirm('Tem certeza que deseja resetar TODOS os resultados da fase eliminatória?')) {

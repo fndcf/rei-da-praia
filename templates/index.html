@@ -77,25 +77,29 @@
     </div>
     {% endif %}
 
-    <!-- Formulário de Confrontos -->
     {% if confrontos %}
     <div class="container">
-        <h2 class="text-center mt-4">Confrontos</h2>
+        <h2 class="text-center mt-4">Confrontos</h2>        
+               
+        <!-- Formulário oculto para salvar todos os grupos -->
+        <form id="formSalvarTodos" method="POST" action="{{ url_for('groups.salvar_todos_grupos') }}" style="display: none;"></form>
         
         {% for grupo_idx, grupo_confrontos in enumerate(confrontos) %}
-        <form method="POST" action="{{ url_for('groups.salvar_grupo', grupo_idx=grupo_idx) }}" class="card mt-2">
+        <form method="POST" action="{{ url_for('groups.salvar_grupo', grupo_idx=grupo_idx) }}" class="card mt-2 form-grupo">
             <h3>Grupo {{ grupo_idx + 1 }}</h3>
             {% for confronto_idx, confronto in enumerate(grupo_confrontos) %}
             <div class="confronto">
                 <div class="confronto-jogadores">
                     <span class="dupla">{{ confronto[0]['nome'] }} & {{ confronto[1]['nome'] }}</span>
                     <input class="saldo-inputs-esq"  
+                           id="grupo_{{ grupo_idx }}_confronto_{{ confronto_idx }}_duplaA_favor"
                            name="grupo_{{ grupo_idx }}_confronto_{{ confronto_idx }}_duplaA_favor" 
                            value="{{ valores_salvos.get('grupo_{}_confronto_{}_duplaA_favor'.format(grupo_idx, confronto_idx), '') }}" 
                            min="0" required
                            oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                     <span class="vs">⚔️</span>
                     <input class="saldo-inputs-dir"  
+                           id="grupo_{{ grupo_idx }}_confronto_{{ confronto_idx }}_duplaB_favor"
                            name="grupo_{{ grupo_idx }}_confronto_{{ confronto_idx }}_duplaB_favor" 
                            value="{{ valores_salvos.get('grupo_{}_confronto_{}_duplaB_favor'.format(grupo_idx, confronto_idx), '') }}" 
                            min="0" required
@@ -107,6 +111,12 @@
             <button type="submit" class="btn btn-primary mt-2">Salvar Grupo {{ grupo_idx + 1 }}</button>
         </form>
         {% endfor %}
+
+        <!-- Botão Salvar Todos os Grupos -->
+        <div class="text-center mb-3">
+            <button type="button" id="btnSalvarTodos" class="btn btn-primary btn-lg">Salvar Todos os Grupos</button>
+        </div>
+
     </div>
     {% endif %}
 
@@ -124,129 +134,307 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const modoSelect = document.getElementById('modo_torneio');
-        const instrucoes = document.getElementById('instrucoes');
-        const contador = document.getElementById('contador-jogadores');
-        const textarea = document.getElementById('jogadores');
-        const btnSortear = document.getElementById('btnSortear');
+    const modoSelect = document.getElementById('modo_torneio');
+    const instrucoes = document.getElementById('instrucoes');
+    const contador = document.getElementById('contador-jogadores');
+    const textarea = document.getElementById('jogadores');
+    const btnSortear = document.getElementById('btnSortear');
 
-        // Atualiza interface quando muda o modo
-        function atualizarInterface() {
-            console.log("Modo selecionado:", modoSelect.value);
-            const modo = modoSelect.value;
-            if (!modo) {
-                instrucoes.textContent = "Selecione o formato do torneio primeiro";
-                textarea.placeholder = "Selecione o formato acima";
-                textarea.disabled = true;
-                btnSortear.disabled = true;
-                return;
-            }
-            
-            let numJogadores;
-            if (modo === '20j') {
-                numJogadores = 20;
-            } else if (modo === '24j') {
-                numJogadores = 24;
-            } else if (modo === '28j') {
-                numJogadores = 28;
-            } else {
-                numJogadores = 32;
-            }
-            instrucoes.textContent = `Insira EXATAMENTE ${numJogadores} jogadores únicos separados por vírgula:`;
-            textarea.placeholder = `Jogador1, Jogador2, ..., Jogador${numJogadores}`;
-            textarea.disabled = false;
-            btnSortear.disabled = false;
-            
-            // Força a validação do textarea
-            textarea.dispatchEvent(new Event('input'));
+    // Atualiza interface quando muda o modo
+    function atualizarInterface() {
+        console.log("Modo selecionado:", modoSelect.value);
+        const modo = modoSelect.value;
+        if (!modo) {
+            instrucoes.textContent = "Selecione o formato do torneio primeiro";
+            textarea.placeholder = "Selecione o formato acima";
+            textarea.disabled = true;
+            btnSortear.disabled = true;
+            return;
         }
         
-        // Validação do textarea
-        textarea.addEventListener('input', function() {
-            const modo = modoSelect.value;
-            if (!modo) return;
-            
-            let numEsperado;
-            if (modo === '20j') {
-                numEsperado = 20;
-            }  else if (modo === '24j') {
-                numEsperado = 24;
-            }  else if (modo === '28j') {
-                numEsperado = 28;
-            } else {
-                numEsperado = 32;
-            }
-            const nomes = this.value.split(',')
-                .map(nome => nome.trim())
-                .filter(nome => nome !== '' && nome.replace(/\s/g, '').length > 0);
+        let numJogadores;
+        if (modo === '20j') {
+            numJogadores = 20;
+        } else if (modo === '24j') {
+            numJogadores = 24;
+        } else if (modo === '28j') {
+            numJogadores = 28;
+        } else {
+            numJogadores = 32;
+        }
+        instrucoes.textContent = `Insira EXATAMENTE ${numJogadores} jogadores únicos separados por vírgula:`;
+        textarea.placeholder = `Jogador1, Jogador2, ..., Jogador${numJogadores}`;
+        textarea.disabled = false;
+        btnSortear.disabled = false;
+        
+        // Força a validação do textarea
+        textarea.dispatchEvent(new Event('input'));
+    }
+    
+    // Validação do textarea
+    textarea.addEventListener('input', function() {
+        const modo = modoSelect.value;
+        if (!modo) return;
+        
+        let numEsperado;
+        if (modo === '20j') {
+            numEsperado = 20;
+        } else if (modo === '24j') {
+            numEsperado = 24;
+        } else if (modo === '28j') {
+            numEsperado = 28;
+        } else {
+            numEsperado = 32;
+        }
+        const nomes = this.value.split(',')
+            .map(nome => nome.trim())
+            .filter(nome => nome !== '' && nome.replace(/\s/g, '').length > 0);
 
-                if (nomes.length === numEsperado) {
-                    this.classList.remove('is-invalid');
-                    this.classList.add('is-valid');
-                    btnSortear.disabled = false;
-                } else {
-                    this.classList.remove('is-valid');
-                    this.classList.add('is-invalid');
-                    btnSortear.disabled = true;
+        if (nomes.length === numEsperado) {
+            this.classList.remove('is-invalid');
+            this.classList.add('is-valid');
+            btnSortear.disabled = false;
+        } else {
+            this.classList.remove('is-valid');
+            this.classList.add('is-invalid');
+            btnSortear.disabled = true;
+        }
+        
+        // Verifica duplicados
+        const nomesLower = nomes.map(nome => nome.toLowerCase());
+        const duplicados = [...new Set(
+            nomesLower.filter((nome, index) => nomesLower.indexOf(nome) !== index)
+        )];
+        
+        // Atualiza contador
+        contador.textContent = `${nomes.length}/${numEsperado} jogadores`;
+        
+        // Feedback visual
+        if (duplicados.length > 0) {
+            contador.innerHTML += ` <span style="color:var(--danger-color)">(Duplicados: ${duplicados.join(', ')})</span>`;
+            contador.style.color = 'var(--danger-color)';
+            btnSortear.disabled = true;
+        } else {
+            contador.style.color = 
+                nomes.length === numEsperado ? 'var(--success-color)' : 
+                nomes.length > numEsperado ? 'var(--danger-color)' : 'var(--warning-color)';
+            btnSortear.disabled = nomes.length !== numEsperado;
+        }
+    });
+    
+    // Observa mudanças no seletor
+    modoSelect.addEventListener('change', atualizarInterface);
+    
+    // Inicializa a interface
+    atualizarInterface();
+
+    // Também precisamos modificar a função de validação de empates para tratar corretamente o placar 0
+    function validarSemEmpates() {
+        let empatesEncontrados = [];
+        
+        // Selecionar todos os confrontos
+        const confrontos = document.querySelectorAll('.confronto');
+        
+        confrontos.forEach((confronto, index) => {
+            const inputsEsq = confronto.querySelector('.saldo-inputs-esq');
+            const inputsDir = confronto.querySelector('.saldo-inputs-dir');
+            
+            if (inputsEsq && inputsDir) {
+                // Verificar se ambos os campos estão preenchidos
+                if (inputsEsq.value !== '' && inputsDir.value !== '') {
+                    const valorEsq = parseInt(inputsEsq.value);
+                    const valorDir = parseInt(inputsDir.value);
+                    
+                    // Verificar se é empate (agora permitindo 0, desde que não seja empate)
+                    if (valorEsq === valorDir) {
+                        // Destacar inputs com erro
+                        inputsEsq.classList.add('erro-empate');
+                        inputsDir.classList.add('erro-empate');
+                        
+                        // Registrar o empate
+                        const jogadoresEsq = confronto.querySelector('.dupla:first-child')?.textContent || 'Dupla 1';
+                        const jogadoresDir = confronto.querySelector('.dupla:last-child')?.textContent || 'Dupla 2';
+                        empatesEncontrados.push({
+                            confronto: index + 1,
+                            placar: `${valorEsq} x ${valorDir}`,
+                            jogadoresEsq,
+                            jogadoresDir
+                        });
+                    } else {
+                        // Remover marcação de erro
+                        inputsEsq.classList.remove('erro-empate');
+                        inputsDir.classList.remove('erro-empate');
+                    }
                 }
-            
-            // Verifica duplicados
-            const nomesLower = nomes.map(nome => nome.toLowerCase());
-            const duplicados = [...new Set(
-                nomesLower.filter((nome, index) => nomesLower.indexOf(nome) !== index)
-            )];
-            
-            // Atualiza contador
-            contador.textContent = `${nomes.length}/${numEsperado} jogadores`;
-            
-            // Feedback visual
-            if (duplicados.length > 0) {
-                contador.innerHTML += ` <span style="color:var(--danger-color)">(Duplicados: ${duplicados.join(', ')})</span>`;
-                contador.style.color = 'var(--danger-color)';
-                btnSortear.disabled = true;
-            } else {
-                contador.style.color = 
-                    nomes.length === numEsperado ? 'var(--success-color)' : 
-                    nomes.length > numEsperado ? 'var(--danger-color)' : 'var(--warning-color)';
-                btnSortear.disabled = nomes.length !== numEsperado;
             }
         });
         
-        // Observa mudanças no seletor
-        modoSelect.addEventListener('change', atualizarInterface);
-        
-        // Inicializa a interface
-        atualizarInterface();
+        return empatesEncontrados;
+    }
 
-        // Adiciona verificação ao botão de abrir eliminatória
-        document.getElementById('btnAbrirEliminatoria')?.addEventListener('click', function(e) {
-            const inputsVazios = document.querySelectorAll('.saldo-inputs-esq[value=""], .saldo-inputs-dir[value=""]');
-            if (inputsVazios.length > 0) {
+    // Adiciona validação na entrada de valores dos confrontos
+    document.querySelectorAll('.saldo-inputs-esq, .saldo-inputs-dir').forEach(input => {
+        input.addEventListener('change', function() {
+            const confronto = this.closest('.confronto');
+            const inputEsq = confronto.querySelector('.saldo-inputs-esq');
+            const inputDir = confronto.querySelector('.saldo-inputs-dir');
+            
+            if (inputEsq.value && inputDir.value) {
+                const valorEsq = parseInt(inputEsq.value);
+                const valorDir = parseInt(inputDir.value);
+                
+                if (valorEsq === valorDir) {
+                    inputEsq.classList.add('erro-empate');
+                    inputDir.classList.add('erro-empate');
+                    alert('Não é permitido empate! Ambas as equipes devem ter pontuações diferentes.');
+                } else {
+                    inputEsq.classList.remove('erro-empate');
+                    inputDir.classList.remove('erro-empate');
+                }
+            }
+        });
+    });
+    
+    // Validação ao salvar o grupo
+    document.querySelectorAll('.form-grupo').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const empates = validarSemEmpates();
+            
+            if (empates.length > 0) {
                 e.preventDefault();
                 
+                // Montar mensagem de erro
+                let mensagem = '⚠️ Não é permitido empate nos confrontos:\n\n';
+                empates.forEach(empate => {
+                    mensagem += `Confronto ${empate.confronto}: ${empate.jogadoresEsq} x ${empate.jogadoresDir} (${empate.placar})\n`;
+                });
+                mensagem += '\nPor favor, corrija os resultados antes de salvar.';
+                
+                alert(mensagem);
+                
+                // Rolar até o primeiro empate
+                const primeiroInputComErro = document.querySelector('.erro-empate');
+                if (primeiroInputComErro) {
+                    primeiroInputComErro.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    primeiroInputComErro.focus();
+                }
+            }
+        });
+    });
+
+    // Adiciona verificação ao botão de abrir eliminatória
+    document.getElementById('btnAbrirEliminatoria')?.addEventListener('click', function(e) {
+        // Primeiro validar se não há empates
+        const empates = validarSemEmpates();
+        if (empates.length > 0) {
+            e.preventDefault();
+            
+            // Montar mensagem de erro
+            let mensagem = '⚠️ Não é permitido empate nos confrontos:\n\n';
+            empates.forEach(empate => {
+                mensagem += `Confronto ${empate.confronto}: ${empate.jogadoresEsq} x ${empate.jogadoresDir} (${empate.placar})\n`;
+            });
+            mensagem += '\nPor favor, corrija os resultados antes de avançar.';
+            
+            alert(mensagem);
+            
+            // Rolar até o primeiro empate
+            const primeiroInputComErro = document.querySelector('.erro-empate');
+            if (primeiroInputComErro) {
+                primeiroInputComErro.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                primeiroInputComErro.focus();
+            }
+            return;
+        }
+        
+        // Se não houver empates, continuar verificando campos vazios
+        const inputsVazios = document.querySelectorAll('.saldo-inputs-esq[value=""], .saldo-inputs-dir[value=""]');
+        if (inputsVazios.length > 0) {
+            e.preventDefault();
+            
+            // Destacar campos vazios
+            inputsVazios.forEach(input => {
+                input.classList.add('campo-vazio');
+                input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+            // Focar no primeiro campo vazio
+            inputsVazios[0]?.focus();
+
+            // Alert mais informativo
+            if (!confirm(`⚠️ Existem ${inputsVazios.length} resultados não preenchidos. Você deve preencher todos os resultados antes de avançar para a fase eliminatória. Deseja rolar para o primeiro campo vazio?`)) {
+                return;
+            }
+        } else {
+            // Todos preenchidos, pode abrir normalmente
+            window.open(
+                '{{ url_for("playoffs.fase_eliminatoria") }}',
+                '_blank',
+                'width=1000,height=700'
+            );
+        }
+    });
+
+    // Lógica para Salvar Todos os Grupos
+    document.getElementById('btnSalvarTodos')?.addEventListener('click', function() {
+        // Verificar se há empates
+        const empates = validarSemEmpates();
+        if (empates.length > 0) {
+            // Montar mensagem de erro
+            let mensagem = '⚠️ Não é permitido empate nos confrontos:\n\n';
+            empates.forEach(empate => {
+                mensagem += `Confronto ${empate.confronto}: ${empate.jogadoresEsq} x ${empate.jogadoresDir} (${empate.placar})\n`;
+            });
+            mensagem += '\nPor favor, corrija os resultados antes de salvar.';
+            
+            alert(mensagem);
+            
+            // Rolar até o primeiro empate
+            const primeiroInputComErro = document.querySelector('.erro-empate');
+            if (primeiroInputComErro) {
+                primeiroInputComErro.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                primeiroInputComErro.focus();
+            }
+            return;
+        }
+        
+        // Verificar se todos os campos estão preenchidos
+        const inputsVazios = document.querySelectorAll('.saldo-inputs-esq[value=""], .saldo-inputs-dir[value=""]');
+        if (inputsVazios.length > 0) {
+            if (!confirm(`⚠️ Existem ${inputsVazios.length} resultados não preenchidos. Deseja salvar assim mesmo?`)) {
                 // Destacar campos vazios
                 inputsVazios.forEach(input => {
                     input.classList.add('campo-vazio');
-                    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 });
                 // Focar no primeiro campo vazio
+                inputsVazios[0]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 inputsVazios[0]?.focus();
-
-                // Alert mais informativo
-                if (!confirm(`⚠️ Existem ${inputsVazios.length} resultados não preenchidos. Você deve preencher todos os resultados antes de avançar para a fase eliminatória. Deseja rolar para o primeiro campo vazio?`)) {
-                    return;
-                }
-            } else {
-                // Todos preenchidos, pode abrir normalmente
-                window.open(
-                    '{{ url_for("playoffs.fase_eliminatoria") }}',
-                    '_blank',
-                    'width=1000,height=700'
-                );
+                return;
             }
+        }
+        
+        // Capturar todos os inputs de todos os grupos
+        const formSalvarTodos = document.getElementById('formSalvarTodos');
+        formSalvarTodos.innerHTML = ''; // Limpar o formulário
+        
+        // Selecionar todos os inputs com id que começa com "grupo_"
+        const todosInputs = document.querySelectorAll('input[id^="grupo_"]');
+        
+        // Adicionar cada input como um campo oculto no formulário
+        todosInputs.forEach(input => {
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = input.id;
+            
+            // CORREÇÃO: Usar valor real ou null/vazio, não substituir campos vazios por '0'
+            // Isso preserva a diferença entre um placar legítimo de 0 e um campo não preenchido
+            hiddenInput.value = input.value;
+            
+            formSalvarTodos.appendChild(hiddenInput);
         });
-
-
+        
+        // Submeter o formulário
+        formSalvarTodos.submit();
     });
+});
 </script>
 {% endblock %}

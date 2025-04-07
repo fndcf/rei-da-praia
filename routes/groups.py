@@ -219,3 +219,101 @@ def salvar_grupo(grupo_idx):
         current_app.logger.error(error_msg, exc_info=True)
         session['erro_validacao'] = error_msg
         return redirect(url_for('main.index'))
+
+@bp.route('/salvar_todos_grupos', methods=['POST'])
+def salvar_todos_grupos():
+    try:
+        log_action("all_groups_save_start", "Salvando todos os grupos")
+        
+        # Inicializa valores salvos se necessário
+        session.setdefault('valores_salvos', {})
+
+        # Processa campos do formulário
+        for key, value in request.form.items():
+            session['valores_salvos'][key] = value
+            if key.startswith('grupo_') and not value.isdigit() and value:
+                current_app.logger.warning(f"Valor inválido no campo {key}: {value}")
+
+        # Reset estatísticas para todos os jogadores
+        for nome, jogador in session['jogadores'].items():
+            jogador.update({
+                'vitorias': 0,
+                'saldo_a_favor': 0,
+                'saldo_contra': 0,
+                'saldo_total': 0
+            })
+        
+        # Processa cada grupo
+        for grupo_idx in range(len(session['grupos'])):
+            # Processa cada confronto do grupo
+            for confronto_idx, confronto in enumerate(session['confrontos'][grupo_idx]):
+                campo_A = f"grupo_{grupo_idx}_confronto_{confronto_idx}_duplaA_favor"
+                campo_B = f"grupo_{grupo_idx}_confronto_{confronto_idx}_duplaB_favor"
+
+                try:
+                    saldoA = int(session['valores_salvos'].get(campo_A, 0))
+                    saldoB = int(session['valores_salvos'].get(campo_B, 0))
+                    
+                    # Atualiza estatísticas para cada jogador
+                    jogadores = {
+                        'A': [session['jogadores'][confronto[0]['nome']], 
+                              session['jogadores'][confronto[1]['nome']]],
+                        'B': [session['jogadores'][confronto[2]['nome']], 
+                              session['jogadores'][confronto[3]['nome']]]
+                    }
+
+                    for jogador in jogadores['A']:
+                        jogador['saldo_a_favor'] += saldoA
+                        jogador['saldo_contra'] += saldoB
+                        if saldoA > saldoB:
+                            jogador['vitorias'] += 1
+
+                    for jogador in jogadores['B']:
+                        jogador['saldo_a_favor'] += saldoB
+                        jogador['saldo_contra'] += saldoA
+                        if saldoB > saldoA:
+                            jogador['vitorias'] += 1
+                
+                except (KeyError, ValueError) as e:
+                    current_app.logger.error(f"Erro processando confronto {confronto_idx} do grupo {grupo_idx}: {str(e)}")
+                    continue  # Continue processando outros confrontos mesmo se um falhar
+            
+            # Atualiza e classifica o grupo
+            for jogador in session['grupos'][grupo_idx]:
+                jogador_ref = session['jogadores'][jogador['nome']]
+                jogador.update({
+                    'vitorias': jogador_ref['vitorias'],
+                    'saldo_a_favor': jogador_ref['saldo_a_favor'],
+                    'saldo_contra': jogador_ref['saldo_contra'],
+                    'saldo_total': jogador_ref['saldo_a_favor'] - jogador_ref['saldo_contra']
+                })
+
+            # Classifica o grupo
+            session['grupos'][grupo_idx].sort(key=lambda x: (-x['vitorias'], -x['saldo_total']))
+        
+        session.modified = True
+
+        # Atualiza o banco com os dados salvos
+        for nome, dados in session['jogadores'].items():
+            dados['saldo_total'] = dados['saldo_a_favor'] - dados['saldo_contra']
+            jogador = Jogador.query.filter_by(
+                nome=nome, 
+                torneio_id=session.get('torneio_id')
+            ).first()
+            
+            if jogador:
+                jogador.vitorias = dados['vitorias']
+                jogador.saldo_a_favor = dados['saldo_a_favor']
+                jogador.saldo_contra = dados['saldo_contra']
+                jogador.saldo_total = dados['saldo_total']
+        
+        db.session.commit()
+        
+        log_action("all_groups_saved", f"Todos os {len(session['grupos'])} grupos salvos com sucesso")
+        return redirect(url_for('main.index'))
+    
+    except Exception as e:
+        error_msg = f"Erro ao salvar todos os grupos: {str(e)}"
+        current_app.logger.error(error_msg, exc_info=True)
+        session['erro_validacao'] = error_msg
+        return redirect(url_for('main.index'))
