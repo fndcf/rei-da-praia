@@ -24,8 +24,10 @@
                     oninput="this.value = this.value.replace(/[^a-zA-ZÀ-ú0-9\s,]/g, '')" 
                     placeholder="Jogador1, Jogador2, Jogador3, ..."></textarea>
                 <p id="contador-jogadores" class="counter">0 jogadores</p>
+                <label for="nome_torneio">Nome do Torneio:</label>
+                <input type="text" id="nome_torneio" name="nome_torneio" required>  
             </div>
-            
+              
             <button type="submit" class="btn btn-success" id="btnSortear">Sortear Grupos</button>
         </form>
 

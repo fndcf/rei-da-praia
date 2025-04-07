@@ -3,10 +3,18 @@ from config import Config
 from routes.main import bp as main_bp
 from routes.groups import bp as groups_bp
 from routes.playoffs import bp as playoffs_bp
+from flask_sqlalchemy import SQLAlchemy
+from database.db import db
 
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+
+    db.init_app(app)
+
+    with app.app_context():
+        db.drop_all()   # Apaga as tabelas existentes
+        db.create_all() # Cria as tabelas com as colunas certas
 
     # --------------------------------------
     # Registro de Blueprints

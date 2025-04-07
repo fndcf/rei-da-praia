@@ -1,6 +1,8 @@
 from flask import Blueprint, render_template, session, url_for, redirect, request, flash, current_app
 from datetime import datetime
 import logging
+from database.models import Jogador, Torneio
+from database.db import db
 
 bp = Blueprint('playoffs', __name__)
 
@@ -357,55 +359,42 @@ def salvar_final():
     try:
         modo = request.form.get('modo', '28j')
         jogo_final = {'20j':4, '24j':5, '28j':6, '32j':7}.get(modo, 6)
-        
-        # DEBUG: Log todo o formulário recebido
-        current_app.logger.debug(f"Form data recebido: {dict(request.form)}")
-        
-        timeA = request.form.get(f'jogo_{jogo_final}_timeA')
-        timeB = request.form.get(f'jogo_{jogo_final}_timeB')
-        
-        # Validação rigorosa
-        if not timeA or not timeB:
-            raise ValueError("Placar incompleto")
-        
-        timeA = int(timeA)
-        timeB = int(timeB)
-        
-        # Valida valores positivos
-        if timeA < 0 or timeB < 0:
-            raise ValueError("Placar não pode ser negativo")
 
+        # Obter os nomes dos jogadores do formulário
+        timeA_jogador1 = request.form.get('timeA_jogador1', 'N/A')
+        timeA_jogador2 = request.form.get('timeA_jogador2', 'N/A')
+        timeB_jogador1 = request.form.get('timeB_jogador1', 'N/A')
+        timeB_jogador2 = request.form.get('timeB_jogador2', 'N/A')
+
+        # Armazenar as duplas na sessão
+        session['final_dupla_timeA'] = [
+            {'nome': timeA_jogador1},
+            {'nome': timeA_jogador2}
+        ]
+        session['final_dupla_timeB'] = [
+            {'nome': timeB_jogador1},
+            {'nome': timeB_jogador2}
+        ]
+        
+        timeA = int(request.form.get(f'jogo_{jogo_final}_timeA', 0))
+        timeB = int(request.form.get(f'jogo_{jogo_final}_timeB', 0))
+        
+        # Armazena o placar
         session[f'eliminatoria_jogo{jogo_final}'] = {
             'timeA': timeA,
             'timeB': timeB
         }
-
-        current_app.logger.info(
-            f"FINAL SALVA | {timeA}x{timeB} | "
-            f"Campeão: {'TimeA' if timeA > timeB else 'TimeB'} | "
-            f"Modo: {modo} | "
-            f"Jogo: {jogo_final}"
-        )
-
+        
+        # Determina os campeões
+        vencedor = 'timeA' if timeA > timeB else 'timeB'
+        session['campea'] = session[f'final_dupla_{vencedor}']
+        
         session.modified = True
         return redirect(url_for('playoffs.fase_eliminatoria'))
     
-    except ValueError as e:
-        current_app.logger.error(
-            f"Erro ao salvar final: {str(e)} | "
-            f"Formulário: {dict(request.form)}",
-            exc_info=True
-        )
-        flash(f"Erro: {str(e)}", "error")
-        return redirect(url_for('playoffs.fase_eliminatoria'))
-    
     except Exception as e:
-        current_app.logger.critical(
-            f"Falha crítica ao salvar final: {str(e)} | "
-            f"Formulário: {dict(request.form)}",
-            exc_info=True
-        )
-        flash("Erro interno ao salvar a final", "error")
+        current_app.logger.error(f"Erro ao salvar final: {str(e)}")
+        flash("Erro ao salvar a final", "error")
         return redirect(url_for('playoffs.fase_eliminatoria'))
 
 @bp.route('/resetar_eliminatorias')
@@ -426,3 +415,63 @@ def resetar_eliminatorias():
             exc_info=True
         )
         return {'success': False, 'error': str(e)}, 500
+    
+@bp.route('/finalizar_torneio')
+def finalizar_torneio():
+    try:
+        modo = session.get('modo_torneio', '28j')
+        jogo_final = {'20j':4, '24j':5, '28j':6, '32j':7}.get(modo, 6)
+        
+        if f'eliminatoria_jogo{jogo_final}' not in session:
+            flash("A final ainda não foi disputada!", "error")
+            return redirect(url_for('playoffs.fase_eliminatoria'))
+        
+        final_data = session[f'eliminatoria_jogo{jogo_final}']
+        
+        # Determinar vencedor
+        if final_data['timeA'] > final_data['timeB']:
+            campeoes = session.get('final_dupla_timeA', [{'nome': 'N/A'}, {'nome': 'N/A'}])
+            vice_campeoes = session.get('final_dupla_timeB', [{'nome': 'N/A'}, {'nome': 'N/A'}])
+        else:
+            campeoes = session.get('final_dupla_timeB', [{'nome': 'N/A'}, {'nome': 'N/A'}])
+            vice_campeoes = session.get('final_dupla_timeA', [{'nome': 'N/A'}, {'nome': 'N/A'}])
+        
+        # Salvar na sessão para a tela de campeões
+        session['campeoes_finais'] = {
+            'campeoes': campeoes,
+            'vice_campeoes': vice_campeoes,
+            'placar': f"{final_data['timeA']}x{final_data['timeB']}"
+        }
+        
+        return redirect(url_for('playoffs.campeoes'))
+    
+    except Exception as e:
+        current_app.logger.error(f"Erro ao finalizar torneio: {str(e)}")
+        flash("Erro ao finalizar o torneio", "error")
+        return redirect(url_for('playoffs.fase_eliminatoria'))
+    
+@bp.route('/campeoes')
+def campeoes():
+    try:
+        dados = session.get('campeoes_finais')
+        if not dados:
+            flash("Nenhum torneio finalizado encontrado!", "error")
+            return redirect(url_for('main.index'))
+        
+        return render_template('campeoes.html',
+                            campeoes=dados['campeoes'],
+                            vice_campeoes=dados['vice_campeoes'],
+                            placar=dados['placar'],
+                            modo_torneio=session.get('modo_torneio', '28j'),
+                            data=datetime.now().strftime('%d/%m/%Y %H:%M'))
+    
+    except Exception as e:
+        current_app.logger.error(f"Erro na tela de campeões: {str(e)}")
+        flash("Erro ao exibir os campeões", "error")
+        return redirect(url_for('main.index'))
+    
+# Adicione esta rota no seu blueprint playoffs
+@bp.route('/novo_torneio')
+def novo_torneio():
+    session.clear()
+    return redirect(url_for('main.index'))

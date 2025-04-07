@@ -2,6 +2,9 @@ from flask import Blueprint, request, redirect, url_for, session, current_app
 import random
 import re
 from datetime import datetime
+from database.models import Jogador, Torneio
+from database.db import db
+
 
 bp = Blueprint('groups', __name__)
 
@@ -52,7 +55,14 @@ def gerar_confrontos(grupo):
 def sorteio():
     try:
         modo = request.form.get('modo_torneio', '28j')
+        nome_torneio = request.form.get('nome_torneio', 'Torneio Sem Nome')
         log_action("tournament_start", f"Iniciando sorteio - Modo: {modo}")
+
+        # Verifica se há um torneio finalizado com mesmo nome
+        torneio_existente = Torneio.query.filter_by(nome=nome_torneio).order_by(Torneio.id.desc()).first()
+        if torneio_existente and torneio_existente.finalizado:
+            session['erro_validacao'] = "Este torneio já foi finalizado. Crie um novo com outro nome."
+            return redirect('/')
         
         # Validação e processamento de nomes
         nomes = [nome.strip() for nome in request.form['jogadores'].split(',') 
@@ -69,10 +79,32 @@ def sorteio():
             session['erro_validacao'] = error_msg
             return redirect('/')
         
+        # Cria novo torneio
+        novo_torneio = Torneio(nome=nome_torneio)
+        db.session.add(novo_torneio)
+        db.session.commit()
+        
+        # Cria jogadores vinculados ao torneio
+        jogadores_dict = {}
+        for nome in nomes:
+            jogador = Jogador(nome=nome, torneio_id=novo_torneio.id)
+            db.session.add(jogador)
+            jogadores_dict[nome] = jogador
+        db.session.commit()
+        
         # Cria estrutura de dados
         session.update({
+            'torneio_id': novo_torneio.id,
             'modo_torneio': modo,
-            'jogadores': {nome: criar_jogador(nome) for nome in nomes},
+            'jogadores': {
+                nome: {
+                    'nome': jogador.nome,
+                    'vitorias': jogador.vitorias,
+                    'saldo_a_favor': jogador.saldo_a_favor,
+                    'saldo_contra': jogador.saldo_contra,
+                    'saldo_total': jogador.saldo_total
+                } for nome, jogador in jogadores_dict.items()
+            },
             'grupos': [],
             'confrontos': [],
             'valores_salvos': {}
@@ -153,7 +185,7 @@ def salvar_grupo(grupo_idx):
             except (KeyError, ValueError) as e:
                 current_app.logger.error(f"Erro processando confronto {confronto_idx}: {str(e)}")
                 raise
-
+            
         # Atualiza e classifica o grupo
         for jogador in session['grupos'][grupo_idx]:
             jogador_ref = session['jogadores'][jogador['nome']]
@@ -166,6 +198,17 @@ def salvar_grupo(grupo_idx):
 
         session['grupos'][grupo_idx].sort(key=lambda x: (-x['vitorias'], -x['saldo_total']))
         session.modified = True
+
+        # Atualiza o banco com os dados salvos
+        for nome, dados in session['jogadores'].items():
+            dados['saldo_total'] = dados['saldo_a_favor'] - dados['saldo_contra']
+            jogador = Jogador.query.filter_by(nome=nome).first()
+            if jogador:
+                jogador.vitorias = dados['vitorias']
+                jogador.saldo_a_favor = dados['saldo_a_favor']
+                jogador.saldo_contra = dados['saldo_contra']
+                jogador.saldo_total = dados['saldo_total']
+        db.session.commit()
         
         log_action("group_saved", 
                   f"Grupo {grupo_idx + 1} salvo - Resultados: {session['grupos'][grupo_idx]}")

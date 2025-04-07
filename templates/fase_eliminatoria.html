@@ -238,6 +238,10 @@
             
             <form method="POST" action="{{ url_for('playoffs.salvar_final') }}" class="card">
                 <input type="hidden" name="modo" value="{{ modo_torneio }}">
+                <input type="hidden" name="timeA_jogador1" value="{{ final.timeA[0]['nome'] }}">
+                <input type="hidden" name="timeA_jogador2" value="{{ final.timeA[1]['nome'] }}">
+                <input type="hidden" name="timeB_jogador1" value="{{ final.timeB[0]['nome'] }}">
+                <input type="hidden" name="timeB_jogador2" value="{{ final.timeB[1]['nome'] }}">
                 <div class="confronto-eliminatorio confronto-final">
                     <h3>Jogo {{ final.jogo }} - FINAL</h3>
                     <div class="confronto-jogadores">
@@ -268,6 +272,13 @@
                 <button type="submit" class="btn btn-info mt-3">
                     Salvar Resultado Final
                 </button>
+
+                {% if 'eliminatoria_jogo' + final.jogo|string in session %}
+                <a href="{{ url_for('playoffs.finalizar_torneio') }}" class="btn btn-success mt-3">
+                    Finalizar Torneio e Ver Campeões
+                </a>
+                {% endif %}
+
             </form>
         </section>
         {% endif %}
@@ -295,6 +306,19 @@
             if(this.value > 100) this.value = 100;
         });
     });
+
+    function finalizarTorneio() {
+        // Abre a página de campeões numa nova aba
+        window.open("/campeoes", "_blank");
+
+        // Tenta fechar a aba atual
+        window.close();
+
+        // Se não conseguir fechar (por limitação do navegador), redireciona para a tela inicial
+        setTimeout(() => {
+            window.location.href = "/";
+        }, 500);
+    }
 
     // Adiciona verificação ao botão de abrir eliminatória
     document.getElementById('btnEliminatoria')?.addEventListener('click', function(e) {

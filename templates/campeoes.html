@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <h1 class="display-4 mb-4">🏆 Campeões do Torneio 🏆</h1>
+            
+            <div class="card border-success mb-4">
+                <div class="card-header bg-success text-white">
+                    <h2 class="mb-0">Campeões</h2>
+                </div>
+                <div class="card-body">
+                    {% if campeoes %}
+                        <h3 class="text-success">{{ campeoes[0].nome }} e {{ campeoes[1].nome }}</h3>
+                    {% else %}
+                        <p class="text-danger">Dados dos campeões não encontrados!</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="mb-0">Vice-Campeões</h2>
+                </div>
+                <div class="card-body">
+                    {% if vice_campeoes %}
+                        <h3 class="text-primary">{{ vice_campeoes[0].nome }} e {{ vice_campeoes[1].nome }}</h3>
+                    {% else %}
+                        <p class="text-danger">Dados dos vice-campeões não encontrados!</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <p class="text-muted">
+                    <strong>Modo:</strong> {{ modo_torneio }} | 
+                    <strong>Data:</strong> {{ data }}
+                </p>
+            </div>
+            
+            <div class="mt-5">
+                <a href="{{ url_for('playoffs.novo_torneio') }}" class="btn btn-lg btn-primary mr-3">
+                    Novo Torneio
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
