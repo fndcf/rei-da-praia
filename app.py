@@ -5,6 +5,7 @@ from routes.groups import bp as groups_bp
 from routes.playoffs import bp as playoffs_bp
 from flask_sqlalchemy import SQLAlchemy
 from database.db import db
+from sqlalchemy import text
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -13,8 +14,13 @@ def create_app(config_class=Config):
     db.init_app(app)
 
     with app.app_context():
-        db.drop_all()   # Apaga as tabelas existentes
-        db.create_all() # Cria as tabelas com as colunas certas
+        # Use text() para envolver os comandos SQL
+        db.session.execute(text('DROP SCHEMA public CASCADE'))
+        db.session.execute(text('CREATE SCHEMA public'))
+        db.session.commit()
+        
+        # Agora crie as tabelas
+        db.create_all()
 
     # --------------------------------------
     # Registro de Blueprints

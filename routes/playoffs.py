@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, session, url_for, redirect, request, flash, current_app
 from datetime import datetime
 import logging
-from database.models import Jogador, Torneio
+from database.models import Jogador, Torneio, Confronto, ConfrontoEliminatoria
 from database.db import db
 
 bp = Blueprint('playoffs', __name__)
@@ -301,6 +301,7 @@ def fase_eliminatoria():
 def salvar_eliminatorias():
     try:
         modo = session.get('modo_torneio', '28j')
+        torneio_id = session.get('torneio_id')
         log_playoff_action("save_quarterfinals_start")
 
         num_jogos = {'20j':1, '24j':2, '28j':3, '32j':4}.get(modo, 3)
@@ -309,11 +310,59 @@ def salvar_eliminatorias():
             timeA = int(request.form.get(f'jogo_{jogo}_timeA', 0))
             timeB = int(request.form.get(f'jogo_{jogo}_timeB', 0))
             
+            # Salvar na sessão (como já estava fazendo)
             session[f'eliminatoria_jogo{jogo}'] = {
                 'timeA': timeA,
                 'timeB': timeB
             }
-            current_app.logger.info(f"Quartas Jogo {jogo} salvo: {timeA}x{timeB}")
+            
+            # Pegar os nomes dos jogadores do formulário
+            timeA_jogador1 = request.form.get(f'timeA_jogador1_{jogo}')
+            timeA_jogador2 = request.form.get(f'timeA_jogador2_{jogo}')
+            timeB_jogador1 = request.form.get(f'timeB_jogador1_{jogo}')
+            timeB_jogador2 = request.form.get(f'timeB_jogador2_{jogo}')
+            
+            if torneio_id and all([timeA_jogador1, timeA_jogador2, timeB_jogador1, timeB_jogador2]):
+                # Verificar se já existe este confronto no banco
+                confronto_db = ConfrontoEliminatoria.query.filter_by(
+                    torneio_id=torneio_id,
+                    fase='quartas',
+                    jogo_numero=jogo
+                ).first()
+                
+                # Buscar IDs dos jogadores
+                jogador_a1 = Jogador.query.filter_by(nome=timeA_jogador1, torneio_id=torneio_id).first()
+                jogador_a2 = Jogador.query.filter_by(nome=timeA_jogador2, torneio_id=torneio_id).first()
+                jogador_b1 = Jogador.query.filter_by(nome=timeB_jogador1, torneio_id=torneio_id).first()
+                jogador_b2 = Jogador.query.filter_by(nome=timeB_jogador2, torneio_id=torneio_id).first()
+                
+                if all([jogador_a1, jogador_a2, jogador_b1, jogador_b2]):
+                    if confronto_db:
+                        # Atualizar confronto existente
+                        confronto_db.pontos_dupla_a = timeA
+                        confronto_db.pontos_dupla_b = timeB
+                        confronto_db.atualizado_em = datetime.now()
+                    else:
+                        # Criar novo confronto
+                        confronto_db = ConfrontoEliminatoria(
+                            torneio_id=torneio_id,
+                            fase='quartas',
+                            jogo_numero=jogo,
+                            jogador_a1_id=jogador_a1.id,
+                            jogador_a2_id=jogador_a2.id,
+                            jogador_b1_id=jogador_b1.id,
+                            jogador_b2_id=jogador_b2.id,
+                            pontos_dupla_a=timeA,
+                            pontos_dupla_b=timeB
+                        )
+                        db.session.add(confronto_db)
+                    
+                    db.session.commit()
+                    current_app.logger.info(f"Quartas Jogo {jogo} salvo no DB: {timeA}x{timeB}")
+                else:
+                    current_app.logger.warning(f"Não foi possível encontrar todos os jogadores para o confronto {jogo}")
+            
+            current_app.logger.info(f"Quartas Jogo {jogo} salvo na sessão: {timeA}x{timeB}")
 
         session.modified = True
         return redirect(url_for('playoffs.fase_eliminatoria'))
@@ -323,6 +372,7 @@ def salvar_eliminatorias():
             f"Erro ao salvar quartas: {str(e)}",
             exc_info=True
         )
+        db.session.rollback()
         flash("Erro ao salvar resultados das quartas", "error")
         return redirect(url_for('playoffs.fase_eliminatoria'))
 
@@ -330,6 +380,7 @@ def salvar_eliminatorias():
 def salvar_semi_finais():
     try:
         modo = request.form.get('modo', '28j')
+        torneio_id = session.get('torneio_id')
         inicio_semis = {'20j':2, '24j':3, '28j':4, '32j':5}.get(modo, 4)
         log_playoff_action("save_semifinals_start", f"Jogos: {inicio_semis}-{inicio_semis+1}")
 
@@ -337,11 +388,59 @@ def salvar_semi_finais():
             timeA = int(request.form.get(f'jogo_{jogo}_timeA', 0))
             timeB = int(request.form.get(f'jogo_{jogo}_timeB', 0))
             
+            # Salvar na sessão
             session[f'eliminatoria_jogo{jogo}'] = {
                 'timeA': timeA,
                 'timeB': timeB
             }
-            current_app.logger.debug(f"Semi-final Jogo {jogo}: {timeA}x{timeB}")
+            
+            # Pegar os nomes dos jogadores do formulário
+            timeA_jogador1 = request.form.get(f'timeA_jogador1_{jogo}')
+            timeA_jogador2 = request.form.get(f'timeA_jogador2_{jogo}')
+            timeB_jogador1 = request.form.get(f'timeB_jogador1_{jogo}')
+            timeB_jogador2 = request.form.get(f'timeB_jogador2_{jogo}')
+            
+            if torneio_id and all([timeA_jogador1, timeA_jogador2, timeB_jogador1, timeB_jogador2]):
+                # Verificar se já existe este confronto no banco
+                confronto_db = ConfrontoEliminatoria.query.filter_by(
+                    torneio_id=torneio_id,
+                    fase='semi',
+                    jogo_numero=jogo
+                ).first()
+                
+                # Buscar IDs dos jogadores
+                jogador_a1 = Jogador.query.filter_by(nome=timeA_jogador1, torneio_id=torneio_id).first()
+                jogador_a2 = Jogador.query.filter_by(nome=timeA_jogador2, torneio_id=torneio_id).first()
+                jogador_b1 = Jogador.query.filter_by(nome=timeB_jogador1, torneio_id=torneio_id).first()
+                jogador_b2 = Jogador.query.filter_by(nome=timeB_jogador2, torneio_id=torneio_id).first()
+                
+                if all([jogador_a1, jogador_a2, jogador_b1, jogador_b2]):
+                    if confronto_db:
+                        # Atualizar confronto existente
+                        confronto_db.pontos_dupla_a = timeA
+                        confronto_db.pontos_dupla_b = timeB
+                        confronto_db.atualizado_em = datetime.now()
+                    else:
+                        # Criar novo confronto
+                        confronto_db = ConfrontoEliminatoria(
+                            torneio_id=torneio_id,
+                            fase='semi',
+                            jogo_numero=jogo,
+                            jogador_a1_id=jogador_a1.id,
+                            jogador_a2_id=jogador_a2.id,
+                            jogador_b1_id=jogador_b1.id,
+                            jogador_b2_id=jogador_b2.id,
+                            pontos_dupla_a=timeA,
+                            pontos_dupla_b=timeB
+                        )
+                        db.session.add(confronto_db)
+                    
+                    db.session.commit()
+                    current_app.logger.debug(f"Semi-final Jogo {jogo} salvo no DB: {timeA}x{timeB}")
+                else:
+                    current_app.logger.warning(f"Não foi possível encontrar todos os jogadores para o confronto {jogo}")
+            
+            current_app.logger.debug(f"Semi-final Jogo {jogo} salvo na sessão: {timeA}x{timeB}")
 
         session.modified = True
         return redirect(url_for('playoffs.fase_eliminatoria'))
@@ -351,6 +450,7 @@ def salvar_semi_finais():
             f"Erro ao salvar semi-finais: {str(e)}",
             exc_info=True
         )
+        db.session.rollback()
         flash("Erro ao salvar semi-finais", "error")
         return redirect(url_for('playoffs.fase_eliminatoria'))
 
@@ -358,6 +458,7 @@ def salvar_semi_finais():
 def salvar_final():
     try:
         modo = request.form.get('modo', '28j')
+        torneio_id = session.get('torneio_id')
         jogo_final = {'20j':4, '24j':5, '28j':6, '32j':7}.get(modo, 6)
 
         # Obter os nomes dos jogadores do formulário
@@ -379,7 +480,7 @@ def salvar_final():
         timeA = int(request.form.get(f'jogo_{jogo_final}_timeA', 0))
         timeB = int(request.form.get(f'jogo_{jogo_final}_timeB', 0))
         
-        # Armazena o placar
+        # Armazena o placar na sessão
         session[f'eliminatoria_jogo{jogo_final}'] = {
             'timeA': timeA,
             'timeB': timeB
@@ -389,11 +490,59 @@ def salvar_final():
         vencedor = 'timeA' if timeA > timeB else 'timeB'
         session['campea'] = session[f'final_dupla_{vencedor}']
         
+        # Salvar no banco de dados
+        if torneio_id:
+            # Verificar se já existe este confronto no banco
+            confronto_db = ConfrontoEliminatoria.query.filter_by(
+                torneio_id=torneio_id,
+                fase='final',
+                jogo_numero=jogo_final
+            ).first()
+            
+            # Obter IDs dos jogadores
+            # Precisamos encontrar os IDs no dicionário de jogadores
+            timeA_ids = [
+                session['jogadores'].get(timeA_jogador1, {}).get('id', None),
+                session['jogadores'].get(timeA_jogador2, {}).get('id', None)
+            ]
+            timeB_ids = [
+                session['jogadores'].get(timeB_jogador1, {}).get('id', None),
+                session['jogadores'].get(timeB_jogador2, {}).get('id', None)
+            ]
+            
+            # Verificar se todos os IDs foram encontrados
+            if all(timeA_ids) and all(timeB_ids):
+                if confronto_db:
+                    # Atualizar confronto existente
+                    confronto_db.pontos_dupla_a = timeA
+                    confronto_db.pontos_dupla_b = timeB
+                    confronto_db.atualizado_em = datetime.now()
+                else:
+                    # Criar novo confronto
+                    confronto_db = ConfrontoEliminatoria(
+                        torneio_id=torneio_id,
+                        fase='final',
+                        jogo_numero=jogo_final,
+                        jogador_a1_id=timeA_ids[0],
+                        jogador_a2_id=timeA_ids[1],
+                        jogador_b1_id=timeB_ids[0],
+                        jogador_b2_id=timeB_ids[1],
+                        pontos_dupla_a=timeA,
+                        pontos_dupla_b=timeB
+                    )
+                    db.session.add(confronto_db)
+                
+                db.session.commit()
+                current_app.logger.info(f"Final Jogo {jogo_final} salvo no DB: {timeA}x{timeB}")
+            else:
+                current_app.logger.warning("Não foi possível encontrar todos os IDs dos jogadores para salvar a final")
+        
         session.modified = True
         return redirect(url_for('playoffs.fase_eliminatoria'))
     
     except Exception as e:
         current_app.logger.error(f"Erro ao salvar final: {str(e)}")
+        db.session.rollback()
         flash("Erro ao salvar a final", "error")
         return redirect(url_for('playoffs.fase_eliminatoria'))
 
@@ -401,9 +550,19 @@ def salvar_final():
 def resetar_eliminatorias():
     try:
         log_playoff_action("reset_start")
+        torneio_id = session.get('torneio_id')
         
+        # Remover da sessão
         for i in range(1, 8):
             session.pop(f'eliminatoria_jogo{i}', None)
+        
+        # Remover do banco de dados
+        if torneio_id:
+            confrontos = ConfrontoEliminatoria.query.filter_by(torneio_id=torneio_id).all()
+            for confronto in confrontos:
+                db.session.delete(confronto)
+            db.session.commit()
+            current_app.logger.info(f"Eliminados {len(confrontos)} confrontos do DB para o torneio {torneio_id}")
         
         session.modified = True
         current_app.logger.info("Fase eliminatória resetada com sucesso")
@@ -414,12 +573,14 @@ def resetar_eliminatorias():
             f"Falha ao resetar eliminatórias: {str(e)}",
             exc_info=True
         )
+        db.session.rollback()
         return {'success': False, 'error': str(e)}, 500
     
 @bp.route('/finalizar_torneio')
 def finalizar_torneio():
     try:
         modo = session.get('modo_torneio', '28j')
+        torneio_id = session.get('torneio_id')
         jogo_final = {'20j':4, '24j':5, '28j':6, '32j':7}.get(modo, 6)
         
         if f'eliminatoria_jogo{jogo_final}' not in session:
@@ -442,6 +603,14 @@ def finalizar_torneio():
             'vice_campeoes': vice_campeoes,
             'placar': f"{final_data['timeA']}x{final_data['timeB']}"
         }
+        
+        # AQUI: Vamos atualizar o status 'finalizado' no banco de dados
+        if torneio_id:
+            torneio = Torneio.query.get(torneio_id)
+            if torneio:
+                torneio.finalizado = True
+                db.session.commit()
+                current_app.logger.info(f"Torneio {torneio_id} marcado como finalizado no banco de dados")
         
         return redirect(url_for('playoffs.campeoes'))
     
@@ -475,3 +644,35 @@ def campeoes():
 def home_page():
     session.clear()
     return redirect(url_for('main.home'))
+
+def obter_confrontos_eliminatorias_db(torneio_id):
+    """Recupera os confrontos de eliminatórias do banco de dados para um determinado torneio"""
+    confrontos_db = {}
+    try:
+        # Busca todos os confrontos eliminatórios do torneio
+        confrontos = ConfrontoEliminatoria.query.filter_by(torneio_id=torneio_id).all()
+        
+        # Organiza confrontos por fase e número do jogo
+        for confronto in confrontos:
+            fase = confronto.fase
+            jogo_numero = confronto.jogo_numero
+            
+            if fase not in confrontos_db:
+                confrontos_db[fase] = {}
+            
+            # Armazena os dados do confronto
+            confrontos_db[fase][jogo_numero] = {
+                'jogador_a1_id': confronto.jogador_a1_id,
+                'jogador_a2_id': confronto.jogador_a2_id,
+                'jogador_b1_id': confronto.jogador_b1_id,
+                'jogador_b2_id': confronto.jogador_b2_id,
+                'pontos_dupla_a': confronto.pontos_dupla_a,
+                'pontos_dupla_b': confronto.pontos_dupla_b
+            }
+        
+        log_playoff_action("confrontos_eliminatorias_loaded", f"Carregados {len(confrontos)} confrontos do torneio {torneio_id}")
+        return confrontos_db
+    
+    except Exception as e:
+        log_playoff_action("confrontos_eliminatorias_load_error", f"Erro ao carregar confrontos: {str(e)}")
+        return {}

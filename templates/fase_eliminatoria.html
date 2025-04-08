@@ -158,21 +158,27 @@
                         <span class="dupla">
                             {{ jogo.timeA[0]['nome'] }} & {{ jogo.timeA[1]['nome'] }}
                         </span>
+                        <!-- Campos ocultos para os nomes dos jogadores -->
+                        <input type="hidden" name="timeA_jogador1_{{ jogo.jogo }}" value="{{ jogo.timeA[0]['nome'] }}">
+                        <input type="hidden" name="timeA_jogador2_{{ jogo.jogo }}" value="{{ jogo.timeA[1]['nome'] }}">
+                        <input type="hidden" name="timeB_jogador1_{{ jogo.jogo }}" value="{{ jogo.timeB[0]['nome'] }}">
+                        <input type="hidden" name="timeB_jogador2_{{ jogo.jogo }}" value="{{ jogo.timeB[1]['nome'] }}">
+                        
                         <input type="number" 
-                               name="jogo_{{ jogo.jogo }}_timeA" 
-                               value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeA', '') }}" 
-                               min="0"
-                               class="saldo-inputs-esq" 
-                               required
-                               oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                            name="jogo_{{ jogo.jogo }}_timeA" 
+                            value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeA', '') }}" 
+                            min="0"
+                            class="saldo-inputs-esq" 
+                            required
+                            oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                         <span class="vs">⚔️</span>
                         <input type="number" 
-                               name="jogo_{{ jogo.jogo }}_timeB" 
-                               value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeB', '') }}" 
-                               min="0" 
-                               class="saldo-inputs-dir"
-                               required
-                               oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                            name="jogo_{{ jogo.jogo }}_timeB" 
+                            value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeB', '') }}" 
+                            min="0" 
+                            class="saldo-inputs-dir"
+                            required
+                            oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                         <span class="dupla">
                             {{ jogo.timeB[0]['nome'] }} & {{ jogo.timeB[1]['nome'] }}
                         </span>
@@ -202,21 +208,27 @@
                         <span class="dupla">
                             {{ jogo.timeA[0]['nome'] }} & {{ jogo.timeA[1]['nome'] }}
                         </span>
+                        <!-- Campos ocultos para os nomes dos jogadores -->
+                        <input type="hidden" name="timeA_jogador1_{{ jogo.jogo }}" value="{{ jogo.timeA[0]['nome'] }}">
+                        <input type="hidden" name="timeA_jogador2_{{ jogo.jogo }}" value="{{ jogo.timeA[1]['nome'] }}">
+                        <input type="hidden" name="timeB_jogador1_{{ jogo.jogo }}" value="{{ jogo.timeB[0]['nome'] }}">
+                        <input type="hidden" name="timeB_jogador2_{{ jogo.jogo }}" value="{{ jogo.timeB[1]['nome'] }}">
+                        
                         <input type="number"  
-                               name="jogo_{{ jogo.jogo }}_timeA" 
-                               value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeA', '') }}" 
-                               min="0" 
-                               class="saldo-inputs-esq"
-                               required
-                               oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                            name="jogo_{{ jogo.jogo }}_timeA" 
+                            value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeA', '') }}" 
+                            min="0" 
+                            class="saldo-inputs-esq"
+                            required
+                            oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                         <span class="vs vs-semi">⚔️</span>
                         <input type="number"  
-                               name="jogo_{{ jogo.jogo }}_timeB" 
-                               value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeB', '') }}" 
-                               min="0" 
-                               class="saldo-inputs-dir"
-                               required
-                               oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                            name="jogo_{{ jogo.jogo }}_timeB" 
+                            value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeB', '') }}" 
+                            min="0" 
+                            class="saldo-inputs-dir"
+                            required
+                            oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                         <span class="dupla">
                             {{ jogo.timeB[0]['nome'] }} & {{ jogo.timeB[1]['nome'] }}
                         </span>
