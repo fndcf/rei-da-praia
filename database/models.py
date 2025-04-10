@@ -8,6 +8,9 @@ class Jogador(db.Model):
     saldo_a_favor = db.Column(db.Integer, default=0)
     saldo_contra = db.Column(db.Integer, default=0)
     saldo_total = db.Column(db.Integer, default=0)
+    posicao_grupo = db.Column(db.Integer, default=0)  # Nova coluna
+    grupo_idx = db.Column(db.Integer, default=0)      # Índice do grupo ao qual pertence
+    pontuacao = db.Column(db.Integer, default=0)      # Pontuação total do ranking
     torneio_id = db.Column(db.Integer, db.ForeignKey('torneio.id'), nullable=False)
 
 class Torneio(db.Model):

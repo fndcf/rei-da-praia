@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, session, url_for, redirect, reques
 from datetime import datetime
 import logging
 from database.models import Jogador, Torneio, Confronto, ConfrontoEliminatoria
+from database.ranking import RankingManager
 from database.db import db
 
 bp = Blueprint('playoffs', __name__)
@@ -546,36 +547,6 @@ def salvar_final():
         flash("Erro ao salvar a final", "error")
         return redirect(url_for('playoffs.fase_eliminatoria'))
 
-@bp.route('/resetar_eliminatorias')
-def resetar_eliminatorias():
-    try:
-        log_playoff_action("reset_start")
-        torneio_id = session.get('torneio_id')
-        
-        # Remover da sessão
-        for i in range(1, 8):
-            session.pop(f'eliminatoria_jogo{i}', None)
-        
-        # Remover do banco de dados
-        if torneio_id:
-            confrontos = ConfrontoEliminatoria.query.filter_by(torneio_id=torneio_id).all()
-            for confronto in confrontos:
-                db.session.delete(confronto)
-            db.session.commit()
-            current_app.logger.info(f"Eliminados {len(confrontos)} confrontos do DB para o torneio {torneio_id}")
-        
-        session.modified = True
-        current_app.logger.info("Fase eliminatória resetada com sucesso")
-        return {'success': True}, 200
-    
-    except Exception as e:
-        current_app.logger.error(
-            f"Falha ao resetar eliminatórias: {str(e)}",
-            exc_info=True
-        )
-        db.session.rollback()
-        return {'success': False, 'error': str(e)}, 500
-    
 @bp.route('/finalizar_torneio')
 def finalizar_torneio():
     try:
@@ -604,13 +575,22 @@ def finalizar_torneio():
             'placar': f"{final_data['timeA']}x{final_data['timeB']}"
         }
         
-        # AQUI: Vamos atualizar o status 'finalizado' no banco de dados
+        # Atualizar o status 'finalizado' no banco de dados
         if torneio_id:
             torneio = Torneio.query.get(torneio_id)
             if torneio:
                 torneio.finalizado = True
                 db.session.commit()
                 current_app.logger.info(f"Torneio {torneio_id} marcado como finalizado no banco de dados")
+                
+                # Calcular a pontuação dos jogadores neste torneio
+                success = RankingManager.calcular_pontuacao_torneio(torneio_id)
+                if success:
+                    current_app.logger.info(f"Pontuação do torneio {torneio_id} calculada com sucesso")
+                    flash("Pontuação do ranking calculada com sucesso!", "success")
+                else:
+                    current_app.logger.warning(f"Erro ao calcular pontuação do torneio {torneio_id}")
+                    flash("Erro ao calcular pontuação do ranking", "warning")
         
         return redirect(url_for('playoffs.campeoes'))
     

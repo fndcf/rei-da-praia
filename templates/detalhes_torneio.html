@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block title %}Detalhes do Torneio - {{ torneio.nome }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Destacar primeiro e segundo lugares */
+    tr.primeiro td {
+        background-color: #ffd700 !important; /* Dourado */
+        font-weight: bold;
+    }
+    tr.segundo td {
+        background-color: #c0c0c0 !important; /* Prateado */
+    }
+    
+    /* Cores para saldo positivo e negativo */
+    .positivo {
+        color: #28a745;
+        font-weight: bold;
+    }
+    .negativo {
+        color: #dc3545;
+        font-weight: bold;
+    }
+    
+    /* Destacar placar vencedor */
+    .vencedor {
+        font-weight: bold;
+        color: #fff;
+        background-color: #28a745 !important;
+        border-radius: 4px;
+    }
+    
+    /* Estilo para número do confronto */
+    .confronto-numero {
+        background-color: #f8f9fa;
+        padding: 5px 10px;
+        border-radius: 4px;
+        margin-bottom: 10px;
+        font-size: 0.9em;
+        color: #6c757d;
+    }
+    
+    /* Melhorar espaçamento dos confrontos */
+    .confronto {
+        margin-bottom: 20px;
+        padding: 15px;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        background-color: #fff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card mb-4">
+        <div class="card-body">
+            <h1 class="card-title text-center">{{ torneio.nome }}</h1>
+            <p class="text-muted text-center">Data de criação: {{ torneio.data_criacao.strftime('%d/%m/%Y') }}</p>
+            
+            <!-- Informações do Campeão -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card border-success mb-3">
+                        <div class="card-header bg-success text-white">
+                            <h3 class="mb-0">Campeões</h3>
+                        </div>
+                        <div class="card-body">
+                            {% if campeoes %}
+                                <h4 class="text-success">{{ campeoes[0].nome }} & {{ campeoes[1].nome }}</h4>
+                            {% else %}
+                                <p class="text-danger">Informações dos campeões não disponíveis</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card border-primary mb-3">
+                        <div class="card-header bg-primary text-white">
+                            <h3 class="mb-0">Vice-Campeões</h3>
+                        </div>
+                        <div class="card-body">
+                            {% if vice_campeoes %}
+                                <h4 class="text-primary">{{ vice_campeoes[0].nome }} & {{ vice_campeoes[1].nome }}</h4>
+                            {% else %}
+                                <p class="text-danger">Informações dos vice-campeões não disponíveis</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% if placar_final %}
+                <div class="col-12 text-center">
+                    <h3>Placar Final: {{ placar_final }}</h3>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Fase de Grupos -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2>Fase de Grupos</h2>
+        </div>
+        <div class="card-body">
+            {% for grupo_idx, grupo in grupos.items() %}
+            <div class="grupo card mt-2">
+                <h3>Grupo {{ grupo_idx + 1 }}</h3>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Pos.</th>
+                            <th>Jogador</th>
+                            <th>Vitórias</th>
+                            <th>Saldo+</th>
+                            <th>Saldo-</th>
+                            <th>Saldo Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for jogador in grupo.jogadores_ordenados %}
+                        <tr class="{% if loop.index == 1 %}primeiro{% elif loop.index == 2 %}segundo{% endif %}">
+                            <td>{{ loop.index }}</td>
+                            <td>{{ jogador.nome }}</td>
+                            <td>{{ jogador.vitorias }}</td>
+                            <td>{{ jogador.saldo_a_favor }}</td>
+                            <td>{{ jogador.saldo_contra }}</td>
+                            <td class="{% if jogador.saldo_total > 0 %}positivo{% elif jogador.saldo_total < 0 %}negativo{% endif %}">
+                                {{ jogador.saldo_total }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                
+                <h4 class="mt-3">Confrontos</h4>
+                {% set confrontos_ordenados = grupo.confrontos|sort(attribute='confronto_idx') %}
+                {% for confronto in confrontos_ordenados %}
+                <div class="confronto">
+                    <h5 class="confronto-numero">Confronto {{ confronto.confronto_idx + 1 }}</h5>
+                    <div class="confronto-jogadores">
+                        <span class="dupla">
+                            {{ jogadores[confronto.jogador_a1_id].nome }} & {{ jogadores[confronto.jogador_a2_id].nome }}
+                        </span>
+                        <span class="saldo-inputs-esq {% if confronto.pontos_dupla_a > confronto.pontos_dupla_b %}vencedor{% endif %}">
+                            {{ confronto.pontos_dupla_a if confronto.pontos_dupla_a is not none else '-' }}
+                        </span>
+                        <span class="vs">⚔️</span>
+                        <span class="saldo-inputs-dir {% if confronto.pontos_dupla_b > confronto.pontos_dupla_a %}vencedor{% endif %}">
+                            {{ confronto.pontos_dupla_b if confronto.pontos_dupla_b is not none else '-' }}
+                        </span>
+                        <span class="dupla">
+                            {{ jogadores[confronto.jogador_b1_id].nome }} & {{ jogadores[confronto.jogador_b2_id].nome }}
+                        </span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Fase Eliminatória -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2>Fase Eliminatória</h2>
+        </div>
+        <div class="card-body">
+            {% if quartas %}
+            <h3>Quartas de Final</h3>
+            {% for confronto in quartas|sort(attribute='jogo_numero') %}
+            <div class="confronto-eliminatorio">
+                <h5 class="confronto-numero">Jogo {{ confronto.jogo_numero }}</h5>
+                <div class="confronto-jogadores">
+                    <span class="dupla">
+                        {{ jogadores[confronto.jogador_a1_id].nome }} & {{ jogadores[confronto.jogador_a2_id].nome }}
+                    </span>
+                    <span class="saldo-inputs-esq {% if confronto.pontos_dupla_a > confronto.pontos_dupla_b %}vencedor{% endif %}">
+                        {{ confronto.pontos_dupla_a if confronto.pontos_dupla_a is not none else '-' }}
+                    </span>
+                    <span class="vs">⚔️</span>
+                    <span class="saldo-inputs-dir {% if confronto.pontos_dupla_b > confronto.pontos_dupla_a %}vencedor{% endif %}">
+                        {{ confronto.pontos_dupla_b if confronto.pontos_dupla_b is not none else '-' }}
+                    </span>
+                    <span class="dupla">
+                        {{ jogadores[confronto.jogador_b1_id].nome }} & {{ jogadores[confronto.jogador_b2_id].nome }}
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+            {% endif %}
+
+            {% if semis %}
+            <h3 class="mt-4">Semi-finais</h3>
+            {% for confronto in semis|sort(attribute='jogo_numero') %}
+            <div class="confronto-eliminatorio confronto-semi">
+                <h5 class="confronto-numero">Jogo {{ confronto.jogo_numero }}</h5>
+                <div class="confronto-jogadores">
+                    <span class="dupla">
+                        {{ jogadores[confronto.jogador_a1_id].nome }} & {{ jogadores[confronto.jogador_a2_id].nome }}
+                    </span>
+                    <span class="saldo-inputs-esq {% if confronto.pontos_dupla_a > confronto.pontos_dupla_b %}vencedor{% endif %}">
+                        {{ confronto.pontos_dupla_a if confronto.pontos_dupla_a is not none else '-' }}
+                    </span>
+                    <span class="vs vs-semi">⚔️</span>
+                    <span class="saldo-inputs-dir {% if confronto.pontos_dupla_b > confronto.pontos_dupla_a %}vencedor{% endif %}">
+                        {{ confronto.pontos_dupla_b if confronto.pontos_dupla_b is not none else '-' }}
+                    </span>
+                    <span class="dupla">
+                        {{ jogadores[confronto.jogador_b1_id].nome }} & {{ jogadores[confronto.jogador_b2_id].nome }}
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+            {% endif %}
+
+            {% if final %}
+            <h3 class="mt-4">Final</h3>
+            <div class="confronto-eliminatorio confronto-final">
+                <h5 class="confronto-numero">Final</h5>
+                <div class="confronto-jogadores">
+                    <span class="dupla">
+                        {{ jogadores[final.jogador_a1_id].nome }} & {{ jogadores[final.jogador_a2_id].nome }}
+                    </span>
+                    <span class="saldo-inputs-esq {% if final.pontos_dupla_a > final.pontos_dupla_b %}vencedor{% endif %}">
+                        {{ final.pontos_dupla_a if final.pontos_dupla_a is not none else '-' }}
+                    </span>
+                    <span class="vs vs-final">🏆</span>
+                    <span class="saldo-inputs-dir {% if final.pontos_dupla_b > final.pontos_dupla_a %}vencedor{% endif %}">
+                        {{ final.pontos_dupla_b if final.pontos_dupla_b is not none else '-' }}
+                    </span>
+                    <span class="dupla">
+                        {{ jogadores[final.jogador_b1_id].nome }} & {{ jogadores[final.jogador_b2_id].nome }}
+                    </span>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="text-center mb-5">
+        <a href="{{ url_for('main.home') }}" class="btn btn-primary">Voltar para Home</a>
+    </div>
+</div>
+{% endblock %}

@@ -510,3 +510,26 @@ input[type="number"] {
   from { opacity: 0; }
   to { opacity: 1; }
 }
+/* Adicionar ao final do arquivo static/style.css */
+
+/* Estilos específicos para tabela de histórico */
+.historico-table tr:nth-child(1) td,
+.historico-table tr:nth-child(2) td {
+  background-color: transparent !important; /* Remove o destaque dourado/prata */
+  font-weight: normal;
+}
+
+.historico-table tr:nth-child(even) {
+  background-color: #f2f2f2; /* Mantém o estilo zebrado para linhas pares */
+}
+
+.historico-table tr:hover {
+  background-color: #e9ecef; /* Efeito hover suave */
+}
+
+/* Estilo para botões em tabelas */
+.table .btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  border-radius: 0.2rem;
+}

@@ -17,31 +17,46 @@
             <!-- Histórico de Torneios -->
             <div class="card">
                 <h2>Histórico de Torneios</h2>
-                <table class="table">
+                <table class="table historico-table">
                     <thead>
                         <tr>
                             <th>Data</th>
+                            <th>Nome do Torneio</th>
                             <th>Campeão</th>
                             <th>Vice</th>
                             <th>Detalhes</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- Loop de torneios do banco de dados -->
-                        <!-- Exemplo: -->
-                        <!--
-                        {% for torneio in torneios %}
-                        <tr>
-                            <td>{{ torneio.data }}</td>
-                            <td>{{ torneio.campeao }}</td>
-                            <td>{{ torneio.vice }}</td>
-                            <td><a href="{{ url_for('main.detalhes_torneio', id=torneio.id) }}">Ver</a></td>
-                        </tr>
-                        {% endfor %}
-                        -->
-                        <tr>
-                            <td colspan="4">Nenhum torneio registrado ainda.</td>
-                        </tr>
+                        {% if torneios_finalizados %}
+                            {% for torneio in torneios_finalizados %}
+                            <tr>
+                                <td>{{ torneio.data_criacao.strftime('%d/%m/%Y') }}</td>
+                                <td>{{ torneio.nome }}</td>
+                                <td>
+                                    {% if torneio.campeoes %}
+                                        {{ torneio.campeoes[0] }} & {{ torneio.campeoes[1] }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if torneio.vice_campeoes %}
+                                        {{ torneio.vice_campeoes[0] }} & {{ torneio.vice_campeoes[1] }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('main.detalhes_torneio', torneio_id=torneio.id) }}" class="btn btn-sm btn-primary">Detalhar</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="5">Nenhum torneio finalizado registrado ainda.</td>
+                            </tr>
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
@@ -49,7 +64,7 @@
             <!-- Ranking de Jogadores -->
             <div class="card mt-4">
                 <h2>Ranking de Jogadores</h2>
-                <table class="table">
+                <table class="table historico-table">
                     <thead>
                         <tr>
                             <th>Posição</th>
@@ -58,10 +73,19 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- Loop de jogadores do banco de dados -->
-                        <tr>
-                            <td colspan="3">Ranking ainda não disponível.</td>
-                        </tr>
+                        {% if ranking_jogadores %}
+                            {% for jogador in ranking_jogadores %}
+                            <tr>
+                                <td>{{ jogador.posicao }}</td>
+                                <td>{{ jogador.nome }}</td>
+                                <td>{{ jogador.pontos }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="3">Ranking ainda não disponível.</td>
+                            </tr>
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
@@ -76,6 +100,7 @@
                     </form>
                 </div>
             </div>
+        </div>
     </div>
 </div>
 {% endblock %}

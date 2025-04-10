@@ -253,21 +253,35 @@ def salvar_grupo(grupo_idx):
         session['grupos'][grupo_idx].sort(key=lambda x: (-x['vitorias'], -x['saldo_total']))
         session.modified = True
 
-        # Atualiza o banco com os dados salvos
-        for nome, dados in session['jogadores'].items():
-            dados['saldo_total'] = dados['saldo_a_favor'] - dados['saldo_contra']
+        # Primeiro commit para salvar as alterações nos confrontos
+        db.session.commit()
+        
+        # Agora atualizamos posição dos jogadores com commits individuais
+        for i, jogador_dados in enumerate(session['grupos'][grupo_idx]):
+            nome = jogador_dados['nome']
+            posicao = i + 1  # Posição no grupo (1-based)
+            
+            # Busca novamente o jogador para ter uma instância atualizada
             jogador = Jogador.query.filter_by(
                 nome=nome, 
                 torneio_id=session.get('torneio_id')
             ).first()
             
             if jogador:
-                jogador.vitorias = dados['vitorias']
-                jogador.saldo_a_favor = dados['saldo_a_favor']
-                jogador.saldo_contra = dados['saldo_contra']
-                jogador.saldo_total = dados['saldo_total']
-        
-        db.session.commit()
+                # Atualiza estatísticas e posição
+                jogador.vitorias = jogador_dados['vitorias']
+                jogador.saldo_a_favor = jogador_dados['saldo_a_favor']
+                jogador.saldo_contra = jogador_dados['saldo_contra']
+                jogador.saldo_total = jogador_dados['saldo_total']
+                jogador.posicao_grupo = posicao
+                jogador.grupo_idx = grupo_idx
+                
+                # Commit individual para garantir a persistência
+                db.session.commit()
+                
+                # Log para debug
+                log_action("jogador_position_updated", 
+                          f"Jogador: {nome}, Grupo: {grupo_idx}, Posição: {posicao}")
         
         log_action("group_saved", 
                   f"Grupo {grupo_idx + 1} salvo - Resultados: {session['grupos'][grupo_idx]}")
@@ -277,6 +291,7 @@ def salvar_grupo(grupo_idx):
         error_msg = f"Erro ao salvar Grupo {grupo_idx + 1}: {str(e)}"
         current_app.logger.error(error_msg, exc_info=True)
         session['erro_validacao'] = error_msg
+        db.session.rollback()
         return redirect(url_for('main.novo_torneio'))
 
 @bp.route('/salvar_todos_grupos', methods=['POST'])
@@ -384,21 +399,42 @@ def salvar_todos_grupos():
         
         session.modified = True
 
-        # Atualiza o banco com os dados salvos
-        for nome, dados in session['jogadores'].items():
-            dados['saldo_total'] = dados['saldo_a_favor'] - dados['saldo_contra']
-            jogador = Jogador.query.filter_by(
-                nome=nome, 
-                torneio_id=session.get('torneio_id')
-            ).first()
-            
-            if jogador:
-                jogador.vitorias = dados['vitorias']
-                jogador.saldo_a_favor = dados['saldo_a_favor']
-                jogador.saldo_contra = dados['saldo_contra']
-                jogador.saldo_total = dados['saldo_total']
-        
+        # Importantíssimo: Commit no banco para garantir persistência das alterações anteriores
         db.session.commit()
+        
+        # Atualiza o banco com os dados de posição
+        # Fazemos isso APÓS o commit anterior para garantir que todas as alterações sejam persistidas
+        for grupo_idx in range(len(session['grupos'])):
+            # Atualiza as posições no banco de dados
+            for i, jogador_dados in enumerate(session['grupos'][grupo_idx]):
+                nome = jogador_dados['nome']
+                posicao = i + 1  # Posição no grupo (1, 2, 3, 4)
+                
+                # Busca novamente o jogador do banco para ter certeza que estamos com a instância atualizada
+                jogador = Jogador.query.filter_by(
+                    nome=nome, 
+                    torneio_id=session.get('torneio_id')
+                ).first()
+                
+                if jogador:
+                    # Registra informações de debug para verificar valores
+                    current_app.logger.debug(
+                        f"Atualizando posição: Jogador {jogador.nome} | "
+                        f"Grupo {grupo_idx} | Posição {posicao}"
+                    )
+                    
+                    # Garante que os valores sejam atualizados
+                    jogador.vitorias = jogador_dados['vitorias']
+                    jogador.saldo_a_favor = jogador_dados['saldo_a_favor']
+                    jogador.saldo_contra = jogador_dados['saldo_contra']
+                    jogador.saldo_total = jogador_dados['saldo_total']
+                    jogador.posicao_grupo = posicao
+                    jogador.grupo_idx = grupo_idx
+                    
+                    # Commit individual para cada jogador
+                    db.session.commit()
+                else:
+                    current_app.logger.error(f"Jogador não encontrado: {nome}")
         
         log_action("all_groups_saved", f"Todos os {len(session['grupos'])} grupos salvos com sucesso")
         return redirect(url_for('main.novo_torneio'))
@@ -407,6 +443,7 @@ def salvar_todos_grupos():
         error_msg = f"Erro ao salvar todos os grupos: {str(e)}"
         current_app.logger.error(error_msg, exc_info=True)
         session['erro_validacao'] = error_msg
+        db.session.rollback()
         return redirect(url_for('main.novo_torneio'))
 
 # Função auxiliar para obter confrontos do banco de dados
