@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 class RankingManager:
     """Classe para gerenciar o sistema de pontuação e ranking dos jogadores"""
     
-    # Pontuação para cada fase
+    # Pontuação para cada fase (não cumulativa)
     PONTOS = {
         'quartas': 30,
         'semi': 50,
@@ -17,15 +17,14 @@ class RankingManager:
     }
     
     @staticmethod
-    def atualizar_pontuacao_jogador(jogador_id, pontos_a_adicionar):
-        """Adiciona pontos ao jogador"""
+    def atualizar_pontuacao_jogador(jogador_id, pontos):
+        """Atualiza a pontuação do jogador"""
         try:
             jogador = Jogador.query.get(jogador_id)
             if jogador:
-                # Para garantir que a pontuação nunca fique negativa
-                jogador.pontuacao = max(0, (jogador.pontuacao or 0) + pontos_a_adicionar)
+                jogador.pontuacao = pontos
                 db.session.commit()
-                logger.info(f"Pontuação do jogador {jogador.nome} atualizada: +{pontos_a_adicionar} pontos")
+                logger.info(f"Pontuação do jogador {jogador.nome} atualizada: {pontos} pontos")
                 return True
             return False
         except Exception as e:
@@ -43,6 +42,15 @@ class RankingManager:
                 logger.warning(f"Torneio {torneio_id} não está finalizado ou não existe")
                 return False
             
+            # Buscar todos os jogadores do torneio e resetar suas pontuações
+            jogadores = Jogador.query.filter_by(torneio_id=torneio_id).all()
+            for jogador in jogadores:
+                jogador.pontuacao = 0
+            db.session.commit()
+            
+            # Criar um mapeamento de jogadores para suas pontuações máximas
+            pontuacoes_jogadores = {}
+            
             # Buscar confrontos da fase eliminatória
             confrontos = ConfrontoEliminatoria.query.filter_by(torneio_id=torneio_id).all()
             
@@ -54,30 +62,33 @@ class RankingManager:
                 else:
                     por_fase[confronto.fase].append(confronto)
             
-            # Processar quartas de final
+            # Processar quartas de final (30 pontos)
             for confronto in por_fase['quartas']:
-                # Jogadores da fase de quartas (tanto vencedores quanto perdedores)
                 jogadores_ids = [
                     confronto.jogador_a1_id, confronto.jogador_a2_id,
                     confronto.jogador_b1_id, confronto.jogador_b2_id
                 ]
                 for jogador_id in jogadores_ids:
-                    RankingManager.atualizar_pontuacao_jogador(jogador_id, RankingManager.PONTOS['quartas'])
+                    pontuacoes_jogadores[jogador_id] = max(
+                        pontuacoes_jogadores.get(jogador_id, 0),
+                        RankingManager.PONTOS['quartas']
+                    )
             
-            # Processar semi-finais
+            # Processar semi-finais (50 pontos)
             for confronto in por_fase['semi']:
-                # Jogadores da fase de semi (todos ganham a pontuação)
                 jogadores_ids = [
                     confronto.jogador_a1_id, confronto.jogador_a2_id,
                     confronto.jogador_b1_id, confronto.jogador_b2_id
                 ]
                 for jogador_id in jogadores_ids:
-                    RankingManager.atualizar_pontuacao_jogador(jogador_id, RankingManager.PONTOS['semi'])
+                    pontuacoes_jogadores[jogador_id] = max(
+                        pontuacoes_jogadores.get(jogador_id, 0),
+                        RankingManager.PONTOS['semi']
+                    )
             
             # Processar final
             final = por_fase['final']
             if final:
-                # Determinar vencedor e perdedor
                 if final.pontos_dupla_a > final.pontos_dupla_b:
                     # Time A ganhou
                     campeoes = [final.jogador_a1_id, final.jogador_a2_id]
@@ -87,14 +98,27 @@ class RankingManager:
                     campeoes = [final.jogador_b1_id, final.jogador_b2_id]
                     vices = [final.jogador_a1_id, final.jogador_a2_id]
                 
-                # Atribuir pontos aos campeões
+                # Pontuação para campeões (125 pontos)
                 for jogador_id in campeoes:
-                    RankingManager.atualizar_pontuacao_jogador(jogador_id, RankingManager.PONTOS['campeao'])
+                    pontuacoes_jogadores[jogador_id] = max(
+                        pontuacoes_jogadores.get(jogador_id, 0),
+                        RankingManager.PONTOS['campeao']
+                    )
                 
-                # Atribuir pontos aos vices
+                # Pontuação para vices (75 pontos)
                 for jogador_id in vices:
-                    RankingManager.atualizar_pontuacao_jogador(jogador_id, RankingManager.PONTOS['vice'])
+                    pontuacoes_jogadores[jogador_id] = max(
+                        pontuacoes_jogadores.get(jogador_id, 0),
+                        RankingManager.PONTOS['vice']
+                    )
             
+            # Atualizar pontuações no banco de dados
+            for jogador_id, pontuacao in pontuacoes_jogadores.items():
+                jogador = Jogador.query.get(jogador_id)
+                if jogador:
+                    jogador.pontuacao = pontuacao
+            
+            db.session.commit()
             logger.info(f"Pontuação calculada com sucesso para o torneio {torneio_id}")
             return True
         
