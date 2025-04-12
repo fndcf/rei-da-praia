@@ -29,6 +29,24 @@ def home():
     # Buscar todos os torneios, ordenados pelo mais recente
     torneios = Torneio.query.order_by(Torneio.data_criacao.desc()).all()
     
+    # Verificar se há um torneio em andamento na sessão e se ele ainda existe no banco de dados
+    torneio_em_andamento = False
+    torneio_id_sessao = session.get('torneio_id')
+    
+    if torneio_id_sessao:
+        # Verificar se o torneio existe e não está finalizado
+        torneio_atual = Torneio.query.get(torneio_id_sessao)
+        if torneio_atual and not torneio_atual.finalizado:
+            torneio_em_andamento = True
+        else:
+            # Se o torneio não existe mais ou está finalizado, limpar a sessão
+            current_app.logger.warning(
+                f"Torneio ID {torneio_id_sessao} não encontrado ou já finalizado. Limpando sessão."
+            )
+            for key in ['torneio_id', 'grupos', 'confrontos', 'jogadores', 'valores_salvos', 'nome_torneio']:
+                session.pop(key, None)
+            session['sucesso_validacao'] = "Sessão limpa automaticamente pois o torneio não existe mais ou já foi finalizado."
+    
     # Para cada torneio, recuperar campeões e vice-campeões
     for torneio in torneios:
         if torneio.finalizado:
@@ -73,7 +91,8 @@ def home():
                           torneios=torneios,
                           ranking_jogadores=ranking_jogadores,
                           erro_validacao=erro_validacao,
-                          sucesso_validacao=sucesso_validacao)
+                          sucesso_validacao=sucesso_validacao,
+                          torneio_em_andamento=torneio_em_andamento)  # Nova variável
 
 @bp.route('/novo-torneio')
 def novo_torneio():
@@ -82,6 +101,28 @@ def novo_torneio():
         session.setdefault('valores_salvos', {})
         modos_validos = ['20j', '24j', '28j', '32j']
         modo_atual = session.get('modo_torneio', '28j')
+        
+        # Verificar se existe um torneio em andamento
+        torneio_id = session.get('torneio_id')
+        torneio_em_andamento = False
+        nome_torneio = ""
+        
+        if torneio_id:
+            # Buscar informações do torneio
+            torneio = Torneio.query.get(torneio_id)
+            if torneio and not torneio.finalizado:
+                torneio_em_andamento = True
+                nome_torneio = torneio.nome
+                # Salvar o nome do torneio na sessão para uso no formulário
+                session['nome_torneio'] = nome_torneio
+            else:
+                # Se o torneio não existe mais ou está finalizado, limpar a sessão
+                current_app.logger.warning(
+                    f"Torneio ID {torneio_id} não encontrado ou já finalizado. Limpando sessão."
+                )
+                for key in ['torneio_id', 'grupos', 'confrontos', 'jogadores', 'valores_salvos', 'nome_torneio']:
+                    session.pop(key, None)
+                # Não exibir mensagem aqui para evitar confusão ao entrar na página
         
         # Validação do modo
         if modo_atual not in modos_validos:
@@ -113,7 +154,10 @@ def novo_torneio():
             current_app.logger.error(
                 f"Erro de validação exibido: {erro_validacao}"
             )
-
+            
+        # Obter mensagem de sucesso (não remover da sessão ainda)
+        sucesso_validacao = session.get('sucesso_validacao')
+        
         # Log antes do render
         current_app.logger.debug(
             f"Renderizando novo-torneio | "
@@ -128,6 +172,9 @@ def novo_torneio():
             valores_salvos=session.get('valores_salvos', {}),
             modo_torneio=modo_atual,
             erro_validacao=erro_validacao,  # Passar o erro para o template
+            sucesso_validacao=sucesso_validacao,  # Passar mensagem de sucesso
+            torneio_em_andamento=torneio_em_andamento,  # Nova variável
+            nome_torneio=nome_torneio,  # Nova variável
             modos_disponiveis=[
                 {'value': '20j', 'text': '20 Jogadores (5 grupos de 4)'},
                 {'value': '24j', 'text': '24 Jogadores (6 grupos de 4)'},
@@ -650,3 +697,4 @@ def cancelar_torneio():
         current_app.logger.error(f"Erro ao cancelar torneio: {str(e)}", exc_info=True)
         session['erro_validacao'] = f"Erro ao cancelar torneio: {str(e)}"
         return redirect(url_for('main.novo_torneio'))
+    

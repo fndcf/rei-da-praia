@@ -54,9 +54,18 @@ def gerar_confrontos(grupo):
 @bp.route('/sorteio', methods=['POST'])
 def sorteio():
     try:
+        # Verificar se já existem grupos sorteados
+        if 'grupos' in session and session['grupos']:
+            log_action("tournament_start_prevented", "Tentativa de novo sorteio com grupos existentes")
+            session['erro_validacao'] = "Um sorteio já foi realizado. Para realizar um novo sorteio, cancele o torneio atual."
+            return redirect(url_for('main.novo_torneio'))
+            
         modo = request.form.get('modo_torneio', '28j')
         nome_torneio = request.form.get('nome_torneio', 'Torneio Sem Nome')
         log_action("tournament_start", f"Iniciando sorteio - Modo: {modo}")
+
+        # Armazenar o nome do torneio na sessão para uso posterior
+        session['nome_torneio'] = nome_torneio
 
         # Verifica se já existe um torneio com o mesmo nome
         torneio_existente = Torneio.query.filter_by(nome=nome_torneio).first()

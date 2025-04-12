@@ -296,21 +296,16 @@
         {% endif %}
         
         <div class="text-center mt-4">
-            <button onclick="resetarEliminatorias()" class="btn btn-primary">
-                Fechar e Resetar Resultados
-            </button>
+            <a href="{{ url_for('playoffs.resetar_e_voltar') }}" class="btn btn-danger" onclick="return confirm('Tem certeza que deseja resetar TODOS os resultados da fase eliminatória?')">
+            Resetar Resultados
+            </a>
         </div>
     </div>
 </body>
 {% endblock %}
 
 {% block scripts %}
-<script>
-    // Foca a janela principal ao abrir esta
-    if(window.opener) {
-        window.opener.focus();
-    }
-    
+<script>    
     // Validação dos inputs
     document.querySelectorAll('input[type="number"]').forEach(input => {
         input.addEventListener('change', function() {
@@ -320,16 +315,8 @@
     });
 
     function finalizarTorneio() {
-        // Abre a página de campeões numa nova aba
-        window.open("/campeoes", "_blank");
-
-        // Tenta fechar a aba atual
-        window.close();
-
-        // Se não conseguir fechar (por limitação do navegador), redireciona para a tela inicial
-        setTimeout(() => {
-            window.location.href = "main.home";
-        }, 500);
+        // Apenas redireciona para a página de campeões
+        window.location.href = "{{ url_for('playoffs.campeoes') }}";
     }
 
     // Adiciona validação na entrada de valores dos confrontos
@@ -384,7 +371,7 @@
             return;
         }
 
-        const btn = document.querySelector('.btn-primary');
+        const btn = document.querySelector('.btn-danger'); // Modificado para selecionar o botão correto
         const originalText = btn.textContent;
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner">⌛</span> Processando...';
@@ -394,14 +381,16 @@
             const data = await response.json();
             
             if (data.success) {
-                window.close();
+                // Redirecionamento explícito para a página de novo torneio
+                window.location.href = "{{ url_for('main.novo_torneio') }}";
             } else {
                 alert('Erro ao resetar: ' + (data.error || 'Erro desconhecido'));
+                btn.textContent = originalText;
+                btn.disabled = false;
             }
         } catch (error) {
-            alert('Falha na comunicação com o servidor');
+            alert('Falha na comunicação com o servidor: ' + error);
             console.error('Erro:', error);
-        } finally {
             btn.textContent = originalText;
             btn.disabled = false;
         }

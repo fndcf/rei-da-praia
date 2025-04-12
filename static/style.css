@@ -852,3 +852,72 @@ margin-bottom: 1rem;
 .card-header {
   position: relative;
 }
+/* Adicionar ao final do arquivo static/style.css */
+
+/* Estilos para elementos desabilitados */
+button:disabled,
+select:disabled,
+textarea:disabled,
+input:disabled {
+  background-color: #f8f9fa;
+  color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.alert {
+  padding: 12px 15px;
+  margin-bottom: 1rem;
+  border: 1px solid transparent;
+  border-radius: var(--border-radius);
+}
+
+.alert-warning {
+  color: #856404;
+  background-color: #fff3cd;
+  border-color: #ffeeba;
+}
+
+.alert-info {
+  color: #0c5460;
+  background-color: #d1ecf1;
+  border-color: #bee5eb;
+}
+
+/* Outros ajustes visuais */
+.card {
+  transition: all 0.3s ease;
+}
+
+.bg-light {
+  background-color: #f8f9fa !important;
+}
+/* Adicionar ao final do arquivo static/style.css */
+
+/* Estilos para layout flexbox */
+.d-flex {
+  display: flex;
+}
+
+.justify-content-center {
+  justify-content: center;
+}
+
+.ml-2 {
+  margin-left: 0.5rem;
+}
+
+.mr-2 {
+  margin-right: 0.5rem;
+}
+
+/* Ajustes para responsividade em dispositivos pequenos */
+@media (max-width: 576px) {
+  .d-flex {
+    flex-direction: column;
+  }
+  
+  .ml-2, .mr-2 {
+    margin: 0.5rem 0;
+  }
+}

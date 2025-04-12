@@ -7,11 +7,22 @@
             <h1 class="display-4 mb-4">🏆 Bem-vindo ao Torneio Rei da Praia! 🏆</h1>
 
             <!-- Destaque para botão Novo Torneio -->
-            <div class="card mb-5 p-4 bg-warning-subtle shadow">
+            <div class="card mb-5 p-4 {% if torneio_em_andamento %}bg-light{% else %}bg-warning-subtle{% endif %} shadow">
                 <h2 class="mb-3">Iniciar um Novo Torneio</h2>
+                {% if torneio_em_andamento %}
+                <div class="alert alert-warning">
+                    <strong>Atenção!</strong> Existe um torneio em andamento. Finalize ou cancele o torneio atual antes de iniciar um novo.
+                </div>
+                <div class="d-flex justify-content-center">
+                    <form action="{{ url_for('main.novo_torneio') }}" method="get" class="mr-2">
+                        <button type="submit" class="btn btn-lg btn-success px-5 py-2 fs-4">Continuar Torneio Atual</button>
+                    </form>
+                </div>
+                {% else %}
                 <form action="{{ url_for('main.novo_torneio') }}" method="get">
                     <button type="submit" class="btn btn-lg btn-success px-5 py-2 fs-4">Novo Torneio</button>
                 </form>
+                {% endif %}
             </div>
 
             <!-- Histórico de Torneios -->

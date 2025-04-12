@@ -11,12 +11,37 @@
         <h1 class="title">Rei da Praia</h1>
         
         <!-- Exibir mensagens de erro antes do formulário -->
-        {% if session.get('erro_validacao') %}
+        {% if erro_validacao %}
         <div class="erro mt-3 mb-3">
-            {{ session.get('erro_validacao') }}
+            {{ erro_validacao }}
+        </div>
+        {% endif %}
+
+        <!-- Exibir mensagens de sucesso -->
+        {% if sucesso_validacao %}
+        <div class="sucesso mt-3 mb-3">
+            {{ sucesso_validacao }}
         </div>
         {% endif %}
         
+        {% if grupos %}
+        <!-- Se já existem grupos, mostrar informações em vez do formulário -->
+        <div class="card" id="gruposSorteadosInfo">
+            <div class="alert alert-info">
+                <strong>Atenção!</strong> Grupos já sorteados para este torneio.
+            </div>
+            <div class="text-center mt-3 mb-3">
+                <p>Para realizar um novo sorteio, você precisa cancelar o torneio atual.</p>
+                <form action="{{ url_for('main.cancelar_torneio') }}" method="get">
+                    <button type="submit" class="btn btn-danger mt-2"
+                            onclick="return confirm('Tem certeza que deseja cancelar este torneio? Todos os dados serão perdidos.')">
+                        Cancelar Torneio Atual
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <!-- Formulário de sorteio normal quando não há grupos -->
         <form method="POST" action="{{ url_for('groups.sorteio') }}" id="formSorteio" class="card">
             <div class="form-group">
                 <label for="modo_torneio" class="form-text">Formato do Torneio:</label>
@@ -36,19 +61,17 @@
                     placeholder="Jogador1, Jogador2, Jogador3, ..."></textarea>
                 <p id="contador-jogadores" class="counter">0 jogadores</p>
                 <label for="nome_torneio" class="form-text">Nome do Torneio:</label>
-                <input type="text" id="nome_torneio" name="nome_torneio" class="form-control" required>  
+                <input type="text" id="nome_torneio" name="nome_torneio" class="form-control" required>
             </div>
               
             <button type="submit" class="btn btn-success" id="btnSortear">Sortear Grupos</button>
+            
+            {% if grupos %}
+            <div class="alert alert-info mt-3">
+                <strong>Atenção!</strong> Um sorteio já foi realizado para este torneio. O formulário está desabilitado. Para realizar um novo sorteio, cancele o torneio atual.
+            </div>
+            {% endif %}
         </form>
-    </div>
-
-    <!-- Botão Cancelar Torneio -->
-    <div class="container text-center mt-4 mb-4">
-        {% if session.get('torneio_id') %}
-            <button id="btnCancelarTorneio" class="btn btn-danger">
-                Cancelar Torneio
-            </button>
         {% endif %}
     </div>
 
@@ -148,11 +171,42 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-    const modoSelect = document.getElementById('modo_torneio');
+        const modoSelect = document.getElementById('modo_torneio');
     const instrucoes = document.getElementById('instrucoes');
     const contador = document.getElementById('contador-jogadores');
     const textarea = document.getElementById('jogadores');
     const btnSortear = document.getElementById('btnSortear');
+    
+    // Como formSorteio é usado mais abaixo, vamos mover a declaração aqui
+    const formSorteio = document.getElementById('formSorteio');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+
+    // ADICIONAR ESTE NOVO CÓDIGO AQUI
+    // Verificar se já existem grupos
+    const gruposExistem = {% if grupos %}true{% else %}false{% endif %};
+
+    // Desabilitar o formulário se já existirem grupos
+    if (formSorteio && gruposExistem) {
+        // Este é um failsafe para caso o template não seja renderizado corretamente
+        formSorteio.addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('Você não pode realizar um novo sorteio enquanto houver um torneio em andamento. Por favor, cancele o torneio atual primeiro.');
+            return false;
+        });
+        
+        // Desabilitar todos os campos do formulário
+        const campos = formSorteio.querySelectorAll('input, select, textarea');
+        campos.forEach(campo => {
+            campo.disabled = true;
+        });
+        
+        // Desabilitar o botão de sortear
+        if (btnSortear) {
+            btnSortear.disabled = true;
+            btnSortear.title = 'Um sorteio já foi realizado. Para realizar um novo sorteio, cancele o torneio atual.';
+            btnSortear.textContent = 'Grupos já sorteados';
+        }
+    }
 
     // Adicionar manipulador de evento para o botão cancelar torneio
     document.getElementById('btnCancelarTorneio')?.addEventListener('click', function() {
@@ -160,10 +214,6 @@
             window.location.href = "{{ url_for('main.cancelar_torneio') }}";
         }
     });
-    
-    // Mostrar overlay de loading quando enviar o formulário
-    const formSorteio = document.getElementById('formSorteio');
-    const loadingOverlay = document.getElementById('loadingOverlay');
 
     if (formSorteio && loadingOverlay) {
         formSorteio.addEventListener('submit', function(e) {
@@ -428,12 +478,8 @@
                 return;
             }
         } else {
-            // Todos preenchidos, pode abrir normalmente
-            window.open(
-                '{{ url_for("playoffs.fase_eliminatoria") }}',
-                '_blank',
-                'width=1000,height=700'
-            );
+            // Todos preenchidos, redirecionar para a fase eliminatória na mesma página
+            window.location.href = '{{ url_for("playoffs.fase_eliminatoria") }}';
         }
     });
 
