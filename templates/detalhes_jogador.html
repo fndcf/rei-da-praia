@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Detalhes de {{ jogador_permanente.nome }} - {{ torneio.nome }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h1 class="mb-0">{{ jogador_permanente.nome }} - {{ torneio.nome }}</h1>
+            <p class="mb-0">{{ torneio.data_criacao.strftime('%d/%m/%Y') }}</p>
+        </div>
+    </div>
+
+    <!-- Confrontos da Fase de Grupos -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2>Fase de Grupos</h2>
+        </div>
+        <div class="card-body">
+            {% if confrontos_grupo %}
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Grupo</th>
+                            <th>Jogo</th>
+                            <th>Dupla</th>
+                            <th>Placar</th>
+                            <th>Adversários</th>
+                            <th>Resultado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for confronto in confrontos_grupo %}
+                        <tr>
+                            <td>{{ confronto.grupo }}</td>
+                            <td>{{ confronto.confronto }}</td>
+                            <td>{{ jogador_permanente.nome }} & {{ confronto.parceiro }}</td>
+                            <td>
+                                <span class="{% if confronto.pontos_equipe > confronto.pontos_adversarios %}positivo{% elif confronto.pontos_equipe < confronto.pontos_adversarios %}negativo{% endif %}">
+                                    {{ confronto.pontos_equipe }} x {{ confronto.pontos_adversarios }}
+                                </span>
+                            </td>
+                            <td>{{ confronto.adversario1 }} & {{ confronto.adversario2 }}</td>
+                            <td>
+                                <span class="badge {% if confronto.resultado == 'Vitória' %}bg-success text-white{% elif confronto.resultado == 'Derrota' %}bg-danger text-white{% else %}bg-warning text-dark{% endif %}">
+                                    {{ confronto.resultado }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p class="text-center">Não há confrontos da fase de grupos registrados.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Confrontos da Fase Eliminatória -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2>Fase Eliminatória</h2>
+        </div>
+        <div class="card-body">
+            {% if confrontos_eliminatorias %}
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Fase</th>
+                            <th>Jogo</th>
+                            <th>Dupla</th>
+                            <th>Placar</th>
+                            <th>Adversários</th>
+                            <th>Resultado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for confronto in confrontos_eliminatorias %}
+                        <tr>
+                            <td>{{ confronto.fase }}</td>
+                            <td>{{ confronto.jogo }}</td>
+                            <td>{{ jogador_permanente.nome }} & {{ confronto.parceiro }}</td>
+                            <td>
+                                <span class="{% if confronto.pontos_equipe > confronto.pontos_adversarios %}positivo{% elif confronto.pontos_equipe < confronto.pontos_adversarios %}negativo{% endif %}">
+                                    {{ confronto.pontos_equipe }} x {{ confronto.pontos_adversarios }}
+                                </span>
+                            </td>
+                            <td>{{ confronto.adversario1 }} & {{ confronto.adversario2 }}</td>
+                            <td>
+                                <span class="badge {% if confronto.resultado == 'Vitória' %}bg-success text-white{% elif confronto.resultado == 'Derrota' %}bg-danger text-white{% else %}bg-warning text-dark{% endif %}">
+                                    {{ confronto.resultado }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p class="text-center">Este jogador não participou da fase eliminatória.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="text-center mt-4">
+        <a href="{{ url_for('main.perfil_jogador', nome_jogador=jogador_permanente.nome) }}" class="btn btn-primary">Voltar ao Perfil</a>
+        <a href="{{ url_for('main.home') }}" class="btn btn-secondary ml-2">Voltar para a Home</a>
+    </div>
+</div>
+{% endblock %}

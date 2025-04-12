@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, session, url_for, redirect, request, flash, current_app
+from flask import Blueprint, render_template, session, url_for, redirect, request, flash, current_app, jsonify
 from datetime import datetime
 import logging
 from database.models import Jogador, Torneio, Confronto, ConfrontoEliminatoria
@@ -656,3 +656,34 @@ def obter_confrontos_eliminatorias_db(torneio_id):
     except Exception as e:
         log_playoff_action("confrontos_eliminatorias_load_error", f"Erro ao carregar confrontos: {str(e)}")
         return {}
+
+@bp.route('/resetar_eliminatorias', methods=['GET'])
+def resetar_eliminatorias():
+    """Reseta os dados de fase eliminatória da sessão e do banco de dados"""
+    try:
+        # Obtém o ID do torneio atual da sessão
+        torneio_id = session.get('torneio_id')
+        
+        if torneio_id:
+            # Excluir todos os confrontos eliminatórios deste torneio do banco de dados
+            ConfrontoEliminatoria.query.filter_by(torneio_id=torneio_id).delete()
+            db.session.commit()
+            log_playoff_action("reset_db_eliminatorias", f"Confrontos eliminatórios do torneio {torneio_id} removidos do banco")
+        
+        # Limpar dados das eliminatórias na sessão
+        for key in list(session.keys()):
+            if key.startswith('eliminatoria_jogo'):
+                session.pop(key, None)
+        
+        # Limpar duplicações de time e campeonatos
+        for key in ['final_dupla_timeA', 'final_dupla_timeB', 'campea', 'campeoes_finais']:
+            if key in session:
+                session.pop(key, None)
+        
+        log_playoff_action("reset_eliminatorias", "Fase eliminatória resetada com sucesso")
+        return jsonify({'success': True})
+    
+    except Exception as e:
+        db.session.rollback()
+        log_playoff_action("reset_eliminatorias_error", f"Erro: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})

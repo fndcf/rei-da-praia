@@ -58,11 +58,11 @@ def sorteio():
         nome_torneio = request.form.get('nome_torneio', 'Torneio Sem Nome')
         log_action("tournament_start", f"Iniciando sorteio - Modo: {modo}")
 
-        # Verifica se há um torneio finalizado com mesmo nome
-        torneio_existente = Torneio.query.filter_by(nome=nome_torneio).order_by(Torneio.id.desc()).first()
-        if torneio_existente and torneio_existente.finalizado:
-            session['erro_validacao'] = "Este torneio já foi finalizado. Crie um novo com outro nome."
-            return redirect(url_for('main.home'))
+        # Verifica se já existe um torneio com o mesmo nome
+        torneio_existente = Torneio.query.filter_by(nome=nome_torneio).first()
+        if torneio_existente:
+            session['erro_validacao'] = f"Já existe um torneio com o nome '{nome_torneio}'. Por favor, escolha outro nome."
+            return redirect(url_for('main.novo_torneio'))
         
         # Validação e processamento de nomes
         nomes = [nome.strip() for nome in request.form['jogadores'].split(',') 

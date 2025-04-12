@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Jogador Não Encontrado{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="not-found-message">
+        <h3>🔍 Jogador Não Encontrado</h3>
+        {% if termo_pesquisa %}
+            <p>Não encontramos nenhum jogador com o nome <strong>"{{ termo_pesquisa }}"</strong>.</p>
+        {% else %}
+            <p>{{ mensagem }}</p>
+        {% endif %}
+        
+        {% if jogadores_similares %}
+            <p>Você quis dizer:</p>
+            <div class="similar-jogadores mb-3">
+                {% for jogador in jogadores_similares %}
+                    <a href="{{ url_for('main.perfil_jogador', nome_jogador=jogador.nome) }}" class="btn btn-sm btn-outline-primary mr-2 mb-2">
+                        {{ jogador.nome }}
+                    </a>
+                {% endfor %}
+            </div>
+        {% endif %}
+        
+        <a href="{{ url_for('main.home') }}" class="btn btn-primary">Voltar para a Home</a>
+    </div>
+</div>
+{% endblock %}

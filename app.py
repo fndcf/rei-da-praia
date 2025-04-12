@@ -14,12 +14,12 @@ def create_app(config_class=Config):
     db.init_app(app)
 
     with app.app_context():
-        # Use text() para envolver os comandos SQL
-        db.session.execute(text('DROP SCHEMA public CASCADE'))
-        db.session.execute(text('CREATE SCHEMA public'))
-        db.session.commit()
+        # Comentado para preservar os dados entre reinicializações
+        # db.session.execute(text('DROP SCHEMA public CASCADE'))
+        # db.session.execute(text('CREATE SCHEMA public'))
+        # db.session.commit()
         
-        # Agora crie as tabelas
+        # Apenas cria tabelas que não existem ainda
         db.create_all()
 
     # --------------------------------------

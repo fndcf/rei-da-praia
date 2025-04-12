@@ -533,3 +533,322 @@ input[type="number"] {
   font-size: 0.875rem;
   border-radius: 0.2rem;
 }
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 0.25em 0.6em;
+  font-size: 75%;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: baseline;
+  border-radius: 0.25rem;
+}
+
+.bg-success {
+  background-color: var(--success-color) !important;
+}
+
+.bg-warning {
+  background-color: var(--warning-color) !important;
+}
+
+.text-white {
+  color: white !important;
+}
+
+.text-dark {
+  color: #343a40 !important;
+}
+/* Adicionar estes estilos para badges e cores na página de detalhes */
+.bg-danger {
+  background-color: var(--danger-color) !important;
+}
+
+.ml-2 {
+  margin-left: 0.5rem;
+}
+
+.text-muted {
+  color: var(--dark-gray);
+  font-size: 0.875em;
+}
+/* Estilos para o autocomplete */
+.autocomplete-container {
+  position: relative;
+  width: 100%;
+}
+
+.autocomplete-items {
+  position: absolute;
+  border: 1px solid var(--medium-gray);
+  border-top: none;
+  z-index: 99;
+  top: 100%;
+  left: 0;
+  right: 0;
+  border-radius: 0 0 var(--border-radius) var(--border-radius);
+  max-height: 200px;
+  overflow-y: auto;
+  background-color: white;
+  box-shadow: var(--box-shadow);
+}
+
+.autocomplete-items div {
+  padding: 10px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.autocomplete-items div:hover {
+  background-color: var(--light-gray);
+}
+
+.autocomplete-active {
+  background-color: var(--secondary-color) !important;
+  color: white;
+}
+
+/* Mensagem de jogador não encontrado */
+.not-found-message {
+  background-color: #fff3cd;
+  border: 1px solid #ffeeba;
+  border-radius: var(--border-radius);
+  padding: 15px;
+  margin: 20px 0;
+  text-align: center;
+  color: #856404;
+}
+
+.not-found-message h3 {
+  margin-bottom: 10px;
+  color: #856404;
+}
+
+.not-found-message p {
+  margin-bottom: 15px;
+}
+
+.position-relative {
+  position: relative;
+}
+
+.w-100 {
+  width: 100%;
+}
+/* Botões outline */
+.btn-outline-primary {
+  color: var(--secondary-color);
+  background-color: transparent;
+  border: 1px solid var(--secondary-color);
+}
+
+.btn-outline-primary:hover {
+  color: white;
+  background-color: var(--secondary-color);
+}
+
+.mr-2 {
+  margin-right: 0.5rem;
+}
+
+.mb-2 {
+  margin-bottom: 0.5rem;
+}
+
+.mb-3 {
+  margin-bottom: 1rem;
+}
+.position-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 1rem;
+  padding: 5px 10px;
+}
+
+.card-header {
+  position: relative;
+}
+/* Estilos para o modal de confirmação */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 20px;
+  border-radius: var(--border-radius);
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+  gap: 10px;
+}
+
+.sucesso {
+  color: var(--success-color);
+  padding: 10px;
+  margin: 10px 0;
+  background: #e8f5e9;
+  border: 1px solid #a5d6a7;
+  border-radius: var(--border-radius);
+}
+
+.btn-secondary {
+  background-color: var(--dark-gray);
+  color: white;
+}
+
+.btn-danger {
+  background-color: var(--danger-color);
+  color: white;
+}
+
+/* Estilos para o autocomplete */
+.autocomplete-container {
+position: relative;
+width: 100%;
+}
+
+.autocomplete-items {
+position: absolute;
+border: 1px solid var(--medium-gray);
+border-top: none;
+z-index: 99;
+top: 100%;
+left: 0;
+right: 0;
+border-radius: 0 0 var(--border-radius) var(--border-radius);
+max-height: 200px;
+overflow-y: auto;
+background-color: white;
+box-shadow: var(--box-shadow);
+}
+
+.autocomplete-items div {
+padding: 10px;
+cursor: pointer;
+text-align: left;
+}
+
+.autocomplete-items div:hover {
+background-color: var(--light-gray);
+}
+
+.autocomplete-active {
+background-color: var(--secondary-color) !important;
+color: white;
+}
+
+/* Mensagem de jogador não encontrado */
+.not-found-message {
+background-color: #fff3cd;
+border: 1px solid #ffeeba;
+border-radius: var(--border-radius);
+padding: 15px;
+margin: 20px 0;
+text-align: center;
+color: #856404;
+}
+
+.not-found-message h3 {
+margin-bottom: 10px;
+color: #856404;
+}
+
+.not-found-message p {
+margin-bottom: 15px;
+}
+
+.position-relative {
+position: relative;
+}
+
+.w-100 {
+width: 100%;
+}
+
+/* Botões outline */
+.btn-outline-primary {
+color: var(--secondary-color);
+background-color: transparent;
+border: 1px solid var(--secondary-color);
+}
+
+.btn-outline-primary:hover {
+color: white;
+background-color: var(--secondary-color);
+}
+
+.mr-2 {
+margin-right: 0.5rem;
+}
+
+.mb-2 {
+margin-bottom: 0.5rem;
+}
+
+.mb-3 {
+margin-bottom: 1rem;
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 0.25em 0.6em;
+  font-size: 75%;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: baseline;
+  border-radius: 0.25rem;
+}
+
+.bg-success {
+  background-color: var(--success-color) !important;
+}
+
+.bg-warning {
+  background-color: var(--warning-color) !important;
+}
+
+.bg-danger {
+  background-color: var(--danger-color) !important;
+}
+
+.text-white {
+  color: white !important;
+}
+
+.text-dark {
+  color: #343a40 !important;
+}
+
+.position-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 1rem;
+  padding: 5px 10px;
+}
+
+.card-header {
+  position: relative;
+}

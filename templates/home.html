@@ -24,12 +24,13 @@
                             <th>Nome do Torneio</th>
                             <th>Campeão</th>
                             <th>Vice</th>
-                            <th>Detalhes</th>
+                            <th>Status</th>
+                            <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% if torneios_finalizados %}
-                            {% for torneio in torneios_finalizados %}
+                        {% if torneios %}
+                            {% for torneio in torneios %}
                             <tr>
                                 <td>{{ torneio.data_criacao.strftime('%d/%m/%Y') }}</td>
                                 <td>{{ torneio.nome }}</td>
@@ -48,18 +49,59 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <a href="{{ url_for('main.detalhes_torneio', torneio_id=torneio.id) }}" class="btn btn-sm btn-primary">Detalhar</a>
+                                    {% if torneio.finalizado %}
+                                        <span class="badge bg-success text-white">Finalizado</span>
+                                    {% else %}
+                                        <span class="badge bg-warning text-dark">Em andamento</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if torneio.finalizado %}
+                                        <a href="{{ url_for('main.detalhes_torneio', torneio_id=torneio.id) }}" class="btn btn-sm btn-primary">Detalhar</a>
+                                    {% else %}
+                                        <button type="button" class="btn btn-sm btn-danger" 
+                                            onclick="confirmarExclusao({{ torneio.id }}, '{{ torneio.nome }}')">
+                                            Apagar
+                                        </button>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}
                         {% else %}
                             <tr>
-                                <td colspan="5">Nenhum torneio finalizado registrado ainda.</td>
+                                <td colspan="6">Nenhum torneio registrado ainda.</td>
                             </tr>
                         {% endif %}
                     </tbody>
                 </table>
             </div>
+
+            <!-- Modal de confirmação oculto -->
+            <div id="modal-confirmacao" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <h3>Confirmar exclusão</h3>
+                    <p id="mensagem-confirmacao">Tem certeza que deseja excluir este torneio?</p>
+                    <div class="modal-buttons">
+                        <form id="form-excluir" method="POST" action="">
+                            <button type="button" class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+                            <button type="submit" class="btn btn-danger">Sim, apagar</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mensagens de feedback -->
+            {% if erro_validacao %}
+            <div class="erro mt-3">
+                {{ erro_validacao }}
+            </div>
+            {% endif %}
+
+            {% if sucesso_validacao %}
+            <div class="sucesso mt-3">
+                {{ sucesso_validacao }}
+            </div>
+            {% endif %}
 
             <!-- Ranking de Jogadores -->
             <div class="card mt-4">
@@ -70,6 +112,7 @@
                             <th>Posição</th>
                             <th>Nome</th>
                             <th>Pontos</th>
+                            <th>Torneios</th>  <!-- Nova coluna -->
                         </tr>
                     </thead>
                     <tbody>
@@ -79,11 +122,12 @@
                                 <td>{{ jogador.posicao }}</td>
                                 <td>{{ jogador.nome }}</td>
                                 <td>{{ jogador.pontos }}</td>
+                                <td>{{ jogador.torneios }}</td>  <!-- Nova coluna -->
                             </tr>
                             {% endfor %}
                         {% else %}
                             <tr>
-                                <td colspan="3">Ranking ainda não disponível.</td>
+                                <td colspan="4">Ranking ainda não disponível.</td>  <!-- Atualizado para 4 colunas -->
                             </tr>
                         {% endif %}
                     </tbody>
@@ -94,8 +138,12 @@
             <div class="card mt-4">
                 <h2 class="text-center">Pesquisar Jogador</h2>
                 <div class="d-flex justify-content-center">
-                    <form method="get" action="{{ url_for('main.novo_torneio') }}" class="d-flex flex-column align-items-center w-50">
-                        <input type="text" name="nome_jogador" class="form-control mb-2 text-center" placeholder="Digite o nome do jogador">
+                    <form method="get" action="{{ url_for('main.perfil_jogador') }}" id="formPesquisaJogador" class="d-flex flex-column align-items-center w-50">
+                        <div class="autocomplete-container w-100 position-relative">
+                            <input type="text" name="nome_jogador" id="nome_jogador" class="form-control mb-2 text-center" 
+                                placeholder="Digite o nome do jogador" autocomplete="off">
+                            <div id="sugestoes-jogadores" class="autocomplete-items"></div>
+                        </div>
                         <button type="submit" class="btn btn-primary">Buscar</button>
                     </form>
                 </div>
@@ -103,4 +151,84 @@
         </div>
     </div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+    function confirmarExclusao(torneioId, nomeTorneio) {
+        // Configurar o modal
+        document.getElementById('mensagem-confirmacao').textContent = 
+            `Tem certeza que deseja excluir o torneio "${nomeTorneio}"? Esta ação não pode ser desfeita.`;
+        
+        // Configurar o formulário
+        const form = document.getElementById('form-excluir');
+        form.action = `/apagar_torneio/${torneioId}`;
+        
+        // Mostrar o modal
+        document.getElementById('modal-confirmacao').style.display = 'flex';
+    }
+    
+    function fecharModal() {
+        document.getElementById('modal-confirmacao').style.display = 'none';
+    }
+    
+    // Fechar modal se clicar fora dele
+    window.onclick = function(event) {
+        const modal = document.getElementById('modal-confirmacao');
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        // Código do autocomplete (se houver)
+        const jogadorInput = document.getElementById('nome_jogador');
+        const sugestoesDiv = document.getElementById('sugestoes-jogadores');
+        
+        if (jogadorInput) {
+            // Função para buscar sugestões
+            let timeoutId;
+            jogadorInput.addEventListener('input', function() {
+                const termo = this.value.trim();
+                
+                // Limpar timeout anterior
+                clearTimeout(timeoutId);
+                
+                // Limpar sugestões se input estiver vazio
+                if (termo.length < 2) {
+                    sugestoesDiv.innerHTML = '';
+                    return;
+                }
+                
+                // Adicionar delay para não sobrecarregar o servidor
+                timeoutId = setTimeout(function() {
+                    fetch(`/buscar_jogadores?termo=${encodeURIComponent(termo)}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            // Limpar sugestões anteriores
+                            sugestoesDiv.innerHTML = '';
+                            
+                            if (data.length === 0) {
+                                const noResults = document.createElement('div');
+                                noResults.textContent = 'Nenhum jogador encontrado';
+                                noResults.style.color = 'var(--danger-color)';
+                                sugestoesDiv.appendChild(noResults);
+                            } else {
+                                // Criar elemento para cada sugestão
+                                data.forEach(jogador => {
+                                    const div = document.createElement('div');
+                                    div.textContent = jogador.nome;
+                                    div.addEventListener('click', function() {
+                                        jogadorInput.value = jogador.nome;
+                                        sugestoesDiv.innerHTML = '';
+                                    });
+                                    sugestoesDiv.appendChild(div);
+                                });
+                            }
+                        })
+                        .catch(error => console.error('Erro ao buscar jogadores:', error));
+                }, 300);
+            });
+        }
+    });
+</script>
 {% endblock %}

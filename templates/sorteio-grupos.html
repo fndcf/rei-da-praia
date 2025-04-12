@@ -10,6 +10,13 @@
     <div class="main-container">
         <h1 class="title">Rei da Praia</h1>
         
+        <!-- Exibir mensagens de erro antes do formulário -->
+        {% if session.get('erro_validacao') %}
+        <div class="erro mt-3 mb-3">
+            {{ session.get('erro_validacao') }}
+        </div>
+        {% endif %}
+        
         <form method="POST" action="{{ url_for('groups.sorteio') }}" id="formSorteio" class="card">
             <div class="form-group">
                 <label for="modo_torneio" class="form-text">Formato do Torneio:</label>
@@ -19,7 +26,6 @@
                     <option value="24j" {% if modo_torneio == '24j' %}selected{% endif %}>24 Jogadores (6 grupos de 4)</option>
                     <option value="28j" {% if modo_torneio == '28j' %}selected{% endif %}>28 Jogadores (7 grupos de 4)</option>
                     <option value="32j" {% if modo_torneio == '32j' %}selected{% endif %}>32 Jogadores (8 grupos de 4)</option>                   
-
                 </select>
             </div>
             
@@ -35,11 +41,14 @@
               
             <button type="submit" class="btn btn-success" id="btnSortear">Sortear Grupos</button>
         </form>
+    </div>
 
-        {% if session.get('erro_validacao') %}
-        <div class="erro mt-3">
-            {{ session['erro_validacao'] }}
-        </div>
+    <!-- Botão Cancelar Torneio -->
+    <div class="container text-center mt-4 mb-4">
+        {% if session.get('torneio_id') %}
+            <button id="btnCancelarTorneio" class="btn btn-danger">
+                Cancelar Torneio
+            </button>
         {% endif %}
     </div>
 
@@ -145,6 +154,12 @@
     const textarea = document.getElementById('jogadores');
     const btnSortear = document.getElementById('btnSortear');
 
+    // Adicionar manipulador de evento para o botão cancelar torneio
+    document.getElementById('btnCancelarTorneio')?.addEventListener('click', function() {
+        if (confirm('Tem certeza que deseja cancelar este torneio? Todos os dados serão perdidos.')) {
+            window.location.href = "{{ url_for('main.cancelar_torneio') }}";
+        }
+    });
     
     // Mostrar overlay de loading quando enviar o formulário
     const formSorteio = document.getElementById('formSorteio');

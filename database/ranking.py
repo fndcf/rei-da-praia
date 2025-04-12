@@ -131,18 +131,21 @@ class RankingManager:
     def obter_ranking():
         """Obtém o ranking completo dos jogadores por pontuação"""
         try:
-            # Consulta SQL para agrupar jogadores pelo nome e somar pontuações
+            # Consulta SQL para agrupar jogadores pelo nome, somar pontuações e contar torneios
             sql = text("""
                 SELECT 
-                    nome, 
-                    SUM(pontuacao) as pontos_totais 
+                    jp.nome, 
+                    SUM(COALESCE(j.pontuacao, 0)) as pontos_totais,
+                    COUNT(DISTINCT j.torneio_id) as torneios_jogados
                 FROM 
-                    jogador 
+                    jogador_permanente jp
+                LEFT JOIN
+                    jogador j ON jp.id = j.jogador_permanente_id
                 GROUP BY 
-                    nome 
+                    jp.nome 
                 ORDER BY 
                     pontos_totais DESC, 
-                    nome ASC
+                    jp.nome ASC
             """)
             
             resultado = db.session.execute(sql).fetchall()
@@ -152,7 +155,7 @@ class RankingManager:
             posicao_atual = 1
             pontuacao_anterior = None
             
-            for i, (nome, pontos) in enumerate(resultado):
+            for i, (nome, pontos, torneios) in enumerate(resultado):
                 # Se a pontuação for diferente da anterior, atualizar a posição
                 if pontos != pontuacao_anterior and i > 0:
                     posicao_atual = i + 1
@@ -160,13 +163,14 @@ class RankingManager:
                 ranking.append({
                     'posicao': posicao_atual,
                     'nome': nome,
-                    'pontos': pontos or 0
+                    'pontos': pontos or 0,
+                    'torneios': torneios or 0  # Adicionando o número de torneios
                 })
                 
                 pontuacao_anterior = pontos
             
             return ranking
-        
+    
         except Exception as e:
             logger.error(f"Erro ao obter ranking: {str(e)}")
             return []
