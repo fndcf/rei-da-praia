@@ -1,6 +1,37 @@
 from database.db import db
 from datetime import datetime
 
+# Novo modelo para jogadores permanentes
+class JogadorPermanente(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(80), nullable=False, unique=True)  # Nome único
+    email = db.Column(db.String(120), nullable=True)
+    telefone = db.Column(db.String(20), nullable=True)
+    data_cadastro = db.Column(db.DateTime, default=datetime.utcnow)
+    participacoes = db.relationship('ParticipacaoTorneio', backref='jogador_permanente', lazy=True)
+    
+    def __repr__(self):
+        return f"<JogadorPermanente {self.nome}>"
+
+# Modelo para participação em torneios (substitui funcionalidade do Jogador)
+class ParticipacaoTorneio(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    jogador_permanente_id = db.Column(db.Integer, db.ForeignKey('jogador_permanente.id'), nullable=False)
+    torneio_id = db.Column(db.Integer, db.ForeignKey('torneio.id'), nullable=False)
+    
+    # Dados de desempenho no torneio
+    vitorias = db.Column(db.Integer, default=0)
+    saldo_a_favor = db.Column(db.Integer, default=0)
+    saldo_contra = db.Column(db.Integer, default=0)
+    saldo_total = db.Column(db.Integer, default=0)
+    posicao_grupo = db.Column(db.Integer, default=0)
+    grupo_idx = db.Column(db.Integer, default=0)
+    pontuacao = db.Column(db.Integer, default=0)
+    
+    def __repr__(self):
+        return f"<ParticipacaoTorneio {self.id}>"
+
+# Mantemos o modelo Jogador para compatibilidade com código existente
 class Jogador(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(80), nullable=False)
@@ -8,10 +39,14 @@ class Jogador(db.Model):
     saldo_a_favor = db.Column(db.Integer, default=0)
     saldo_contra = db.Column(db.Integer, default=0)
     saldo_total = db.Column(db.Integer, default=0)
-    posicao_grupo = db.Column(db.Integer, default=0)  # Nova coluna
-    grupo_idx = db.Column(db.Integer, default=0)      # Índice do grupo ao qual pertence
-    pontuacao = db.Column(db.Integer, default=0)      # Pontuação total do ranking
+    posicao_grupo = db.Column(db.Integer, default=0)
+    grupo_idx = db.Column(db.Integer, default=0)
+    pontuacao = db.Column(db.Integer, default=0)
     torneio_id = db.Column(db.Integer, db.ForeignKey('torneio.id'), nullable=False)
+    
+    # Novo campo para rastrear relação com jogador permanente
+    jogador_permanente_id = db.Column(db.Integer, db.ForeignKey('jogador_permanente.id'), nullable=True)
+    jogador_permanente = db.relationship('JogadorPermanente', backref='jogadores_legados')
 
 class Torneio(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -19,6 +54,7 @@ class Torneio(db.Model):
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
     finalizado = db.Column(db.Boolean, default=False)
     jogadores = db.relationship('Jogador', backref='torneio', lazy=True)
+    participacoes = db.relationship('ParticipacaoTorneio', backref='torneio', lazy=True)
 
 class Confronto(db.Model):
     id = db.Column(db.Integer, primary_key=True)

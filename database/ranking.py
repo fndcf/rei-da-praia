@@ -1,6 +1,6 @@
 from sqlalchemy import text
 from database.db import db
-from database.models import Jogador, Torneio, ConfrontoEliminatoria
+from database.models import Jogador, Torneio, Confronto, JogadorPermanente, ParticipacaoTorneio, ConfrontoEliminatoria
 import logging
 
 logger = logging.getLogger(__name__)

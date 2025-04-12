@@ -2,7 +2,7 @@ from flask import Blueprint, request, redirect, url_for, session, current_app
 import random
 import re
 from datetime import datetime
-from database.models import Jogador, Torneio, Confronto
+from database.models import Jogador, Torneio, Confronto, JogadorPermanente, ParticipacaoTorneio, ConfrontoEliminatoria
 from database.db import db
 
 
@@ -82,24 +82,66 @@ def sorteio():
         # Cria novo torneio
         novo_torneio = Torneio(nome=nome_torneio)
         db.session.add(novo_torneio)
-        db.session.commit()
+        db.session.flush()  # Para obter o ID sem fazer commit completo
         
-        # Cria jogadores vinculados ao torneio
-        jogadores_dict = {}
+        # Primeiro, garantir que todos os jogadores permanentes existam
+        jogadores_permanentes = {}
+        
         for nome in nomes:
-            jogador = Jogador(nome=nome, torneio_id=novo_torneio.id)
+            # Verificar se jogador já existe
+            jogador = JogadorPermanente.query.filter_by(nome=nome).first()
+            
+            # Se não existe, criar
+            if not jogador:
+                jogador = JogadorPermanente(nome=nome)
+                db.session.add(jogador)
+                db.session.flush()  # Obter ID sem commit
+                log_action("player_created_permanent", f"Novo jogador permanente: {nome} (ID: {jogador.id})")
+            else:
+                log_action("player_reused", f"Jogador existente: {nome} (ID: {jogador.id})")
+                
+            jogadores_permanentes[nome] = jogador
+        
+        # Agora criar participações e jogadores (para compatibilidade)
+        participacoes = {}
+        jogadores_dict = {}
+        
+        for nome in nomes:
+            jogador_permanente = jogadores_permanentes[nome]
+            
+            # Criar participação
+            participacao = ParticipacaoTorneio(
+                jogador_permanente_id=jogador_permanente.id,
+                torneio_id=novo_torneio.id
+            )
+            db.session.add(participacao)
+            db.session.flush()  # Obter ID sem commit
+            participacoes[nome] = participacao
+            
+            # Criar jogador para compatibilidade
+            jogador = Jogador(
+                nome=nome, 
+                torneio_id=novo_torneio.id,
+                jogador_permanente_id=jogador_permanente.id
+            )
             db.session.add(jogador)
+            db.session.flush()  # Obter ID sem commit
             jogadores_dict[nome] = jogador
+            
+            log_action("player_participation_created", 
+                      f"Participação criada: {nome} - Jogador ID: {jogador.id}, Participação ID: {participacao.id}")
+        
+        # Commit para garantir que todos os jogadores estejam salvos antes de gerar confrontos
         db.session.commit()
         
-        # Cria estrutura de dados
+        # Estrutura de dados na sessão
         session.update({
             'torneio_id': novo_torneio.id,
             'modo_torneio': modo,
             'jogadores': {
                 nome: {
                     'nome': jogador.nome,
-                    'id': jogador.id,  # Adicionamos o ID para referência
+                    'id': jogador.id,  # ID do jogador para compatibilidade
                     'vitorias': jogador.vitorias,
                     'saldo_a_favor': jogador.saldo_a_favor,
                     'saldo_contra': jogador.saldo_contra,
@@ -147,6 +189,7 @@ def sorteio():
         error_msg = f"Erro no sorteio: {str(e)}"
         current_app.logger.error(error_msg, exc_info=True)
         session['erro_validacao'] = error_msg
+        db.session.rollback()  # Importante: rollback no caso de erro
         return redirect(url_for('main.novo_torneio'))
     
 @bp.route('/salvar_grupo/<int:grupo_idx>', methods=['POST'])
@@ -174,6 +217,49 @@ def salvar_grupo(grupo_idx):
                 'saldo_contra': 0,
                 'saldo_total': 0
             })
+        
+        # Verificar IDs dos jogadores no banco
+        torneio_id = session.get('torneio_id')
+        if not torneio_id:
+            raise ValueError("ID do torneio não encontrado na sessão")
+            
+        # Verificar jogadores no banco
+        with db.session.no_autoflush:
+            for nome in grupo_nomes:
+                jogador_id = session['jogadores'][nome]['id']
+                db_jogador = Jogador.query.get(jogador_id)
+                
+                if not db_jogador:
+                    log_action("jogador_not_found", f"Jogador não encontrado no banco: {nome} (ID: {jogador_id})")
+                    # Tente recuperar por nome e torneio
+                    db_jogador = Jogador.query.filter_by(nome=nome, torneio_id=torneio_id).first()
+                    
+                    if db_jogador:
+                        # Atualizar ID na sessão
+                        session['jogadores'][nome]['id'] = db_jogador.id
+                        log_action("jogador_id_fixed", f"ID do jogador {nome} atualizado para {db_jogador.id}")
+                    else:
+                        # Se ainda não encontrar, criar um novo
+                        # Primeiro encontrar ou criar o jogador permanente
+                        jogador_permanente = JogadorPermanente.query.filter_by(nome=nome).first()
+                        if not jogador_permanente:
+                            jogador_permanente = JogadorPermanente(nome=nome)
+                            db.session.add(jogador_permanente)
+                            db.session.flush()
+                        
+                        # Criar novo jogador
+                        novo_jogador = Jogador(
+                            nome=nome, 
+                            torneio_id=torneio_id,
+                            jogador_permanente_id=jogador_permanente.id
+                        )
+                        db.session.add(novo_jogador)
+                        db.session.flush()
+                        session['jogadores'][nome]['id'] = novo_jogador.id
+                        log_action("jogador_created", f"Novo jogador criado: {nome} (ID: {novo_jogador.id})")
+            
+            # Commit para garantir que todos os jogadores estejam no banco
+            db.session.commit()
         
         # Processa cada confronto
         for confronto_idx, confronto in enumerate(session['confrontos'][grupo_idx]):
@@ -256,17 +342,13 @@ def salvar_grupo(grupo_idx):
         # Primeiro commit para salvar as alterações nos confrontos
         db.session.commit()
         
-        # Agora atualizamos posição dos jogadores com commits individuais
+        # Atualiza os jogadores no banco com os dados de posição
         for i, jogador_dados in enumerate(session['grupos'][grupo_idx]):
             nome = jogador_dados['nome']
             posicao = i + 1  # Posição no grupo (1-based)
             
-            # Busca novamente o jogador para ter uma instância atualizada
-            jogador = Jogador.query.filter_by(
-                nome=nome, 
-                torneio_id=session.get('torneio_id')
-            ).first()
-            
+            # Buscar jogador no banco
+            jogador = Jogador.query.get(session['jogadores'][nome]['id'])
             if jogador:
                 # Atualiza estatísticas e posição
                 jogador.vitorias = jogador_dados['vitorias']
@@ -276,12 +358,29 @@ def salvar_grupo(grupo_idx):
                 jogador.posicao_grupo = posicao
                 jogador.grupo_idx = grupo_idx
                 
+                # Também atualizar na tabela de participação
+                if jogador.jogador_permanente_id:
+                    participacao = ParticipacaoTorneio.query.filter_by(
+                        jogador_permanente_id=jogador.jogador_permanente_id,
+                        torneio_id=torneio_id
+                    ).first()
+                    
+                    if participacao:
+                        participacao.vitorias = jogador_dados['vitorias']
+                        participacao.saldo_a_favor = jogador_dados['saldo_a_favor']
+                        participacao.saldo_contra = jogador_dados['saldo_contra']
+                        participacao.saldo_total = jogador_dados['saldo_total']
+                        participacao.posicao_grupo = posicao
+                        participacao.grupo_idx = grupo_idx
+                
                 # Commit individual para garantir a persistência
                 db.session.commit()
                 
                 # Log para debug
                 log_action("jogador_position_updated", 
                           f"Jogador: {nome}, Grupo: {grupo_idx}, Posição: {posicao}")
+            else:
+                current_app.logger.warning(f"Jogador não encontrado para atualização: {nome}")
         
         log_action("group_saved", 
                   f"Grupo {grupo_idx + 1} salvo - Resultados: {session['grupos'][grupo_idx]}")
@@ -317,113 +416,146 @@ def salvar_todos_grupos():
                 'saldo_total': 0
             })
         
-        # Processa cada grupo
-        for grupo_idx in range(len(session['grupos'])):
-            # Processa cada confronto do grupo
-            for confronto_idx, confronto in enumerate(session['confrontos'][grupo_idx]):
-                campo_A = f"grupo_{grupo_idx}_confronto_{confronto_idx}_duplaA_favor"
-                campo_B = f"grupo_{grupo_idx}_confronto_{confronto_idx}_duplaB_favor"
-
-                try:
-                    saldoA = int(session['valores_salvos'].get(campo_A, 0)) if session['valores_salvos'].get(campo_A, '') else 0
-                    saldoB = int(session['valores_salvos'].get(campo_B, 0)) if session['valores_salvos'].get(campo_B, '') else 0
-                    
-                    # Atualiza estatísticas para cada jogador
-                    jogadores = {
-                        'A': [session['jogadores'][confronto[0]['nome']], 
-                              session['jogadores'][confronto[1]['nome']]],
-                        'B': [session['jogadores'][confronto[2]['nome']], 
-                              session['jogadores'][confronto[3]['nome']]]
-                    }
-
-                    for jogador in jogadores['A']:
-                        jogador['saldo_a_favor'] += saldoA
-                        jogador['saldo_contra'] += saldoB
-                        if saldoA > saldoB:
-                            jogador['vitorias'] += 1
-
-                    for jogador in jogadores['B']:
-                        jogador['saldo_a_favor'] += saldoB
-                        jogador['saldo_contra'] += saldoA
-                        if saldoB > saldoA:
-                            jogador['vitorias'] += 1
-
-                    # Atualiza o confronto no banco de dados
-                    torneio_id = session.get('torneio_id')
-                    confronto_db = Confronto.query.filter_by(
-                        torneio_id=torneio_id, 
-                        grupo_idx=grupo_idx, 
-                        confronto_idx=confronto_idx
-                    ).first()
-                    
-                    if confronto_db:
-                        # Se o confronto já existe, atualize os resultados
-                        confronto_db.pontos_dupla_a = saldoA
-                        confronto_db.pontos_dupla_b = saldoB
-                        log_action("confronto_updated", 
-                                  f"Confronto DB atualizado: G{grupo_idx+1}-C{confronto_idx+1} - "
-                                  f"Placar: {saldoA} x {saldoB}")
-                    else:
-                        # Caso o confronto não exista (não deveria acontecer), crie-o
-                        novo_confronto = Confronto(
-                            torneio_id=torneio_id,
-                            grupo_idx=grupo_idx,
-                            confronto_idx=confronto_idx,
-                            jogador_a1_id=session['jogadores'][confronto[0]['nome']]['id'],
-                            jogador_a2_id=session['jogadores'][confronto[1]['nome']]['id'],
-                            jogador_b1_id=session['jogadores'][confronto[2]['nome']]['id'],
-                            jogador_b2_id=session['jogadores'][confronto[3]['nome']]['id'],
-                            pontos_dupla_a=saldoA,
-                            pontos_dupla_b=saldoB
-                        )
-                        db.session.add(novo_confronto)
-                        log_action("confronto_created_late", 
-                                  f"Confronto DB criado tardiamente: G{grupo_idx+1}-C{confronto_idx+1}")
-                
-                except (KeyError, ValueError) as e:
-                    current_app.logger.error(f"Erro processando confronto {confronto_idx} do grupo {grupo_idx}: {str(e)}")
-                    continue  # Continue processando outros confrontos mesmo se um falhar
+        # Verificar se os jogadores existem no banco antes de processar confrontos
+        # Isso ajuda a prevenir o erro de chave estrangeira
+        torneio_id = session.get('torneio_id')
+        if not torneio_id:
+            raise ValueError("ID do torneio não encontrado na sessão")
             
-            # Atualiza e classifica o grupo
-            for jogador in session['grupos'][grupo_idx]:
-                jogador_ref = session['jogadores'][jogador['nome']]
-                jogador.update({
-                    'vitorias': jogador_ref['vitorias'],
-                    'saldo_a_favor': jogador_ref['saldo_a_favor'],
-                    'saldo_contra': jogador_ref['saldo_contra'],
-                    'saldo_total': jogador_ref['saldo_a_favor'] - jogador_ref['saldo_contra']
-                })
+        # Verificar jogadores no banco
+        jogadores_db = {}
+        for nome, jogador in session['jogadores'].items():
+            db_jogador = Jogador.query.get(jogador['id'])
+            if not db_jogador:
+                log_action("jogador_not_found", f"Jogador não encontrado no banco: {nome} (ID: {jogador['id']})")
+                # Tente recuperar por nome e torneio
+                db_jogador = Jogador.query.filter_by(nome=nome, torneio_id=torneio_id).first()
+                if db_jogador:
+                    # Atualizar ID na sessão
+                    jogador['id'] = db_jogador.id
+                    log_action("jogador_id_fixed", f"ID do jogador {nome} atualizado para {db_jogador.id}")
+                else:
+                    # Se ainda não encontrar, criar um novo
+                    # Primeiro encontrar ou criar o jogador permanente
+                    jogador_permanente = JogadorPermanente.query.filter_by(nome=nome).first()
+                    if not jogador_permanente:
+                        jogador_permanente = JogadorPermanente(nome=nome)
+                        db.session.add(jogador_permanente)
+                        db.session.flush()
+                    
+                    # Criar novo jogador
+                    novo_jogador = Jogador(
+                        nome=nome, 
+                        torneio_id=torneio_id,
+                        jogador_permanente_id=jogador_permanente.id
+                    )
+                    db.session.add(novo_jogador)
+                    db.session.flush()
+                    jogador['id'] = novo_jogador.id
+                    log_action("jogador_created", f"Novo jogador criado: {nome} (ID: {novo_jogador.id})")
+            
+            jogadores_db[nome] = db_jogador or Jogador.query.get(jogador['id'])
+        
+        # Commit para garantir que todos os jogadores estejam no banco
+        db.session.commit()
+        
+        # Agora podemos processar os confrontos com segurança
+        with db.session.no_autoflush:  # Evita problemas de autoflush
+            # Processa cada grupo
+            for grupo_idx in range(len(session['grupos'])):
+                # Processa cada confronto do grupo
+                for confronto_idx, confronto in enumerate(session['confrontos'][grupo_idx]):
+                    campo_A = f"grupo_{grupo_idx}_confronto_{confronto_idx}_duplaA_favor"
+                    campo_B = f"grupo_{grupo_idx}_confronto_{confronto_idx}_duplaB_favor"
 
-            # Classifica o grupo
-            session['grupos'][grupo_idx].sort(key=lambda x: (-x['vitorias'], -x['saldo_total']))
+                    try:
+                        saldoA = int(session['valores_salvos'].get(campo_A, 0)) if session['valores_salvos'].get(campo_A, '') else 0
+                        saldoB = int(session['valores_salvos'].get(campo_B, 0)) if session['valores_salvos'].get(campo_B, '') else 0
+                        
+                        # Atualiza estatísticas para cada jogador
+                        jogadores = {
+                            'A': [session['jogadores'][confronto[0]['nome']], 
+                                  session['jogadores'][confronto[1]['nome']]],
+                            'B': [session['jogadores'][confronto[2]['nome']], 
+                                  session['jogadores'][confronto[3]['nome']]]
+                        }
+
+                        for jogador in jogadores['A']:
+                            jogador['saldo_a_favor'] += saldoA
+                            jogador['saldo_contra'] += saldoB
+                            if saldoA > saldoB:
+                                jogador['vitorias'] += 1
+
+                        for jogador in jogadores['B']:
+                            jogador['saldo_a_favor'] += saldoB
+                            jogador['saldo_contra'] += saldoA
+                            if saldoB > saldoA:
+                                jogador['vitorias'] += 1
+
+                        # Atualiza o confronto no banco de dados
+                        # Verificar se existe e atualizar ou criar
+                        confronto_db = Confronto.query.filter_by(
+                            torneio_id=torneio_id, 
+                            grupo_idx=grupo_idx, 
+                            confronto_idx=confronto_idx
+                        ).first()
+                        
+                        if confronto_db:
+                            # Se o confronto já existe, apenas atualize os resultados
+                            confronto_db.pontos_dupla_a = saldoA
+                            confronto_db.pontos_dupla_b = saldoB
+                            log_action("confronto_updated", 
+                                      f"Confronto DB atualizado: G{grupo_idx+1}-C{confronto_idx+1} - "
+                                      f"Placar: {saldoA} x {saldoB}")
+                        else:
+                            # Se o confronto não existe, crie-o
+                            novo_confronto = Confronto(
+                                torneio_id=torneio_id,
+                                grupo_idx=grupo_idx,
+                                confronto_idx=confronto_idx,
+                                jogador_a1_id=session['jogadores'][confronto[0]['nome']]['id'],
+                                jogador_a2_id=session['jogadores'][confronto[1]['nome']]['id'],
+                                jogador_b1_id=session['jogadores'][confronto[2]['nome']]['id'],
+                                jogador_b2_id=session['jogadores'][confronto[3]['nome']]['id'],
+                                pontos_dupla_a=saldoA,
+                                pontos_dupla_b=saldoB
+                            )
+                            db.session.add(novo_confronto)
+                            log_action("confronto_created_late", 
+                                      f"Confronto DB criado: G{grupo_idx+1}-C{confronto_idx+1}")
+                    
+                    except (KeyError, ValueError) as e:
+                        current_app.logger.error(f"Erro processando confronto {confronto_idx} do grupo {grupo_idx}: {str(e)}")
+                        continue  # Continue processando outros confrontos mesmo se um falhar
+                
+                # Atualiza e classifica o grupo
+                for jogador in session['grupos'][grupo_idx]:
+                    jogador_ref = session['jogadores'][jogador['nome']]
+                    jogador.update({
+                        'vitorias': jogador_ref['vitorias'],
+                        'saldo_a_favor': jogador_ref['saldo_a_favor'],
+                        'saldo_contra': jogador_ref['saldo_contra'],
+                        'saldo_total': jogador_ref['saldo_a_favor'] - jogador_ref['saldo_contra']
+                    })
+
+                # Classifica o grupo
+                session['grupos'][grupo_idx].sort(key=lambda x: (-x['vitorias'], -x['saldo_total']))
         
         session.modified = True
 
-        # Importantíssimo: Commit no banco para garantir persistência das alterações anteriores
+        # Commit para salvar as alterações nos confrontos
         db.session.commit()
         
-        # Atualiza o banco com os dados de posição
-        # Fazemos isso APÓS o commit anterior para garantir que todas as alterações sejam persistidas
+        # Atualiza os jogadores no banco com os dados de posição
         for grupo_idx in range(len(session['grupos'])):
-            # Atualiza as posições no banco de dados
             for i, jogador_dados in enumerate(session['grupos'][grupo_idx]):
                 nome = jogador_dados['nome']
-                posicao = i + 1  # Posição no grupo (1, 2, 3, 4)
+                posicao = i + 1  # Posição no grupo (1-based)
                 
-                # Busca novamente o jogador do banco para ter certeza que estamos com a instância atualizada
-                jogador = Jogador.query.filter_by(
-                    nome=nome, 
-                    torneio_id=session.get('torneio_id')
-                ).first()
-                
+                # Buscar jogador no banco
+                jogador = Jogador.query.get(session['jogadores'][nome]['id'])
                 if jogador:
-                    # Registra informações de debug para verificar valores
-                    current_app.logger.debug(
-                        f"Atualizando posição: Jogador {jogador.nome} | "
-                        f"Grupo {grupo_idx} | Posição {posicao}"
-                    )
-                    
-                    # Garante que os valores sejam atualizados
+                    # Atualiza estatísticas e posição
                     jogador.vitorias = jogador_dados['vitorias']
                     jogador.saldo_a_favor = jogador_dados['saldo_a_favor']
                     jogador.saldo_contra = jogador_dados['saldo_contra']
@@ -431,11 +563,29 @@ def salvar_todos_grupos():
                     jogador.posicao_grupo = posicao
                     jogador.grupo_idx = grupo_idx
                     
-                    # Commit individual para cada jogador
-                    db.session.commit()
+                    # Atualizar também na tabela de participação
+                    participacao = ParticipacaoTorneio.query.filter_by(
+                        jogador_permanente_id=jogador.jogador_permanente_id,
+                        torneio_id=torneio_id
+                    ).first()
+                    
+                    if participacao:
+                        participacao.vitorias = jogador_dados['vitorias']
+                        participacao.saldo_a_favor = jogador_dados['saldo_a_favor']
+                        participacao.saldo_contra = jogador_dados['saldo_contra']
+                        participacao.saldo_total = jogador_dados['saldo_total']
+                        participacao.posicao_grupo = posicao
+                        participacao.grupo_idx = grupo_idx
+                    
+                    # Log para debug
+                    log_action("jogador_position_updated", 
+                              f"Jogador: {nome}, Grupo: {grupo_idx}, Posição: {posicao}")
                 else:
-                    current_app.logger.error(f"Jogador não encontrado: {nome}")
+                    log_action("jogador_not_found_for_update", 
+                              f"Jogador não encontrado para atualização: {nome}")
         
+        # Commit final
+        db.session.commit()
         log_action("all_groups_saved", f"Todos os {len(session['grupos'])} grupos salvos com sucesso")
         return redirect(url_for('main.novo_torneio'))
     
