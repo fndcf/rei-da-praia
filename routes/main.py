@@ -698,3 +698,17 @@ def cancelar_torneio():
         session['erro_validacao'] = f"Erro ao cancelar torneio: {str(e)}"
         return redirect(url_for('main.novo_torneio'))
     
+@bp.route('/listar_todos_jogadores', methods=['GET'])
+def listar_todos_jogadores():
+    """Endpoint AJAX para listar todos os jogadores cadastrados"""
+    try:
+        # Buscar todos os jogadores permanentes
+        jogadores = JogadorPermanente.query.order_by(JogadorPermanente.nome).limit(100).all()
+        
+        # Formatando resultado
+        resultados = [{'id': j.id, 'nome': j.nome} for j in jogadores]
+        
+        return jsonify(resultados)
+    except Exception as e:
+        current_app.logger.error(f"Erro ao listar jogadores: {str(e)}", exc_info=True)
+        return jsonify([])
