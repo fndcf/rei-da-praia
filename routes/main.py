@@ -703,6 +703,7 @@ def cancelar_torneio():
     
 @bp.route('/listar_todos_jogadores', methods=['GET'])
 def listar_todos_jogadores():
+
     """Endpoint AJAX para listar todos os jogadores cadastrados"""
     try:
         # Buscar todos os jogadores permanentes
@@ -715,3 +716,18 @@ def listar_todos_jogadores():
     except Exception as e:
         current_app.logger.error(f"Erro ao listar jogadores: {str(e)}", exc_info=True)
         return jsonify([])
+    
+@bp.route('/ranking-completo')
+def ranking_completo():
+    log_route_access('ranking_completo')
+    
+    # Obter o ranking completo de jogadores
+    ranking_jogadores = RankingManager.obter_ranking()
+    
+    # Aqui não limitamos o ranking a apenas 10 jogadores
+    
+    return render_template(
+        'ranking_completo.html',
+        ranking_jogadores=ranking_jogadores,
+        titulo="Ranking Completo de Jogadores"
+    )

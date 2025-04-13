@@ -133,16 +133,23 @@
                                 <td>{{ jogador.posicao }}</td>
                                 <td>{{ jogador.nome }}</td>
                                 <td>{{ jogador.pontos }}</td>
-                                <td>{{ jogador.torneios }}</td>  <!-- Nova coluna -->
+                                <td>{{ jogador.torneios }}</td>
                             </tr>
                             {% endfor %}
                         {% else %}
                             <tr>
-                                <td colspan="4">Ranking ainda não disponível.</td>  <!-- Atualizado para 4 colunas -->
+                                <td colspan="4">Ranking ainda não disponível.</td>
                             </tr>
                         {% endif %}
                     </tbody>
                 </table>
+                
+                <!-- Novo botão para ver ranking completo -->
+                <div class="text-center mb-3">
+                    <a href="{{ url_for('main.ranking_completo') }}" class="btn btn-primary">
+                        Ver Ranking Completo
+                    </a>
+                </div>
             </div>
 
             <!-- Pesquisa de Jogador -->
