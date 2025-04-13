@@ -58,6 +58,14 @@
         <div class="card-body">
             <h1 class="card-title text-center">{{ torneio.nome }}</h1>
             <p class="text-muted text-center">Data de criação: {{ torneio.data_criacao.strftime('%d/%m/%Y') }}</p>
+
+            <!-- Adicionar mensagem informativa para torneio em andamento -->
+            {% if torneio_em_andamento %}
+            <div class="alert alert-info text-center mt-3">
+                <strong>Informação:</strong> Este torneio está em andamento. 
+                Esta página mostra o estado atual da fase de grupos.
+            </div>
+            {% endif %}
             
             <!-- Informações do Campeão -->
             <div class="row mt-4">

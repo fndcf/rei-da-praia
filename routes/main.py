@@ -198,9 +198,9 @@ def detalhes_torneio(torneio_id):
     torneio = Torneio.query.get_or_404(torneio_id)
     
     # Verificar se o torneio está finalizado
-    if not torneio.finalizado:
-        current_app.logger.warning(f"Tentativa de acessar detalhes de torneio não finalizado: {torneio_id}")
-        return redirect(url_for('main.home'))
+    # if not torneio.finalizado:
+    #    current_app.logger.warning(f"Tentativa de acessar detalhes de torneio não finalizado: {torneio_id}")
+    #    return redirect(url_for('main.home'))
     
     # Buscar todos os jogadores do torneio
     jogadores = Jogador.query.filter_by(torneio_id=torneio_id).all()
@@ -345,7 +345,8 @@ def detalhes_torneio(torneio_id):
         campeoes=campeoes,
         vice_campeoes=vice_campeoes,
         placar_final=placar_final,
-        modo_torneio=modo_torneio
+        modo_torneio=modo_torneio,
+        torneio_em_andamento=not torneio.finalizado  # Variável que indica se o torneio está em andamento
     )
 
 @bp.route('/buscar_jogadores', methods=['GET'])
@@ -464,6 +465,8 @@ def perfil_jogador():
             'data': torneio.data_criacao.strftime('%d/%m/%Y'),
             'jogos': jogos_torneio,
             'vitorias': vitorias_total,
+            'vitorias_grupo': participacao.vitorias,           # Adicionado
+            'vitorias_eliminatorias': vitorias_eliminatorias,  # Adicionado
             'pontuacao': jogador_torneio.pontuacao,
             'finalizado': torneio.finalizado
         })

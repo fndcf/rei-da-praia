@@ -16,13 +16,16 @@
             {{ erro_validacao }}
         </div>
         {% endif %}
-
+    
         <!-- Exibir mensagens de sucesso -->
         {% if sucesso_validacao %}
         <div class="sucesso mt-3 mb-3">
             {{ sucesso_validacao }}
         </div>
         {% endif %}
+        
+        <!-- Formulário oculto para salvar todos os grupos - SEMPRE PRESENTE independente de condicionais -->
+        <form id="formSalvarTodos" method="POST" action="{{ url_for('groups.salvar_todos_grupos') }}" style="display: none;"></form>
         
         {% if grupos %}
         <!-- Se já existem grupos, mostrar informações em vez do formulário -->
@@ -75,11 +78,6 @@
               
             <button type="submit" class="btn btn-success" id="btnSortear">Sortear Grupos</button>
             
-            {% if grupos %}
-            <div class="alert alert-info mt-3">
-                <strong>Atenção!</strong> Um sorteio já foi realizado para este torneio. O formulário está desabilitado. Para realizar um novo sorteio, cancele o torneio atual.
-            </div>
-            {% endif %}
             <!-- Modal para seleção de jogadores -->
             <div id="modalJogadores" class="modal">
                 <div class="modal-content">
@@ -217,180 +215,200 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        console.log("DOM carregado, inicializando JavaScript");
+    
+        // Verificar se elementos existem antes de tentar acessá-los
         const modoSelect = document.getElementById('modo_torneio');
-    const instrucoes = document.getElementById('instrucoes');
-    const contador = document.getElementById('contador-jogadores');
-    const textarea = document.getElementById('jogadores');
-    const btnSortear = document.getElementById('btnSortear');
+        const instrucoes = document.getElementById('instrucoes');
+        const contador = document.getElementById('contador-jogadores');
+        const textarea = document.getElementById('jogadores');
+        const btnSortear = document.getElementById('btnSortear');
+        const formSorteio = document.getElementById('formSorteio');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const btnCancelarTorneio = document.getElementById('btnCancelarTorneio');
+        const btnSalvarTodos = document.getElementById('btnSalvarTodos');
+        const btnAbrirEliminatoria = document.getElementById('btnAbrirEliminatoria');
+        const btnSelecionarJogadores = document.getElementById('btnSelecionarJogadores');
+        const btnSelecionarTodos = document.getElementById('btnSelecionarTodos');
+        const buscarJogadorInput = document.getElementById('buscarJogador');
+        const modalJogadores = document.getElementById('modalJogadores');
+        const modalClose = document.querySelector('.modal-close');
+        const btnCancelarSelecao = document.getElementById('btnCancelarSelecao');
+        const btnConfirmarSelecao = document.getElementById('btnConfirmarSelecao');
 
-    const btnSelecionarJogadores = document.getElementById('btnSelecionarJogadores');
-    const modalJogadores = document.getElementById('modalJogadores');
-    const modalClose = document.querySelector('.modal-close');
-    const btnCancelarSelecao = document.getElementById('btnCancelarSelecao');
-    const btnConfirmarSelecao = document.getElementById('btnConfirmarSelecao');
-    const buscarJogadorInput = document.getElementById('buscarJogador');
-    const listaJogadores = document.getElementById('listaJogadores');
-    const jogadoresSelecionados = document.getElementById('jogadoresSelecionados');
-    const contadorSelecionados = document.getElementById('contadorSelecionados');
-    const textareaJogadores = document.getElementById('jogadores');
+        // Verificar quais elementos estão presentes para debug
+    console.log("Elementos encontrados:", {
+        modoSelect: !!modoSelect,
+        instrucoes: !!instrucoes,
+        contador: !!contador,
+        textarea: !!textarea,
+        btnSortear: !!btnSortear,
+        formSorteio: !!formSorteio,
+        loadingOverlay: !!loadingOverlay,
+        btnCancelarTorneio: !!btnCancelarTorneio,
+        btnSalvarTodos: !!btnSalvarTodos,
+        btnAbrirEliminatoria: !!btnAbrirEliminatoria,
+        btnSelecionarJogadores: !!btnSelecionarJogadores,
+        modalJogadores: !!modalJogadores
+    });
 
-    // Botão Selecionar Todos
-    const btnSelecionarTodos = document.getElementById('btnSelecionarTodos');
-
-    // Função para selecionar todos os jogadores exibidos
-    btnSelecionarTodos?.addEventListener('click', function() {
-        // Obter todos os itens de jogador atualmente exibidos na lista
-        const jogadoresItems = document.querySelectorAll('.jogador-item');
-        
-        // Verificar se todos estão selecionados para determinar a ação
-        const todosJaSelecionados = Array.from(jogadoresItems).every(item => 
-            item.classList.contains('selecionado'));
-        
-        // Se todos já estão selecionados, vamos desselecioná-los
-        // Caso contrário, selecionamos todos
-        jogadoresItems.forEach(item => {
-            const nome = item.dataset.nome;
-            const checkbox = item.querySelector('input[type="checkbox"]');
-            
-            if (todosJaSelecionados) {
-                // Desselecionando
-                if (selecionados.includes(nome)) {
-                    selecionados = selecionados.filter(n => n !== nome);
-                    item.classList.remove('selecionado');
-                    checkbox.checked = false;
-                }
-            } else {
-                // Selecionando
-                if (!selecionados.includes(nome)) {
-                    selecionados.push(nome);
-                    item.classList.add('selecionado');
-                    checkbox.checked = true;
-                }
+    // Verificar se temos grupos
+    const existemGrupos = {% if grupos %}true{% else %}false{% endif %};
+    console.log("Existem grupos:", existemGrupos);
+    
+    // Funcionalidade do botão Cancelar Torneio
+    if (btnCancelarTorneio) {
+        btnCancelarTorneio.addEventListener('click', function() {
+            if (confirm('Tem certeza que deseja cancelar este torneio? Todos os dados serão perdidos.')) {
+                window.location.href = "{{ url_for('main.cancelar_torneio') }}";
             }
         });
-        
-        // Atualizar o texto do botão baseado na nova ação
-        this.textContent = todosJaSelecionados ? 'Selecionar Todos' : 'Desselecionar Todos';
-        
-        // Atualizar a lista de selecionados
-        atualizarListaSelecionados();
-    });
-
-    // Array para armazenar os jogadores selecionados
-    let selecionados = [];
-
-    // Função para abrir o modal e carregar os jogadores
-    btnSelecionarJogadores?.addEventListener('click', function() {
-        // Verificar se a textarea já tem jogadores
-        const jogadoresAtuais = textareaJogadores.value.split(',')
-            .map(nome => nome.trim())
-            .filter(nome => nome !== '');
-        
-        // Limpar a lista de selecionados atual
-        selecionados = [...jogadoresAtuais];
-        atualizarListaSelecionados();
-        
-        // Abrir o modal
-        modalJogadores.style.display = 'flex';
-        
-        // Carregar a lista de jogadores do banco de dados
-        carregarJogadores();
-    });
-
-    // Funções para fechar o modal
-    function fecharModal() {
-        modalJogadores.style.display = 'none';
     }
 
-    modalClose?.addEventListener('click', fecharModal);
-    btnCancelarSelecao?.addEventListener('click', fecharModal);
+    // Funcionalidade do botão Salvar Todos
+    if (btnSalvarTodos) {
+        btnSalvarTodos.addEventListener('click', function() {
+            console.log("Botão Salvar Todos clicado");
 
-    // Fechar modal ao clicar fora dele
-    window.addEventListener('click', function(event) {
-        if (event.target === modalJogadores) {
-            fecharModal();
-        }
-    });
+            // Validar confrontos: esquerda e direita devem ser preenchidos juntos
+            const inputsEsq = document.querySelectorAll('.saldo-inputs-esq');
+            const inputsDir = document.querySelectorAll('.saldo-inputs-dir');
 
-    // Função para carregar os jogadores do banco de dados via AJAX
-    function carregarJogadores(termo = '') {
-        // URL da API para buscar jogadores
-        const url = termo 
-            ? `{{ url_for('main.buscar_jogadores') }}?termo=${encodeURIComponent(termo)}` 
-            : "{{ url_for('main.listar_todos_jogadores') }}";
-        
-        // Exibir estado de carregamento
-        listaJogadores.innerHTML = '<p class="text-center"><i>Carregando jogadores...</i></p>';
-        
-        // Fazer a requisição AJAX
-        fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                // Verificar se temos jogadores para exibir
-                if (data.length === 0) {
-                    listaJogadores.innerHTML = '<p class="text-center">Nenhum jogador encontrado</p>';
+            const errosConfronto = [];
+            let temConfrontoPreenchido = false;
+
+            for (let i = 0; i < inputsEsq.length; i++) {
+                const valorEsq = inputsEsq[i].value.trim();
+                const valorDir = inputsDir[i].value.trim();
+
+                const preenchidoEsq = valorEsq !== "";
+                const preenchidoDir = valorDir !== "";
+
+                if (preenchidoEsq && preenchidoDir) {
+                    temConfrontoPreenchido = true; // pelo menos um par preenchido corretamente
+                } else if (preenchidoEsq || preenchidoDir) {
+                    errosConfronto.push(i + 1); // erro: preenchido só um lado
+                }
+            }
+
+            if (errosConfronto.length > 0) {
+                let mensagem = '⚠️ Preencha os dois lados (esquerdo e direito) para os seguintes confrontos:\n\n';
+                errosConfronto.forEach(num => {
+                    mensagem += `- Confronto ${num}\n`;
+                });
+                alert(mensagem);
+                return;
+            }
+
+            if (!temConfrontoPreenchido) {
+                alert("⚠️ Nenhum confronto foi preenchido. Por favor, preencha pelo menos um confronto completo antes de salvar.");
+                return;
+            }
+
+            // Verificar se a função validarSemEmpates existe
+            if (typeof validarSemEmpates === 'function') {
+                const empates = validarSemEmpates();
+                if (empates.length > 0) {
+                    // Montar mensagem de erro
+                    let mensagem = '⚠️ Não é permitido empate nos confrontos:\n\n';
+                    empates.forEach(empate => {
+                        mensagem += `Confronto ${empate.confronto}: ${empate.jogadoresEsq} x ${empate.jogadoresDir} (${empate.placar})\n`;
+                    });
+                    mensagem += '\nPor favor, corrija os resultados antes de salvar.';
+                    
+                    alert(mensagem);
+                    
+                    // Rolar até o primeiro empate
+                    const primeiroInputComErro = document.querySelector('.erro-empate');
+                    if (primeiroInputComErro) {
+                        primeiroInputComErro.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        primeiroInputComErro.focus();
+                    }
                     return;
                 }
-                
-                // Construir a lista de jogadores
-                let html = '';
-                data.forEach(jogador => {
-                    const jaSelecionado = selecionados.includes(jogador.nome);
-                    html += `
-                        <div class="jogador-item ${jaSelecionado ? 'selecionado' : ''}" 
-                            data-nome="${jogador.nome}" onclick="toggleJogador(this)">
-                            <input type="checkbox" ${jaSelecionado ? 'checked' : ''}>
-                            <span>${jogador.nome}</span>
-                        </div>
-                    `;
-                });
-                
-                listaJogadores.innerHTML = html;
-            })
-            .catch(error => {
-                console.error('Erro ao carregar jogadores:', error);
-                listaJogadores.innerHTML = '<p class="text-center text-danger">Erro ao carregar jogadores</p>';
+            }
+
+            // Capturar todos os inputs de todos os grupos
+            const formSalvarTodos = document.getElementById('formSalvarTodos');
+            if (!formSalvarTodos) {
+                console.error("Formulário formSalvarTodos não encontrado!");
+                alert("Erro: Formulário não encontrado. Por favor, recarregue a página.");
+                return;
+            }
+            
+            formSalvarTodos.innerHTML = ''; // Limpar o formulário
+            
+            // Selecionar todos os inputs com id que começa com "grupo_"
+            const todosInputs = document.querySelectorAll('input[id^="grupo_"]');
+            console.log(`Encontrados ${todosInputs.length} inputs para salvar`);
+            
+            // Adicionar cada input como um campo oculto no formulário
+            todosInputs.forEach(input => {
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = input.id;
+                hiddenInput.value = input.value;
+                formSalvarTodos.appendChild(hiddenInput);
             });
-    }
-    
-    // Como formSorteio é usado mais abaixo, vamos mover a declaração aqui
-    const formSorteio = document.getElementById('formSorteio');
-    const loadingOverlay = document.getElementById('loadingOverlay');
 
-    // ADICIONAR ESTE NOVO CÓDIGO AQUI
-    // Verificar se já existem grupos
-    const gruposExistem = {% if grupos %}true{% else %}false{% endif %};
-
-    // Desabilitar o formulário se já existirem grupos
-    if (formSorteio && gruposExistem) {
-        // Este é um failsafe para caso o template não seja renderizado corretamente
-        formSorteio.addEventListener('submit', function(e) {
-            e.preventDefault();
-            alert('Você não pode realizar um novo sorteio enquanto houver um torneio em andamento. Por favor, cancele o torneio atual primeiro.');
-            return false;
+            console.log("Formulário preparado, enviando...");
+            // Submeter o formulário
+            formSalvarTodos.submit();
         });
-        
-        // Desabilitar todos os campos do formulário
-        const campos = formSorteio.querySelectorAll('input, select, textarea');
-        campos.forEach(campo => {
-            campo.disabled = true;
-        });
-        
-        // Desabilitar o botão de sortear
-        if (btnSortear) {
-            btnSortear.disabled = true;
-            btnSortear.title = 'Um sorteio já foi realizado. Para realizar um novo sorteio, cancele o torneio atual.';
-            btnSortear.textContent = 'Grupos já sorteados';
-        }
     }
 
-    // Adicionar manipulador de evento para o botão cancelar torneio
-    document.getElementById('btnCancelarTorneio')?.addEventListener('click', function() {
-        if (confirm('Tem certeza que deseja cancelar este torneio? Todos os dados serão perdidos.')) {
-            window.location.href = "{{ url_for('main.cancelar_torneio') }}";
-        }
-    });
+    // Botão Abrir Fase Eliminatória
+    if (btnAbrirEliminatoria) {
+        btnAbrirEliminatoria.addEventListener('click', function(e) {
+            // Primeiro validar se não há empates
+            const empates = (typeof validarSemEmpates === 'function') ? validarSemEmpates() : [];
+            if (empates.length > 0) {
+                e.preventDefault();
+                
+                // Montar mensagem de erro
+                let mensagem = '⚠️ Não é permitido empate nos confrontos:\n\n';
+                empates.forEach(empate => {
+                    mensagem += `Confronto ${empate.confronto}: ${empate.jogadoresEsq} x ${empate.jogadoresDir} (${empate.placar})\n`;
+                });
+                mensagem += '\nPor favor, corrija os resultados antes de avançar.';
+                
+                alert(mensagem);
+                
+                // Rolar até o primeiro empate
+                const primeiroInputComErro = document.querySelector('.erro-empate');
+                if (primeiroInputComErro) {
+                    primeiroInputComErro.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    primeiroInputComErro.focus();
+                }
+                return;
+            }
+            
+            // Se não houver empates, continuar verificando campos vazios
+            const inputsVazios = document.querySelectorAll('.saldo-inputs-esq[value=""], .saldo-inputs-dir[value=""]');
+            if (inputsVazios.length > 0) {
+                e.preventDefault();
+                
+                // Destacar campos vazios
+                inputsVazios.forEach(input => {
+                    input.classList.add('campo-vazio');
+                    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+                // Focar no primeiro campo vazio
+                inputsVazios[0]?.focus();
 
+                // Alert mais informativo
+                if (!confirm(`⚠️ Existem ${inputsVazios.length} resultados não preenchidos. Você deve preencher todos os resultados antes de avançar para a fase eliminatória. Deseja rolar para o primeiro campo vazio?`)) {
+                    return;
+                }
+            } else {
+                // Se todas as validações passarem:
+                // 3. Redirecionar para a fase eliminatória na aba atual
+                window.location.href = '{{ url_for("playoffs.fase_eliminatoria") }}';
+            }
+        });
+    }
+
+    // Mostrar overlay de loading quando enviar o formulário
     if (formSorteio && loadingOverlay) {
         formSorteio.addEventListener('submit', function(e) {
             // Verifica se o formulário é válido
@@ -429,96 +447,273 @@
         });
     }
 
-    // Atualiza interface quando muda o modo
-    function atualizarInterface() {
-        console.log("Modo selecionado:", modoSelect.value);
-        const modo = modoSelect.value;
-        if (!modo) {
-            instrucoes.textContent = "Selecione o formato do torneio primeiro";
-            textarea.placeholder = "Selecione o formato acima";
-            textarea.disabled = true;
-            btnSortear.disabled = true;
-            return;
+    // Funcionalidades para o modal de seleção de jogadores
+    if (btnSelecionarJogadores && modalJogadores) {
+        // Inicializar array para jogadores selecionados
+        let selecionados = [];
+        
+        // Abrir modal e carregar jogadores
+        btnSelecionarJogadores.addEventListener('click', function() {
+            // Verificar se a textarea já tem jogadores
+            if (textarea) {
+                const jogadoresAtuais = textarea.value.split(',')
+                    .map(nome => nome.trim())
+                    .filter(nome => nome !== '');
+                
+                // Limpar a lista de selecionados atual
+                selecionados = [...jogadoresAtuais];
+                atualizarListaSelecionados();
+            }
+            
+            // Abrir o modal
+            modalJogadores.style.display = 'flex';
+            
+            // Carregar a lista de jogadores do banco de dados
+            carregarJogadores();
+        });
+        
+        // Fechar modal
+        if (modalClose) {
+            modalClose.addEventListener('click', function() {
+                modalJogadores.style.display = 'none';
+            });
         }
         
-        let numJogadores;
-        if (modo === '20j') {
-            numJogadores = 20;
-        } else if (modo === '24j') {
-            numJogadores = 24;
-        } else if (modo === '28j') {
-            numJogadores = 28;
-        } else {
-            numJogadores = 32;
+        if (btnCancelarSelecao) {
+            btnCancelarSelecao.addEventListener('click', function() {
+                modalJogadores.style.display = 'none';
+            });
         }
-        instrucoes.textContent = `Insira EXATAMENTE ${numJogadores} jogadores únicos separados por vírgula:`;
-        textarea.placeholder = `Jogador1, Jogador2, ..., Jogador${numJogadores}`;
-        textarea.disabled = false;
-        btnSortear.disabled = false;
         
-        // Força a validação do textarea
-        textarea.dispatchEvent(new Event('input'));
+        // Fechar modal ao clicar fora
+        window.addEventListener('click', function(event) {
+            if (event.target === modalJogadores) {
+                modalJogadores.style.display = 'none';
+            }
+        });
+        
+        // Funcionalidade do botão Selecionar Todos
+        if (btnSelecionarTodos) {
+            btnSelecionarTodos.addEventListener('click', function() {
+                // Obter todos os itens de jogador atualmente exibidos na lista
+                const jogadoresItems = document.querySelectorAll('.jogador-item');
+                
+                // Verificar se todos estão selecionados para determinar a ação
+                const todosJaSelecionados = Array.from(jogadoresItems).every(item => 
+                    item.classList.contains('selecionado'));
+                
+                // Se todos já estão selecionados, vamos desselecioná-los
+                // Caso contrário, selecionamos todos
+                jogadoresItems.forEach(item => {
+                    const nome = item.dataset.nome;
+                    const checkbox = item.querySelector('input[type="checkbox"]');
+                    
+                    if (todosJaSelecionados) {
+                        // Desselecionando
+                        if (selecionados.includes(nome)) {
+                            selecionados = selecionados.filter(n => n !== nome);
+                            item.classList.remove('selecionado');
+                            checkbox.checked = false;
+                        }
+                    } else {
+                        // Selecionando
+                        if (!selecionados.includes(nome)) {
+                            selecionados.push(nome);
+                            item.classList.add('selecionado');
+                            checkbox.checked = true;
+                        }
+                    }
+                });
+                
+                // Atualizar o texto do botão baseado na nova ação
+                this.textContent = todosJaSelecionados ? 'Selecionar Todos' : 'Desselecionar Todos';
+                
+                // Atualizar a lista de selecionados
+                atualizarListaSelecionados();
+            });
+        }
+        
+        // Função para carregar jogadores
+        function carregarJogadores(termo = '') {
+            const listaJogadores = document.getElementById('listaJogadores');
+            if (!listaJogadores) return;
+            
+            // URL da API para buscar jogadores
+            const url = termo 
+                ? `{{ url_for('main.buscar_jogadores') }}?termo=${encodeURIComponent(termo)}` 
+                : "{{ url_for('main.listar_todos_jogadores') }}";
+            
+            // Exibir estado de carregamento
+            listaJogadores.innerHTML = '<p class="text-center"><i>Carregando jogadores...</i></p>';
+            
+            // Fazer a requisição AJAX
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    // Verificar se temos jogadores para exibir
+                    if (data.length === 0) {
+                        listaJogadores.innerHTML = '<p class="text-center">Nenhum jogador encontrado</p>';
+                        return;
+                    }
+                    
+                    // Construir a lista de jogadores
+                    let html = '';
+                    data.forEach(jogador => {
+                        const jaSelecionado = selecionados.includes(jogador.nome);
+                        html += `
+                            <div class="jogador-item ${jaSelecionado ? 'selecionado' : ''}" 
+                                 data-nome="${jogador.nome}" onclick="toggleJogador(this)">
+                                <input type="checkbox" ${jaSelecionado ? 'checked' : ''}>
+                                <span>${jogador.nome}</span>
+                            </div>
+                        `;
+                    });
+                    
+                    listaJogadores.innerHTML = html;
+                    
+                    // Atualizar o texto do botão Selecionar Todos
+                    if (btnSelecionarTodos) {
+                        // Verificar se todos os jogadores carregados já estão selecionados
+                        const todosJaSelecionados = data.every(jogador => 
+                            selecionados.includes(jogador.nome));
+                        
+                        btnSelecionarTodos.textContent = todosJaSelecionados ? 
+                            'Desselecionar Todos' : 'Selecionar Todos';
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar jogadores:', error);
+                    listaJogadores.innerHTML = '<p class="text-center text-danger">Erro ao carregar jogadores</p>';
+                });
+        }
+        
+        // Filtrar jogadores
+        if (buscarJogadorInput) {
+            buscarJogadorInput.addEventListener('input', function() {
+                const termo = this.value.trim();
+                
+                // Se o termo tiver pelo menos 2 caracteres, buscar
+                if (termo.length >= 2) {
+                    carregarJogadores(termo);
+                } else if (termo.length === 0) {
+                    // Se o termo estiver vazio, carregar todos
+                    carregarJogadores();
+                }
+            });
+        }
+        
+        // Confirmar seleção 
+        if (btnConfirmarSelecao && textarea && modoSelect) {
+            btnConfirmarSelecao.addEventListener('click', function() {
+                // Modo do torneio atual
+                const modo = modoSelect.value;
+                if (!modo) {
+                    alert("Por favor, selecione o formato do torneio primeiro.");
+                    return;
+                }
+                
+                // Número esperado de jogadores
+                let numEsperado;
+                if (modo === '20j') {
+                    numEsperado = 20;
+                } else if (modo === '24j') {
+                    numEsperado = 24;
+                } else if (modo === '28j') {
+                    numEsperado = 28;
+                } else {
+                    numEsperado = 32;
+                }
+                
+                // Verificar se o número de jogadores selecionados é adequado
+                if (selecionados.length > numEsperado) {
+                    alert(`Você selecionou ${selecionados.length} jogadores, mas o formato escolhido requer exatamente ${numEsperado} jogadores.\n\nPor favor, remova ${selecionados.length - numEsperado} jogadores da seleção.`);
+                    return;
+                }
+                
+                // Preencher a textarea com os jogadores selecionados
+                textarea.value = selecionados.join(', ');
+                
+                // Fechar o modal
+                modalJogadores.style.display = 'none';
+                
+                // Atualizar o contador de jogadores
+                if (contador) {
+                    contador.textContent = `${selecionados.length}/${numEsperado} jogadores`;
+                    
+                    // Feedback visual
+                    contador.style.color = 
+                        selecionados.length === numEsperado ? 'var(--success-color)' : 
+                        selecionados.length > numEsperado ? 'var(--danger-color)' : 'var(--warning-color)';
+                }
+                
+                // Disparar evento de input para validar a textarea
+                textarea.dispatchEvent(new Event('input'));
+            });
+        }
+        
+        // Função para atualizar a lista de jogadores selecionados
+        function atualizarListaSelecionados() {
+            const contadorSelecionados = document.getElementById('contadorSelecionados');
+            const jogadoresSelecionados = document.getElementById('jogadoresSelecionados');
+            
+            if (!contadorSelecionados || !jogadoresSelecionados) return;
+            
+            // Atualizar o contador
+            contadorSelecionados.textContent = selecionados.length;
+            
+            // Atualizar a lista visual
+            jogadoresSelecionados.innerHTML = '';
+            
+            selecionados.forEach(nome => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <span>${nome}</span>
+                    <button type="button" onclick="removerSelecionado('${nome}')">×</button>
+                `;
+                jogadoresSelecionados.appendChild(li);
+            });
+        }
+        
+        // Expor funções necessárias no escopo global
+        window.toggleJogador = function(element) {
+            const nome = element.dataset.nome;
+            const checkbox = element.querySelector('input[type="checkbox"]');
+            
+            // Toggle seleção
+            if (selecionados.includes(nome)) {
+                // Remover da seleção
+                selecionados = selecionados.filter(n => n !== nome);
+                element.classList.remove('selecionado');
+                checkbox.checked = false;
+            } else {
+                // Adicionar à seleção
+                selecionados.push(nome);
+                element.classList.add('selecionado');
+                checkbox.checked = true;
+            }
+            
+            // Atualizar a lista de selecionados
+            atualizarListaSelecionados();
+        };
+        
+        window.removerSelecionado = function(nome) {
+            // Remover da lista de selecionados
+            selecionados = selecionados.filter(n => n !== nome);
+            
+            // Atualizar checkbox na lista principal
+            const jogadorItem = document.querySelector(`.jogador-item[data-nome="${nome}"]`);
+            if (jogadorItem) {
+                jogadorItem.classList.remove('selecionado');
+                jogadorItem.querySelector('input[type="checkbox"]').checked = false;
+            }
+            
+            // Atualizar a lista de selecionados
+            atualizarListaSelecionados();
+        };
     }
-    
-    // Validação do textarea
-    textarea.addEventListener('input', function() {
-        const modo = modoSelect.value;
-        if (!modo) return;
-        
-        let numEsperado;
-        if (modo === '20j') {
-            numEsperado = 20;
-        } else if (modo === '24j') {
-            numEsperado = 24;
-        } else if (modo === '28j') {
-            numEsperado = 28;
-        } else {
-            numEsperado = 32;
-        }
-        const nomes = this.value.split(',')
-            .map(nome => nome.trim())
-            .filter(nome => nome !== '' && nome.replace(/\s/g, '').length > 0);
 
-        if (nomes.length === numEsperado) {
-            this.classList.remove('is-invalid');
-            this.classList.add('is-valid');
-            btnSortear.disabled = false;
-        } else {
-            this.classList.remove('is-valid');
-            this.classList.add('is-invalid');
-            btnSortear.disabled = true;
-        }
-        
-        // Verifica duplicados
-        const nomesLower = nomes.map(nome => nome.toLowerCase());
-        const duplicados = [...new Set(
-            nomesLower.filter((nome, index) => nomesLower.indexOf(nome) !== index)
-        )];
-        
-        // Atualiza contador
-        contador.textContent = `${nomes.length}/${numEsperado} jogadores`;
-        
-        // Feedback visual
-        if (duplicados.length > 0) {
-            contador.innerHTML += ` <span style="color:var(--danger-color)">(Duplicados: ${duplicados.join(', ')})</span>`;
-            contador.style.color = 'var(--danger-color)';
-            btnSortear.disabled = true;
-        } else {
-            contador.style.color = 
-                nomes.length === numEsperado ? 'var(--success-color)' : 
-                nomes.length > numEsperado ? 'var(--danger-color)' : 'var(--warning-color)';
-            btnSortear.disabled = nomes.length !== numEsperado;
-        }
-    });
-    
-    // Observa mudanças no seletor
-    modoSelect.addEventListener('change', atualizarInterface);
-    
-    // Inicializa a interface
-    atualizarInterface();
-
-    // Também precisamos modificar a função de validação de empates para tratar corretamente o placar 0
-    function validarSemEmpates() {
+    // Implementação da função validarSemEmpates - definida no escopo global para ser acessível a outros handlers
+    window.validarSemEmpates = function() {
         let empatesEncontrados = [];
         
         // Selecionar todos os confrontos
@@ -559,14 +754,114 @@
         });
         
         return empatesEncontrados;
+    };
+
+    // Inicializar interface se necessário
+    if (modoSelect && textarea && btnSortear) {
+        function atualizarInterface() {
+            console.log("Atualizando interface, modo selecionado:", modoSelect.value);
+            const modo = modoSelect.value;
+            if (!modo) {
+                if (instrucoes) instrucoes.textContent = "Selecione o formato do torneio primeiro";
+                textarea.placeholder = "Selecione o formato acima";
+                textarea.disabled = true;
+                btnSortear.disabled = true;
+                return;
+            }
+            
+            let numJogadores;
+            if (modo === '20j') {
+                numJogadores = 20;
+            } else if (modo === '24j') {
+                numJogadores = 24;
+            } else if (modo === '28j') {
+                numJogadores = 28;
+            } else {
+                numJogadores = 32;
+            }
+            
+            if (instrucoes) {
+                instrucoes.textContent = `Insira EXATAMENTE ${numJogadores} jogadores únicos separados por vírgula:`;
+            }
+            textarea.placeholder = `Jogador1, Jogador2, ..., Jogador${numJogadores}`;
+            textarea.disabled = false;
+            btnSortear.disabled = false;
+            
+            // Força a validação do textarea
+            textarea.dispatchEvent(new Event('input'));
+        }
+        
+        // Validação do textarea
+        textarea.addEventListener('input', function() {
+            const modo = modoSelect.value;
+            if (!modo) return;
+            
+            let numEsperado;
+            if (modo === '20j') {
+                numEsperado = 20;
+            } else if (modo === '24j') {
+                numEsperado = 24;
+            } else if (modo === '28j') {
+                numEsperado = 28;
+            } else {
+                numEsperado = 32;
+            }
+            
+            const nomes = this.value.split(',')
+                .map(nome => nome.trim())
+                .filter(nome => nome !== '' && nome.replace(/\s/g, '').length > 0);
+
+            if (nomes.length === numEsperado) {
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+                btnSortear.disabled = false;
+            } else {
+                this.classList.remove('is-valid');
+                this.classList.add('is-invalid');
+                btnSortear.disabled = true;
+            }
+            
+            // Verifica duplicados
+            const nomesLower = nomes.map(nome => nome.toLowerCase());
+            const duplicados = [...new Set(
+                nomesLower.filter((nome, index) => nomesLower.indexOf(nome) !== index)
+            )];
+            
+            // Atualiza contador
+            if (contador) {
+                contador.textContent = `${nomes.length}/${numEsperado} jogadores`;
+                
+                // Feedback visual
+                if (duplicados.length > 0) {
+                    contador.innerHTML += ` <span style="color:var(--danger-color)">(Duplicados: ${duplicados.join(', ')})</span>`;
+                    contador.style.color = 'var(--danger-color)';
+                    btnSortear.disabled = true;
+                } else {
+                    contador.style.color = 
+                        nomes.length === numEsperado ? 'var(--success-color)' : 
+                        nomes.length > numEsperado ? 'var(--danger-color)' : 'var(--warning-color)';
+                    btnSortear.disabled = nomes.length !== numEsperado;
+                }
+            }
+        });
+
+        // Observa mudanças no seletor
+        modoSelect.addEventListener('change', atualizarInterface);
+
+        // Inicializa a interface
+        atualizarInterface();
     }
 
     // Adiciona validação na entrada de valores dos confrontos
     document.querySelectorAll('.saldo-inputs-esq, .saldo-inputs-dir').forEach(input => {
         input.addEventListener('change', function() {
             const confronto = this.closest('.confronto');
+            if (!confronto) return;
+            
             const inputEsq = confronto.querySelector('.saldo-inputs-esq');
             const inputDir = confronto.querySelector('.saldo-inputs-dir');
+            
+            if (!inputEsq || !inputDir) return;
             
             if (inputEsq.value && inputDir.value) {
                 const valorEsq = parseInt(inputEsq.value);
@@ -587,7 +882,7 @@
     // Validação ao salvar o grupo
     document.querySelectorAll('.form-grupo').forEach(form => {
         form.addEventListener('submit', function(e) {
-            const empates = validarSemEmpates();
+            const empates = window.validarSemEmpates();
             
             if (empates.length > 0) {
                 e.preventDefault();
@@ -610,252 +905,9 @@
             }
         });
     });
-
-    // Adiciona verificação ao botão de abrir eliminatória
-    document.getElementById('btnAbrirEliminatoria')?.addEventListener('click', function(e) {
-        // Primeiro validar se não há empates
-        const empates = validarSemEmpates();
-        if (empates.length > 0) {
-            e.preventDefault();
-            
-            // Montar mensagem de erro
-            let mensagem = '⚠️ Não é permitido empate nos confrontos:\n\n';
-            empates.forEach(empate => {
-                mensagem += `Confronto ${empate.confronto}: ${empate.jogadoresEsq} x ${empate.jogadoresDir} (${empate.placar})\n`;
-            });
-            mensagem += '\nPor favor, corrija os resultados antes de avançar.';
-            
-            alert(mensagem);
-            
-            // Rolar até o primeiro empate
-            const primeiroInputComErro = document.querySelector('.erro-empate');
-            if (primeiroInputComErro) {
-                primeiroInputComErro.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                primeiroInputComErro.focus();
-            }
-            return;
-        }
-        
-        // Se não houver empates, continuar verificando campos vazios
-        const inputsVazios = document.querySelectorAll('.saldo-inputs-esq[value=""], .saldo-inputs-dir[value=""]');
-        if (inputsVazios.length > 0) {
-            e.preventDefault();
-            
-            // Destacar campos vazios
-            inputsVazios.forEach(input => {
-                input.classList.add('campo-vazio');
-                input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            });
-            // Focar no primeiro campo vazio
-            inputsVazios[0]?.focus();
-
-            // Alert mais informativo
-            if (!confirm(`⚠️ Existem ${inputsVazios.length} resultados não preenchidos. Você deve preencher todos os resultados antes de avançar para a fase eliminatória. Deseja rolar para o primeiro campo vazio?`)) {
-                return;
-            }
-        } else {
-            // Todos preenchidos, redirecionar para a fase eliminatória na mesma página
-            window.location.href = '{{ url_for("playoffs.fase_eliminatoria") }}';
-        }
-    });
-
-    // Lógica para Salvar Todos os Grupos
-    document.getElementById('btnSalvarTodos')?.addEventListener('click', function() {
-        // Validar confrontos: esquerda e direita devem ser preenchidos juntos
-        const inputsEsq = document.querySelectorAll('.saldo-inputs-esq');
-        const inputsDir = document.querySelectorAll('.saldo-inputs-dir');
-
-        const errosConfronto = [];
-        let temConfrontoPreenchido = false;
-
-        for (let i = 0; i < inputsEsq.length; i++) {
-            const valorEsq = inputsEsq[i].value.trim();
-            const valorDir = inputsDir[i].value.trim();
-
-            const preenchidoEsq = valorEsq !== "";
-            const preenchidoDir = valorDir !== "";
-
-            if (preenchidoEsq && preenchidoDir) {
-                temConfrontoPreenchido = true; // pelo menos um par preenchido corretamente
-            } else if (preenchidoEsq || preenchidoDir) {
-                errosConfronto.push(i + 1); // erro: preenchido só um lado
-            }
-        }
-
-        if (errosConfronto.length > 0) {
-            let mensagem = '⚠️ Preencha os dois lados (esquerdo e direito) para os seguintes confrontos:\n\n';
-            errosConfronto.forEach(num => {
-                mensagem += `- Confronto ${num}\n`;
-            });
-            alert(mensagem);
-            return;
-        }
-
-        if (!temConfrontoPreenchido) {
-            alert("⚠️ Nenhum confronto foi preenchido. Por favor, preencha pelo menos um confronto completo antes de salvar.");
-            return;
-        }
-        // Verificar se há empates
-        const empates = validarSemEmpates();
-        if (empates.length > 0) {
-            // Montar mensagem de erro
-            let mensagem = '⚠️ Não é permitido empate nos confrontos:\n\n';
-            empates.forEach(empate => {
-                mensagem += `Confronto ${empate.confronto}: ${empate.jogadoresEsq} x ${empate.jogadoresDir} (${empate.placar})\n`;
-            });
-            mensagem += '\nPor favor, corrija os resultados antes de salvar.';
-            
-            alert(mensagem);
-            
-            // Rolar até o primeiro empate
-            const primeiroInputComErro = document.querySelector('.erro-empate');
-            if (primeiroInputComErro) {
-                primeiroInputComErro.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                primeiroInputComErro.focus();
-            }
-            return;
-        }
-        
-        // Capturar todos os inputs de todos os grupos
-        const formSalvarTodos = document.getElementById('formSalvarTodos');
-        formSalvarTodos.innerHTML = ''; // Limpar o formulário
-        
-        // Selecionar todos os inputs com id que começa com "grupo_"
-        const todosInputs = document.querySelectorAll('input[id^="grupo_"]');
-        
-        // Adicionar cada input como um campo oculto no formulário
-        todosInputs.forEach(input => {
-            const hiddenInput = document.createElement('input');
-            hiddenInput.type = 'hidden';
-            hiddenInput.name = input.id;
-            
-            // CORREÇÃO: Usar valor real ou null/vazio, não substituir campos vazios por '0'
-            // Isso preserva a diferença entre um placar legítimo de 0 e um campo não preenchido
-            hiddenInput.value = input.value;
-            
-            formSalvarTodos.appendChild(hiddenInput);
-        });
-        
-        // Submeter o formulário
-        formSalvarTodos.submit();
-    });
-
-    // Adicionar a função toggleJogador no escopo global (fora do DOMContentLoaded)
-    window.toggleJogador = function(element) {
-        const nome = element.dataset.nome;
-        const checkbox = element.querySelector('input[type="checkbox"]');
-        
-        // Toggle seleção
-        if (selecionados.includes(nome)) {
-            // Remover da seleção
-            selecionados = selecionados.filter(n => n !== nome);
-            element.classList.remove('selecionado');
-            checkbox.checked = false;
-        } else {
-            // Adicionar à seleção
-            selecionados.push(nome);
-            element.classList.add('selecionado');
-            checkbox.checked = true;
-        }
-        
-        // Atualizar a lista de selecionados
-        atualizarListaSelecionados();
-    };
-
-    // Função para atualizar a lista de jogadores selecionados
-    function atualizarListaSelecionados() {
-        // Atualizar o contador
-        contadorSelecionados.textContent = selecionados.length;
-        
-        // Atualizar a lista visual
-        jogadoresSelecionados.innerHTML = '';
-        
-        selecionados.forEach(nome => {
-            const li = document.createElement('li');
-            li.innerHTML = `
-                <span>${nome}</span>
-                <button type="button" onclick="removerSelecionado('${nome}')">×</button>
-            `;
-            jogadoresSelecionados.appendChild(li);
-        });
-    }
-
-    // Função para remover um jogador selecionado
-    window.removerSelecionado = function(nome) {
-        // Remover da lista de selecionados
-        selecionados = selecionados.filter(n => n !== nome);
-        
-        // Atualizar checkbox na lista principal
-        const jogadorItem = document.querySelector(`.jogador-item[data-nome="${nome}"]`);
-        if (jogadorItem) {
-            jogadorItem.classList.remove('selecionado');
-            jogadorItem.querySelector('input[type="checkbox"]').checked = false;
-        }
-        
-        // Atualizar a lista de selecionados
-        atualizarListaSelecionados();
-    };
-
-    // Filtrar jogadores ao digitar
-    buscarJogadorInput?.addEventListener('input', function() {
-        const termo = this.value.trim();
-        
-        // Se o termo tiver pelo menos 2 caracteres, buscar
-        if (termo.length >= 2) {
-            carregarJogadores(termo);
-        } else if (termo.length === 0) {
-            // Se o termo estiver vazio, carregar todos
-            carregarJogadores();
-        }
-    });
-
-    // Confirmar seleção de jogadores
-    btnConfirmarSelecao?.addEventListener('click', function() {
-        // Modo do torneio atual
-        const modo = modoSelect.value;
-        if (!modo) {
-            alert("Por favor, selecione o formato do torneio primeiro.");
-            return;
-        }
-        
-        // Número esperado de jogadores
-        let numEsperado;
-        if (modo === '20j') {
-            numEsperado = 20;
-        } else if (modo === '24j') {
-            numEsperado = 24;
-        } else if (modo === '28j') {
-            numEsperado = 28;
-        } else {
-            numEsperado = 32;
-        }
-        
-        // Verificar se o número de jogadores selecionados é adequado
-        if (selecionados.length > numEsperado) {
-            alert(`Você selecionou ${selecionados.length} jogadores, mas o formato escolhido requer exatamente ${numEsperado} jogadores.\n\nPor favor, remova ${selecionados.length - numEsperado} jogadores da seleção.`);
-            return;
-        }
-        
-        // Preencher a textarea com os jogadores selecionados
-        textareaJogadores.value = selecionados.join(', ');
-        
-        // Fechar o modal
-        fecharModal();
-        
-        // Atualizar o contador de jogadores
-        if (contador) {
-            contador.textContent = `${selecionados.length}/${numEsperado} jogadores`;
-            
-            // Feedback visual
-            contador.style.color = 
-                selecionados.length === numEsperado ? 'var(--success-color)' : 
-                selecionados.length > numEsperado ? 'var(--danger-color)' : 'var(--warning-color)';
-        }
-        
-        // Disparar evento de input para validar a textarea
-        textareaJogadores.dispatchEvent(new Event('input'));
-    });  
-
+    
+    console.log("Inicialização JavaScript concluída");
 });
+
 </script>
 {% endblock %}

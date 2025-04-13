@@ -16,6 +16,14 @@
                 32 Jogadores
             {% endif %}
         </h1>
+
+        <!-- Novo botão para visualizar detalhes do torneio -->
+        <div class="text-center mb-4">
+            <a href="{{ url_for('main.detalhes_torneio', torneio_id=session.get('torneio_id', 0)) }}" 
+            target="_blank" class="btn btn-info">
+                Ver Detalhes da Fase de Grupos
+            </a>
+        </div>
         
         <div class="tabela-container">
             <div class="tabela-colocacao card">
