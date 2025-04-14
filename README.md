@@ -94,3 +94,170 @@ Uma aplicação web completa desenvolvida com Python e Flask para gerenciar torn
 - **Perfil Detalhado**: Estatísticas completas de cada jogador
 - **Ranking Global**: Sistema de pontuação que valoriza as melhores colocações
 - **Visualização de Torneios**: Acesso a todos os detalhes de torneios finalizados
+
+## 🚀 Instalação e Configuração
+
+### Pré-requisitos
+- Python 3.10 ou superior
+- PostgreSQL
+- pip (gerenciador de pacotes do Python)
+
+### Passos para Instalação
+
+1. **Clone o repositório**
+   ```bash
+   git clone https://github.com/fndcf/rei-da-praia.git
+   cd rei-da-praia
+   ```
+
+2. **Crie e ative um ambiente virtual**
+   ```bash
+   python -m venv venv
+   
+   # No Windows
+   venv\Scripts\activate
+   
+   # No Linux/macOS
+   source venv/bin/activate
+   ```
+
+3. **Instale as dependências**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Configure as variáveis de ambiente**  
+   Crie um arquivo `.env` na raiz do projeto com o seguinte conteúdo:
+   ```
+   SECRET_KEY=sua_chave_secreta_aqui
+   DATABASE_URL=postgresql://usuario:senha@localhost:5432/nome_do_banco
+   ```
+
+5. **Inicialize o banco de dados**
+   ```bash
+   # Certifique-se de que o PostgreSQL está rodando
+   # Crie o banco de dados
+   createdb nome_do_banco
+   
+   # A aplicação criará as tabelas automaticamente ao iniciar
+   ```
+
+6. **Execute a aplicação**
+   ```bash
+   python app.py
+   ```
+   Acesse http://localhost:5000 no seu navegador.
+
+## 📷 Exemplos de Uso
+
+### Criação de um Novo Torneio
+
+1. Na página inicial, clique em "Novo Torneio"
+2. Selecione o formato do torneio (20, 24, 28 ou 32 jogadores)
+3. Digite os nomes dos jogadores separados por vírgula ou use o botão "Selecionar Jogadores Existentes"
+4. Digite um nome para o torneio e clique em "Sortear Grupos"
+5. O sistema organizará os jogadores em grupos de 4
+
+### Gerenciamento da Fase de Grupos
+
+1. Para cada confronto, registre os resultados digitando os pontos de cada dupla
+2. Salve os resultados de cada grupo ou use "Salvar Jogos" para salvar todos os grupos de uma vez
+3. Após registrar todos os resultados, clique em "Abrir Fase Eliminatória"
+
+### Fase Eliminatória
+
+1. Registre os resultados das quartas de final
+2. Clique em "Gerar Semi-finais" e registre os resultados
+3. Clique em "Gerar Final" e registre o resultado final
+4. Finalize o torneio para atualizar o ranking e visualizar os campeões
+
+## 🤝 Como Contribuir
+
+Agradecemos seu interesse em contribuir com o projeto! Aqui estão algumas diretrizes:
+
+1. **Fork o repositório**
+2. **Crie uma branch para sua feature**
+   ```bash
+   git checkout -b feature/nova-funcionalidade
+   ```
+3. **Commit suas mudanças**
+   ```bash
+   git commit -m 'Adiciona nova funcionalidade'
+   ```
+4. **Push para a branch**
+   ```bash
+   git push origin feature/nova-funcionalidade
+   ```
+5. **Abra um Pull Request**
+
+### Padrões de Código
+- Siga a PEP 8 para código Python
+- Use docstrings para documentar funções e classes
+- Mantenha o código limpo e bem comentado
+- Escreva testes para novas funcionalidades
+
+## 📂 Estrutura do Projeto
+
+```
+sistema-torneios-beach-tennis/
+├── app.py                 # Ponto de entrada da aplicação
+├── config.py              # Configurações da aplicação
+├── requirements.txt       # Dependências do projeto
+├── runtime.txt            # Versão do Python para deploy
+├── .env                   # Variáveis de ambiente (não versionado)
+├── database/              # Módulos relacionados ao banco de dados
+│   ├── db.py              # Configuração do SQLAlchemy
+│   ├── models.py          # Modelos de dados
+│   └── ranking.py         # Lógica do sistema de ranking
+├── routes/                # Rotas da aplicação
+│   ├── main.py            # Rotas principais
+│   ├── groups.py          # Rotas da fase de grupos
+│   └── playoffs.py        # Rotas da fase eliminatória
+├── static/                # Arquivos estáticos
+│   ├── style.css          # Folhas de estilo CSS
+│   └── logo_campeonato.png # Imagens e outros assets
+└── templates/             # Templates HTML
+    ├── base.html          # Template base
+    ├── home.html          # Página inicial
+    ├── sorteio-grupos.html # Página de sorteio
+    └── ...                # Outros templates
+```
+
+## 📊 Status do Projeto
+
+- **Estado atual**: Em desenvolvimento ativo
+- **Última versão estável**: 1.0.0
+
+### Roadmap
+
+- [ ] Implementação de gráficos de desempenho para jogadores
+- [ ] Sistema de autenticação de usuários
+- [ ] API para acesso externo aos dados
+- [ ] Integração com aplicativos móveis
+- [ ] Suporte para torneios com diferentes formatos de pontuação
+
+## ❓ Resolução de Problemas
+
+### Problemas Comuns
+
+1. **Erro de conexão com o banco de dados**
+   - Verifique se o PostgreSQL está em execução
+   - Confira as credenciais no arquivo .env
+   - Certifique-se de que o banco de dados existe
+
+2. **Erro ao sortear grupos**
+   - Verifique se o número de jogadores corresponde ao formato selecionado
+   - Certifique-se de que não há nomes duplicados na lista
+
+3. **Problemas com a fase eliminatória**
+   - Todos os resultados da fase de grupos devem estar preenchidos
+   - Não pode haver empates nos confrontos
+
+### Contato para Suporte
+
+Se encontrar algum problema não listado acima ou tiver sugestões, abra uma issue no repositório do projeto.
+
+## 🙏 Agradecimentos
+
+- Agradecemos a todos os jogadores e organizadores de torneios que forneceram feedback valioso para o desenvolvimento deste sistema
+- Inspirado nos torneios de Beach Tennis realizados em clubes e praias do Brasil
