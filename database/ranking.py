@@ -1,7 +1,9 @@
+"""Classes e funções para o Ranking dos jogadores"""
+import logging
 from sqlalchemy import text
 from database.db import db
-from database.models import Jogador, Torneio, Confronto, JogadorPermanente, ParticipacaoTorneio, ConfrontoEliminatoria
-import logging
+from database.models import Jogador, Torneio, ConfrontoEliminatoria
+
 
 logger = logging.getLogger(__name__)
 

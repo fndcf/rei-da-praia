@@ -1,7 +1,7 @@
-from flask import Blueprint, render_template, session, url_for, redirect, request, flash, current_app, jsonify
+"""Funções para as rotas da fase eliminatoria"""
 from datetime import datetime
-import logging
-from database.models import Jogador, Torneio, Confronto, ConfrontoEliminatoria
+from flask import Blueprint, render_template, session, url_for, redirect, request, flash, current_app, jsonify
+from database.models import Jogador, Torneio, ConfrontoEliminatoria
 from database.ranking import RankingManager
 from database.db import db
 
@@ -24,6 +24,7 @@ def get_jogador_safe(lista, idx, default=None):
 
 @bp.route('/fase_eliminatoria')
 def fase_eliminatoria():
+    """Função para criar as fases eliminatorias"""
     try:
         modo = session.get('modo_torneio', '28j')
         log_playoff_action("phase_accessed", f"Modo: {modo}")
@@ -45,11 +46,6 @@ def fase_eliminatoria():
 
         primeiros.sort(key=lambda x: (-x['vitorias'], -x['saldo_total']))
         segundos.sort(key=lambda x: (-x['vitorias'], -x['saldo_total']))
-
-        current_app.logger.debug(
-            f"Classificados - Primeiros: {[p['nome'] for p in primeiros[:3]]}... | "
-            f"Segundos: {[s['nome'] for s in segundos[:3]]}..."
-        )
 
         # Configuração centralizada para todos os modos
         config = {
@@ -213,8 +209,6 @@ def fase_eliminatoria():
                     }
                 ]
 
-            current_app.logger.debug(f"Semi-finais geradas: {len(semi_finais)} jogos")
-
             # Processa histórico das semi-finais
             for jogo in semi_finais:
                 jogo_key = f'eliminatoria_jogo{jogo["jogo"]}'
@@ -300,6 +294,7 @@ def fase_eliminatoria():
 
 @bp.route('/salvar_eliminatorias', methods=['POST'])
 def salvar_eliminatorias():
+    """Função para salvar os resultados das eliminatorias"""
     try:
         modo = session.get('modo_torneio', '28j')
         torneio_id = session.get('torneio_id')
@@ -311,7 +306,7 @@ def salvar_eliminatorias():
             timeA = int(request.form.get(f'jogo_{jogo}_timeA', 0))
             timeB = int(request.form.get(f'jogo_{jogo}_timeB', 0))
             
-            # Salvar na sessão (como já estava fazendo)
+            # Salvar na sessão
             session[f'eliminatoria_jogo{jogo}'] = {
                 'timeA': timeA,
                 'timeB': timeB
@@ -379,6 +374,7 @@ def salvar_eliminatorias():
 
 @bp.route('/salvar_semi_finais', methods=['POST'])
 def salvar_semi_finais():
+    """Função para salvar os resultados das semi finais"""
     try:
         modo = request.form.get('modo', '28j')
         torneio_id = session.get('torneio_id')
@@ -437,11 +433,8 @@ def salvar_semi_finais():
                         db.session.add(confronto_db)
                     
                     db.session.commit()
-                    current_app.logger.debug(f"Semi-final Jogo {jogo} salvo no DB: {timeA}x{timeB}")
                 else:
                     current_app.logger.warning(f"Não foi possível encontrar todos os jogadores para o confronto {jogo}")
-            
-            current_app.logger.debug(f"Semi-final Jogo {jogo} salvo na sessão: {timeA}x{timeB}")
 
         session.modified = True
         return redirect(url_for('playoffs.fase_eliminatoria'))
@@ -457,6 +450,7 @@ def salvar_semi_finais():
 
 @bp.route('/salvar_final', methods=['POST'])
 def salvar_final():
+    """Função para salvar os resultados da final"""
     try:
         modo = request.form.get('modo', '28j')
         torneio_id = session.get('torneio_id')
@@ -549,6 +543,7 @@ def salvar_final():
 
 @bp.route('/finalizar_torneio')
 def finalizar_torneio():
+    """Função para finalizar o torneio"""
     try:
         modo = session.get('modo_torneio', '28j')
         torneio_id = session.get('torneio_id')
@@ -601,6 +596,7 @@ def finalizar_torneio():
     
 @bp.route('/campeoes')
 def campeoes():
+    """Função para apresentar os campeões de um torneio"""
     try:
         dados = session.get('campeoes_finais')
         if not dados:
@@ -617,11 +613,11 @@ def campeoes():
     except Exception as e:
         current_app.logger.error(f"Erro na tela de campeões: {str(e)}")
         flash("Erro ao exibir os campeões", "error")
-        return redirect(url_for('main.novo_torneio'))
-    
-# Adicione esta rota no seu blueprint playoffs
+        return redirect(url_for('main.novo_torneio'))    
+
 @bp.route('/home_page')
 def home_page():
+    """Função para limpar a sessão e ir para home"""
     session.clear()
     return redirect(url_for('main.home'))
 
@@ -657,8 +653,6 @@ def obter_confrontos_eliminatorias_db(torneio_id):
         log_playoff_action("confrontos_eliminatorias_load_error", f"Erro ao carregar confrontos: {str(e)}")
         return {}
 
-# A rota atual em routes/playoffs.py
-
 @bp.route('/resetar_eliminatorias', methods=['GET'])
 def resetar_eliminatorias():
     """Reseta os dados de fase eliminatória da sessão e do banco de dados"""
@@ -689,8 +683,6 @@ def resetar_eliminatorias():
         db.session.rollback()
         log_playoff_action("reset_eliminatorias_error", f"Erro: {str(e)}")
         return jsonify({'success': False, 'error': str(e)})
-    
-# Adicionar esta nova rota em routes/playoffs.py
 
 @bp.route('/resetar_e_voltar', methods=['GET'])
 def resetar_e_voltar():

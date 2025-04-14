@@ -1,8 +1,9 @@
-from flask import Blueprint, request, redirect, url_for, session, current_app
+"""Funções para criação de grupos"""
 import random
 import re
 from datetime import datetime
-from database.models import Jogador, Torneio, Confronto, JogadorPermanente, ParticipacaoTorneio, ConfrontoEliminatoria
+from flask import Blueprint, request, redirect, url_for, session, current_app
+from database.models import Jogador, Torneio, Confronto, JogadorPermanente, ParticipacaoTorneio
 from database.db import db
 
 
@@ -15,8 +16,8 @@ def log_action(action, details):
         f"{action.upper()} - {details}"
     )
 
-# Mova suas funções auxiliares para cá
 def criar_jogador(nome):
+    """Função para criar jogador"""
     jogador = {
         'nome': nome,
         'vitorias': 0,
@@ -53,6 +54,7 @@ def gerar_confrontos(grupo):
 
 @bp.route('/sorteio', methods=['POST'])
 def sorteio():
+    """Função para fazer o sorteio do grupo"""
     try:
         # Verificar se já existem grupos sorteados
         if 'grupos' in session and session['grupos']:
@@ -129,7 +131,7 @@ def sorteio():
             
             # Criar jogador para compatibilidade
             jogador = Jogador(
-                nome=nome, 
+                nome=nome,
                 torneio_id=novo_torneio.id,
                 jogador_permanente_id=jogador_permanente.id
             )
@@ -150,7 +152,7 @@ def sorteio():
             'jogadores': {
                 nome: {
                     'nome': jogador.nome,
-                    'id': jogador.id,  # ID do jogador para compatibilidade
+                    'id': jogador.id,
                     'vitorias': jogador.vitorias,
                     'saldo_a_favor': jogador.saldo_a_favor,
                     'saldo_contra': jogador.saldo_contra,
@@ -203,6 +205,7 @@ def sorteio():
     
 @bp.route('/salvar_grupo/<int:grupo_idx>', methods=['POST'])
 def salvar_grupo(grupo_idx):
+    """Função para salvar os resultados de apenas um grupo especifico"""
     try:
         log_action("group_save_start", 
                   f"Salvando Grupo {grupo_idx + 1} - Dados: {dict(request.form)}") 
@@ -384,10 +387,6 @@ def salvar_grupo(grupo_idx):
                 
                 # Commit individual para garantir a persistência
                 db.session.commit()
-                
-                # Log para debug
-                log_action("jogador_position_updated", 
-                          f"Jogador: {nome}, Grupo: {grupo_idx}, Posição: {posicao}")
             else:
                 current_app.logger.warning(f"Jogador não encontrado para atualização: {nome}")
         
@@ -404,6 +403,7 @@ def salvar_grupo(grupo_idx):
 
 @bp.route('/salvar_todos_grupos', methods=['POST'])
 def salvar_todos_grupos():
+    """Função para salvar resultados parciais ou de todos os grupos"""
     try:
         log_action("all_groups_save_start", "Salvando todos os grupos")
         
@@ -426,7 +426,6 @@ def salvar_todos_grupos():
             })
         
         # Verificar se os jogadores existem no banco antes de processar confrontos
-        # Isso ajuda a prevenir o erro de chave estrangeira
         torneio_id = session.get('torneio_id')
         if not torneio_id:
             raise ValueError("ID do torneio não encontrado na sessão")
@@ -468,7 +467,6 @@ def salvar_todos_grupos():
         # Commit para garantir que todos os jogadores estejam no banco
         db.session.commit()
         
-        # Agora podemos processar os confrontos com segurança
         with db.session.no_autoflush:  # Evita problemas de autoflush
             # Processa cada grupo
             for grupo_idx in range(len(session['grupos'])):
@@ -584,11 +582,7 @@ def salvar_todos_grupos():
                         participacao.saldo_contra = jogador_dados['saldo_contra']
                         participacao.saldo_total = jogador_dados['saldo_total']
                         participacao.posicao_grupo = posicao
-                        participacao.grupo_idx = grupo_idx
-                    
-                    # Log para debug
-                    log_action("jogador_position_updated", 
-                              f"Jogador: {nome}, Grupo: {grupo_idx}, Posição: {posicao}")
+                        participacao.grupo_idx = grupo_idx                  
                 else:
                     log_action("jogador_not_found_for_update", 
                               f"Jogador não encontrado para atualização: {nome}")
@@ -605,7 +599,6 @@ def salvar_todos_grupos():
         db.session.rollback()
         return redirect(url_for('main.novo_torneio'))
 
-# Função auxiliar para obter confrontos do banco de dados
 def obter_confrontos_db(torneio_id):
     """Recupera os confrontos do banco de dados para um determinado torneio"""
     confrontos_db = {}
@@ -638,9 +631,9 @@ def obter_confrontos_db(torneio_id):
         log_action("confrontos_load_error", f"Erro ao carregar confrontos: {str(e)}")
         return {}
 
-# Você pode adicionar ainda uma rota para recuperar dados de um torneio existente
 @bp.route('/carregar_torneio/<int:torneio_id>', methods=['GET'])
 def carregar_torneio(torneio_id):
+    """Função para carregar torneio"""
     try:
         # Recupera o torneio
         torneio = Torneio.query.get_or_404(torneio_id)
@@ -666,9 +659,6 @@ def carregar_torneio(torneio_id):
                 'saldo_total': jogador.saldo_total
             } for jogador in jogadores
         }
-        
-        # TODO: Reconstruir grupos e confrontos da sessão a partir dos dados do banco
-        # Isso exigiria recuperar a configuração de grupos do torneio
         
         log_action("torneio_loaded", f"Torneio {torneio_id} carregado na sessão")
         return redirect(url_for('main.novo_torneio'))

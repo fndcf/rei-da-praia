@@ -1,5 +1,6 @@
-from flask import Blueprint, render_template, session, current_app, redirect, url_for, request, jsonify
+"""Funções para as principais rotas"""
 from datetime import datetime
+from flask import Blueprint, render_template, session, current_app, redirect, url_for, request, jsonify
 from database.models import Torneio, Jogador, Confronto, ConfrontoEliminatoria, JogadorPermanente, ParticipacaoTorneio
 from database.ranking import RankingManager
 from database.db import db
@@ -16,14 +17,17 @@ def log_route_access(route_name):
 
 @bp.context_processor
 def inject_timestamp():
+    """Injeta a função timestamp"""
     return {'timestamp': datetime.now().timestamp()}
 
 @bp.context_processor
 def inject_enumerate():
+    """Injeta a função enumerate"""
     return dict(enumerate=enumerate)
 
 @bp.route('/')
 def home():
+    """Função para a home page"""    
     log_route_access('home')
     
     # Buscar todos os torneios, ordenados pelo mais recente
@@ -96,6 +100,7 @@ def home():
 
 @bp.route('/novo-torneio')
 def novo_torneio():
+    """Função para criar um novo torneio"""
     try:
         # Inicialização de sessão
         session.setdefault('valores_salvos', {})
@@ -136,45 +141,21 @@ def novo_torneio():
         log_route_access('novo-torneio')
         
         # Atualização de jogadores
-        if 'jogadores' in session:
-            player_count = len(session['jogadores'])
-            current_app.logger.debug(
-                f"Atualizando {player_count} jogadores na sessão"
-            )
-            
+        if 'jogadores' in session:            
             for nome, jogador in session['jogadores'].items():
                 jogador.setdefault('vitorias', 0)
                 jogador.setdefault('saldo_a_favor', 0)
                 jogador.setdefault('saldo_contra', 0)
                 jogador['saldo_total'] = jogador['saldo_a_favor'] - jogador['saldo_contra']
 
-        # Obter erro de validação (não remover da sessão ainda)
-        erro_validacao = session.get('erro_validacao')
-        if erro_validacao:
-            current_app.logger.error(
-                f"Erro de validação exibido: {erro_validacao}"
-            )
-            
-        # Obter mensagem de sucesso (não remover da sessão ainda)
-        sucesso_validacao = session.get('sucesso_validacao')
-        
-        # Log antes do render
-        current_app.logger.debug(
-            f"Renderizando novo-torneio | "
-            f"Grupos: {len(session.get('grupos', []))} | "
-            f"Confrontos: {len(session.get('confrontos', []))}"
-        )
-        
         return render_template(
             'sorteio-grupos.html',
             grupos=session.get('grupos', []),
             confrontos=session.get('confrontos', []),
             valores_salvos=session.get('valores_salvos', {}),
             modo_torneio=modo_atual,
-            erro_validacao=erro_validacao,  # Passar o erro para o template
-            sucesso_validacao=sucesso_validacao,  # Passar mensagem de sucesso
-            torneio_em_andamento=torneio_em_andamento,  # Nova variável
-            nome_torneio=nome_torneio,  # Nova variável
+            torneio_em_andamento=torneio_em_andamento,
+            nome_torneio=nome_torneio,
             modos_disponiveis=[
                 {'value': '20j', 'text': '20 Jogadores (5 grupos de 4)'},
                 {'value': '24j', 'text': '24 Jogadores (6 grupos de 4)'},
@@ -192,15 +173,11 @@ def novo_torneio():
 
 @bp.route('/detalhes-torneio/<int:torneio_id>')
 def detalhes_torneio(torneio_id):
+    """Função para fazer os detalhes do torneio"""
     log_route_access(f'detalhes-torneio/{torneio_id}')
     
     # Buscar o torneio pelo ID
     torneio = Torneio.query.get_or_404(torneio_id)
-    
-    # Verificar se o torneio está finalizado
-    # if not torneio.finalizado:
-    #    current_app.logger.warning(f"Tentativa de acessar detalhes de torneio não finalizado: {torneio_id}")
-    #    return redirect(url_for('main.home'))
     
     # Buscar todos os jogadores do torneio
     jogadores = Jogador.query.filter_by(torneio_id=torneio_id).all()
@@ -346,7 +323,7 @@ def detalhes_torneio(torneio_id):
         vice_campeoes=vice_campeoes,
         placar_final=placar_final,
         modo_torneio=modo_torneio,
-        torneio_em_andamento=not torneio.finalizado  # Variável que indica se o torneio está em andamento
+        torneio_em_andamento=not torneio.finalizado
     )
 
 @bp.route('/buscar_jogadores', methods=['GET'])
@@ -368,6 +345,7 @@ def buscar_jogadores():
 
 @bp.route('/perfil_jogador', methods=['GET'])
 def perfil_jogador():
+    """Função para fazer o perfil do jogador"""
     log_route_access('perfil_jogador')
     
     # Obter o nome do jogador da query string
@@ -465,8 +443,8 @@ def perfil_jogador():
             'data': torneio.data_criacao.strftime('%d/%m/%Y'),
             'jogos': jogos_torneio,
             'vitorias': vitorias_total,
-            'vitorias_grupo': participacao.vitorias,           # Adicionado
-            'vitorias_eliminatorias': vitorias_eliminatorias,  # Adicionado
+            'vitorias_grupo': participacao.vitorias,
+            'vitorias_eliminatorias': vitorias_eliminatorias,
             'pontuacao': jogador_torneio.pontuacao,
             'finalizado': torneio.finalizado
         })
@@ -486,6 +464,7 @@ def perfil_jogador():
 
 @bp.route('/detalhes_jogador/<int:torneio_id>/<int:jogador_id>', methods=['GET'])
 def detalhes_jogador(torneio_id, jogador_id):
+    """Função para fazer os detalhes do jogador"""
     log_route_access(f'detalhes_jogador/{torneio_id}/{jogador_id}')
     
     # Buscar o jogador e o torneio
@@ -602,6 +581,7 @@ def detalhes_jogador(torneio_id, jogador_id):
 
 @bp.route('/apagar_torneio/<int:torneio_id>', methods=['POST'])
 def apagar_torneio(torneio_id):
+    """Função para apagar torneio em andamento"""
     log_route_access(f'apagar_torneio/{torneio_id}')
     
     # Verificar se o torneio existe
@@ -707,7 +687,6 @@ def cancelar_torneio():
     
 @bp.route('/listar_todos_jogadores', methods=['GET'])
 def listar_todos_jogadores():
-
     """Endpoint AJAX para listar todos os jogadores cadastrados"""
     try:
         # Buscar todos os jogadores permanentes
@@ -723,12 +702,11 @@ def listar_todos_jogadores():
     
 @bp.route('/ranking-completo')
 def ranking_completo():
+    """Função para fazer o ranking de jogadores completo, sem limitação de 10 jogadores"""
     log_route_access('ranking_completo')
     
     # Obter o ranking completo de jogadores
     ranking_jogadores = RankingManager.obter_ranking()
-    
-    # Aqui não limitamos o ranking a apenas 10 jogadores
     
     return render_template(
         'ranking_completo.html',

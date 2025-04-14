@@ -214,8 +214,7 @@
 
 {% block scripts %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log("DOM carregado, inicializando JavaScript");        
+    document.addEventListener('DOMContentLoaded', function() {       
     
         // Verificar se elementos existem antes de tentar acessá-los
         const modoSelect = document.getElementById('modo_torneio');
@@ -236,25 +235,8 @@
         const btnCancelarSelecao = document.getElementById('btnCancelarSelecao');
         const btnConfirmarSelecao = document.getElementById('btnConfirmarSelecao');
 
-        // Verificar quais elementos estão presentes para debug
-    console.log("Elementos encontrados:", {
-        modoSelect: !!modoSelect,
-        instrucoes: !!instrucoes,
-        contador: !!contador,
-        textarea: !!textarea,
-        btnSortear: !!btnSortear,
-        formSorteio: !!formSorteio,
-        loadingOverlay: !!loadingOverlay,
-        btnCancelarTorneio: !!btnCancelarTorneio,
-        btnSalvarTodos: !!btnSalvarTodos,
-        btnAbrirEliminatoria: !!btnAbrirEliminatoria,
-        btnSelecionarJogadores: !!btnSelecionarJogadores,
-        modalJogadores: !!modalJogadores
-    });
-
     // Verificar se temos grupos
     const existemGrupos = {% if grupos %}true{% else %}false{% endif %};
-    console.log("Existem grupos:", existemGrupos);
     
     // Funcionalidade do botão Cancelar Torneio
     if (btnCancelarTorneio) {
@@ -268,7 +250,6 @@
     // Funcionalidade do botão Salvar Todos
     if (btnSalvarTodos) {
         btnSalvarTodos.addEventListener('click', function() {
-            console.log("Botão Salvar Todos clicado");
 
             // Validar confrontos: esquerda e direita devem ser preenchidos juntos
             const inputsEsq = document.querySelectorAll('.saldo-inputs-esq');
@@ -340,7 +321,6 @@
             
             // Selecionar todos os inputs com id que começa com "grupo_"
             const todosInputs = document.querySelectorAll('input[id^="grupo_"]');
-            console.log(`Encontrados ${todosInputs.length} inputs para salvar`);
             
             // Adicionar cada input como um campo oculto no formulário
             todosInputs.forEach(input => {
@@ -351,7 +331,6 @@
                 formSalvarTodos.appendChild(hiddenInput);
             });
 
-            console.log("Formulário preparado, enviando...");
             // Submeter o formulário
             formSalvarTodos.submit();
         });
@@ -359,10 +338,8 @@
 
     // Botão Abrir Fase Eliminatória
     if (btnAbrirEliminatoria) {
-        console.log("Adicionando novo event listener ao botão Abrir Fase Eliminatória");
         btnAbrirEliminatoria.addEventListener('click', function(e) {
             e.preventDefault(); // Importante: previne o comportamento padrão
-            console.log("Botão Abrir Fase Eliminatória clicado");
             
             // Primeiro validar se não há empates
             const empates = (typeof validarSemEmpates === 'function') ? validarSemEmpates() : [];
@@ -423,7 +400,6 @@
                 return response.json();
             })
             .then(data => {
-                console.log("Resposta do servidor:", data);
                 if (data.success) {
                     // Redirecionar com timestamp para evitar cache
                     const timestamp = new Date().getTime();
@@ -792,7 +768,6 @@
     // Inicializar interface se necessário
     if (modoSelect && textarea && btnSortear) {
         function atualizarInterface() {
-            console.log("Atualizando interface, modo selecionado:", modoSelect.value);
             const modo = modoSelect.value;
             if (!modo) {
                 if (instrucoes) instrucoes.textContent = "Selecione o formato do torneio primeiro";
@@ -938,8 +913,6 @@
             }
         });
     });
-    
-    console.log("Inicialização JavaScript concluída");
 });
 
 

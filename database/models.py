@@ -1,8 +1,9 @@
-from database.db import db
+"""Models do Banco de Dados"""
 from datetime import datetime
+from database.db import db
 
-# Novo modelo para jogadores permanentes
 class JogadorPermanente(db.Model):
+    """Novo modelo para jogadores permanentes"""
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(80), nullable=False, unique=True)  # Nome único
     email = db.Column(db.String(120), nullable=True)
@@ -13,8 +14,9 @@ class JogadorPermanente(db.Model):
     def __repr__(self):
         return f"<JogadorPermanente {self.nome}>"
 
-# Modelo para participação em torneios (substitui funcionalidade do Jogador)
+
 class ParticipacaoTorneio(db.Model):
+    """Modelo para participação em torneios (substitui funcionalidade do Jogador)"""
     id = db.Column(db.Integer, primary_key=True)
     jogador_permanente_id = db.Column(db.Integer, db.ForeignKey('jogador_permanente.id'), nullable=False)
     torneio_id = db.Column(db.Integer, db.ForeignKey('torneio.id'), nullable=False)
@@ -31,8 +33,9 @@ class ParticipacaoTorneio(db.Model):
     def __repr__(self):
         return f"<ParticipacaoTorneio {self.id}>"
 
-# Mantemos o modelo Jogador para compatibilidade com código existente
+
 class Jogador(db.Model):
+    """Mantemos o modelo Jogador para compatibilidade com código existente"""
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(80), nullable=False)
     vitorias = db.Column(db.Integer, default=0)
@@ -49,6 +52,7 @@ class Jogador(db.Model):
     jogador_permanente = db.relationship('JogadorPermanente', backref='jogadores_legados')
 
 class Torneio(db.Model):
+    """Modelo para torneios"""
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(100))
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
@@ -57,20 +61,21 @@ class Torneio(db.Model):
     participacoes = db.relationship('ParticipacaoTorneio', backref='torneio', lazy=True)
 
 class Confronto(db.Model):
+    """Modelo para confrontos"""
     id = db.Column(db.Integer, primary_key=True)
-    
+
     # Relacionamentos
     torneio_id = db.Column(db.Integer, db.ForeignKey('torneio.id'), nullable=False)
     torneio = db.relationship('Torneio', backref=db.backref('confrontos', lazy=True))
-    
+
     # Dados do confronto
     grupo_idx = db.Column(db.Integer, nullable=False)  # Índice do grupo
     confronto_idx = db.Column(db.Integer, nullable=False)  # Índice do confronto no grupo
-    
+
     # Jogadores da dupla A
     jogador_a1_id = db.Column(db.Integer, db.ForeignKey('jogador.id'), nullable=False)
     jogador_a1 = db.relationship('Jogador', foreign_keys=[jogador_a1_id])
-    
+
     jogador_a2_id = db.Column(db.Integer, db.ForeignKey('jogador.id'), nullable=False)
     jogador_a2 = db.relationship('Jogador', foreign_keys=[jogador_a2_id])
     
@@ -93,6 +98,7 @@ class Confronto(db.Model):
         return f"<Confronto {self.id}: G{self.grupo_idx+1}-C{self.confronto_idx+1}>"
 
 class ConfrontoEliminatoria(db.Model):
+    """Modelo para participação em torneios (substitui funcionalidade do Jogador)"""
     id = db.Column(db.Integer, primary_key=True)
     
     # Relacionamentos
@@ -126,4 +132,4 @@ class ConfrontoEliminatoria(db.Model):
     atualizado_em = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
     
     def __repr__(self):
-        return f"<ConfrontoEliminatoria {self.id}: {self.fase.capitalize()} - Jogo {self.jogo_numero}>"
+        return f"<ConfrontoEliminatoria {self.id}: {self.fase.capitalize()} - Jogo {self.jogo_numero}>" 
