@@ -20,7 +20,7 @@
         <!-- Novo botão para visualizar detalhes do torneio -->
         <div class="text-center mb-4">
             <a href="{{ url_for('main.detalhes_torneio', torneio_id=session.get('torneio_id', 0)) }}" 
-            target="_blank" class="btn btn-info">
+            target="_blank" class="btn btn-success">
                 Ver Detalhes da Fase de Grupos
             </a>
         </div>
@@ -174,19 +174,17 @@
                         
                         <input type="number" 
                             name="jogo_{{ jogo.jogo }}_timeA" 
-                            value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeA', '') }}" 
-                            min="0"
+                            value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeA', '') }}"
                             class="saldo-inputs-esq" 
-                            required
-                            oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                            min="0" max="7" maxlength="1" required
+                            oninput="this.value = this.value.replace(/[^0-7]/g, '')">
                         <span class="vs">⚔️</span>
                         <input type="number" 
                             name="jogo_{{ jogo.jogo }}_timeB" 
-                            value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeB', '') }}" 
-                            min="0" 
+                            value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeB', '') }}"
                             class="saldo-inputs-dir"
-                            required
-                            oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                            min="0" max="7" maxlength="1" required
+                            oninput="this.value = this.value.replace(/[^0-7]/g, '')">
                         <span class="dupla">
                             {{ jogo.timeB[0]['nome'] }} & {{ jogo.timeB[1]['nome'] }}
                         </span>
@@ -194,7 +192,7 @@
                 </div>
                 {% endfor %}
                 
-                <button id= "btnEliminatoria" type="submit" class="btn btn-warning mt-3">
+                <button id= "btnEliminatoria" type="submit" class="btn btn-success mt-3">
                     Gerar Semi-finais
                 </button>
             </form>
@@ -224,19 +222,17 @@
                         
                         <input type="number"  
                             name="jogo_{{ jogo.jogo }}_timeA" 
-                            value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeA', '') }}" 
-                            min="0" 
+                            value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeA', '') }}"
                             class="saldo-inputs-esq"
-                            required
-                            oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                            min="0" max="7" maxlength="1" required
+                            oninput="this.value = this.value.replace(/[^0-7]/g, '')">
                         <span class="vs vs-semi">⚔️</span>
                         <input type="number"  
                             name="jogo_{{ jogo.jogo }}_timeB" 
-                            value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeB', '') }}" 
-                            min="0" 
+                            value="{{ session.get('eliminatoria_jogo' + jogo.jogo|string, {}).get('timeB', '') }}"
                             class="saldo-inputs-dir"
-                            required
-                            oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                            min="0" max="7" maxlength="1" required
+                            oninput="this.value = this.value.replace(/[^0-7]/g, '')">
                         <span class="dupla">
                             {{ jogo.timeB[0]['nome'] }} & {{ jogo.timeB[1]['nome'] }}
                         </span>
@@ -244,7 +240,7 @@
                 </div>
                 {% endfor %}
                 
-                <button id= "btnEliminatoria" type="submit" class="btn btn-info mt-3">
+                <button id= "btnEliminatoria" type="submit" class="btn btn-success mt-3">
                     Gerar Final
                 </button>
             </form>
@@ -270,26 +266,24 @@
                         </span>
                         <input type="number" 
                                name="jogo_{{ final.jogo }}_timeA" 
-                               value="{{ session.get('eliminatoria_jogo' + final.jogo|string, {}).get('timeA', '') }}" 
-                               min="0" 
+                               value="{{ session.get('eliminatoria_jogo' + final.jogo|string, {}).get('timeA', '') }}"
                                class="saldo-inputs-esq"
-                               required
-                               oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                               min="0" max="7" maxlength="1" required
+                               oninput="this.value = this.value.replace(/[^0-7]/g, '')">
                         <span class="vs vs-final">🏆</span>
                         <input type="number"  
                                name="jogo_{{ final.jogo }}_timeB" 
-                               value="{{ session.get('eliminatoria_jogo' + final.jogo|string, {}).get('timeB', '') }}" 
-                               min="0" 
+                               value="{{ session.get('eliminatoria_jogo' + final.jogo|string, {}).get('timeB', '') }}"
                                class="saldo-inputs-dir"
-                               required
-                               oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                               min="0" max="7" maxlength="1" required
+                               oninput="this.value = this.value.replace(/[^0-7]/g, '')">
                         <span class="dupla">
                             {{ final.timeB[0]['nome'] }} & {{ final.timeB[1]['nome'] }}
                         </span>
                     </div>
                 </div>
                 
-                <button type="submit" class="btn btn-info mt-3">
+                <button type="submit" class="btn btn-success mt-3">
                     Salvar Resultado Final
                 </button>
 
@@ -403,6 +397,63 @@
             btn.disabled = false;
         }
     }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const btnAbrirEliminatoria = document.getElementById('btnAbrirEliminatoria');
+        
+        if (btnAbrirEliminatoria) {
+            btnAbrirEliminatoria.addEventListener('click', function(e) {
+                e.preventDefault(); // Impedir o comportamento padrão de navegação
+                
+                // Primeiro verificar se todos os campos estão preenchidos corretamente
+                const todosGruposSalvos = verificarGruposSalvos();
+                if (!todosGruposSalvos) {
+                    if (!confirm("Alguns grupos podem não estar salvos ou com todos os resultados completos. Continuar mesmo assim?")) {
+                        return;
+                    }
+                }
+                
+                // Mostrar loading
+                btnAbrirEliminatoria.disabled = true;
+                const textoOriginal = btnAbrirEliminatoria.textContent;
+                btnAbrirEliminatoria.innerHTML = '<span class="spinner">⌛</span> Preparando fase eliminatória...';
+                
+                // Fazer chamada AJAX para resetar os dados da fase eliminatória
+                fetch('/resetar_eliminatorias')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Redirecionar para a página da fase eliminatória
+                            window.location.href = "{{ url_for('playoffs.fase_eliminatoria') }}";
+                        } else {
+                            // Exibir erro
+                            alert('Erro ao preparar fase eliminatória: ' + (data.error || 'Erro desconhecido'));
+                            btnAbrirEliminatoria.disabled = false;
+                            btnAbrirEliminatoria.textContent = textoOriginal;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erro:', error);
+                        alert('Falha na comunicação com o servidor. Por favor, tente novamente.');
+                        btnAbrirEliminatoria.disabled = false;
+                        btnAbrirEliminatoria.textContent = textoOriginal;
+                    });
+            });
+        }
+        
+        // Função para verificar se todos os grupos estão salvos com seus resultados
+        function verificarGruposSalvos() {
+            // Se não houver inputs de confrontos, está tudo ok
+            const inputs = document.querySelectorAll('.saldo-inputs-esq, .saldo-inputs-dir');
+            if (inputs.length === 0) {
+                return true;
+            }
+            
+            // Verificar se todos os inputs têm valores
+            const inputsVazios = Array.from(inputs).filter(input => !input.value.trim());
+            return inputsVazios.length === 0;
+        }
+    });
     
 </script>
 {% endblock %}

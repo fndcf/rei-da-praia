@@ -98,8 +98,17 @@
                     </div>
                 </div>
                 {% if placar_final %}
-                <div class="col-12 text-center">
-                    <h3>Placar Final: {{ placar_final }}</h3>
+                <div class="col-12 text-center placar-final">
+                    <h3>Placar Final: 
+                        {% if placar_final %}
+                            {% set pontuacoes = placar_final.split('x') %}
+                            {% if campeoes and vice_campeoes and campeoes[0].id == final.jogador_a1_id %}
+                                {{ placar_final }}
+                            {% else %}
+                                {{ pontuacoes[1] }}x{{ pontuacoes[0] }}
+                            {% endif %}
+                        {% endif %}
+                    </h3>
                 </div>
                 {% endif %}
             </div>

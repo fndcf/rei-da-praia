@@ -94,8 +94,8 @@
                     <p id="mensagem-confirmacao">Tem certeza que deseja excluir este torneio?</p>
                     <div class="modal-buttons">
                         <form id="form-excluir" method="POST" action="">
-                            <button type="button" class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
-                            <button type="submit" class="btn btn-danger">Sim, apagar</button>
+                            <button type="button" class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>  
+                            <button type="submit" class="btn btn-info">Confirmar</button>                                                      
                         </form>
                     </div>
                 </div>
@@ -154,16 +154,18 @@
 
             <!-- Pesquisa de Jogador -->
             <div class="card mt-4">
-                <h2 class="text-center">Pesquisar Jogador</h2>
-                <div class="d-flex justify-content-center">
+                <div class="card-body">
+                    <h2 class="text-center mb-3">Pesquisar Jogador</h2>
+                    <div class="d-flex justify-content-center">
                     <form method="get" action="{{ url_for('main.perfil_jogador') }}" id="formPesquisaJogador" class="d-flex flex-column align-items-center w-50">
-                        <div class="autocomplete-container w-100 position-relative">
+                        <div class="autocomplete-container">
                             <input type="text" name="nome_jogador" id="nome_jogador" class="form-control mb-2 text-center" 
                                 placeholder="Digite o nome do jogador" autocomplete="off">
                             <div id="sugestoes-jogadores" class="autocomplete-items"></div>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Buscar</button>
-                    </form>
+                            </div>
+                        <button type="submit" class="btn btn-primary btn-buscar">Buscar</button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>

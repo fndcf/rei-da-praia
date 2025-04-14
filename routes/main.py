@@ -513,7 +513,7 @@ def detalhes_jogador(torneio_id, jogador_id):
             ConfrontoEliminatoria.jogador_b1_id == jogador_id,
             ConfrontoEliminatoria.jogador_b2_id == jogador_id
         )
-    ).order_by(ConfrontoEliminatoria.fase).all()
+    ).all()
     
     # Mapear todos os jogadores para facilitar o acesso
     jogadores_ids = set()
@@ -586,6 +586,10 @@ def detalhes_jogador(torneio_id, jogador_id):
             'pontos_adversarios': pontos_adversarios,
             'resultado': resultado
         })
+
+    # Ordenar os confrontos pela ordem correta das fases
+    ordem_fases = {"Quartas": 1, "Semi": 2, "Final": 3}
+    confrontos_eliminatorias_data.sort(key=lambda c: ordem_fases.get(c['fase'], 0))
     
     return render_template(
         'detalhes_jogador.html',
