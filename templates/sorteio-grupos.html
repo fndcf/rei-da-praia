@@ -214,6 +214,25 @@
 
 {% block scripts %}
 <script>
+
+    // Adicionar detector de salvamento bem-sucedido
+    document.getElementById('btnSalvarTodos')?.addEventListener('click', function() {
+        // Salvar no sessionStorage que o usuário acabou de salvar dados
+        sessionStorage.setItem('dados_salvos_recentemente', 'true');
+    });
+
+    // No evento DOMContentLoaded, adicionar esta verificação
+    const dadosSalvosRecentemente = sessionStorage.getItem('dados_salvos_recentemente');
+    if (dadosSalvosRecentemente === 'true' && performance.getEntriesByType('navigation')[0].type === 'back_forward') {
+        // Limpar o flag
+        sessionStorage.removeItem('dados_salvos_recentemente');
+        
+        // Mostrar o alerta
+        if (confirm('Você acabou de salvar dados e clicou em voltar. Os dados foram salvos, mas podem não estar visíveis. Deseja recarregar a página para ver os resultados atualizados?')) {
+            window.location.reload();
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function() {       
     
         // Verificar se elementos existem antes de tentar acessá-los

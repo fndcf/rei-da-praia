@@ -1,7 +1,7 @@
 """Funções para as rotas da fase eliminatoria"""
 from datetime import datetime
 from flask import Blueprint, render_template, session, url_for, redirect, request, flash, current_app, jsonify, make_response
-from database.models import Jogador, Torneio, ConfrontoEliminatoria
+from database.models import Jogador, Torneio, ConfrontoEliminatoria, Confronto
 from database.ranking import RankingManager
 from database.db import db
 
@@ -44,6 +44,59 @@ def fase_eliminatoria():
         if torneio_finalizado:
             flash("Este torneio já foi finalizado. Por favor, inicie um novo torneio.", "warning")
             return redirect(url_for('main.home'))
+        
+        # Verificar modo do torneio para determinar número de grupos
+        modo = session.get('modo_torneio', '28j')
+        total_grupos_esperados = {
+            '20j': 5,
+            '24j': 6,
+            '28j': 7,
+            '32j': 8
+        }.get(modo, 7)
+        
+        # Obter todos os confrontos do torneio
+        confrontos = Confronto.query.filter_by(torneio_id=torneio_id).all()
+        
+        # Verificar número total de confrontos
+        total_confrontos_esperados = total_grupos_esperados * 3
+        if len(confrontos) < total_confrontos_esperados:
+            flash(f"Número total de confrontos insuficiente. Esperados: {total_confrontos_esperados}, Encontrados: {len(confrontos)}.", "warning")
+            return redirect(url_for('main.novo_torneio'))
+        
+        # Verificar grupos presentes
+        grupos_presentes = set([c.grupo_idx for c in confrontos])
+        if len(grupos_presentes) < total_grupos_esperados:
+            flash(f"Número insuficiente de grupos. Esperados: {total_grupos_esperados}, Encontrados: {len(grupos_presentes)}.", "warning")
+            return redirect(url_for('main.novo_torneio'))
+        
+        # NOVA VERIFICAÇÃO MELHORADA: 
+        # 1. Verificar se tem resultado não preenchido (None)
+        # 2. Verificar se tem empate (0x0)
+        for grupo_idx in range(total_grupos_esperados):
+            confrontos_grupo = [c for c in confrontos if c.grupo_idx == grupo_idx]
+            
+            # Verificar se tem 3 confrontos
+            if len(confrontos_grupo) < 3:
+                flash(f"O Grupo {grupo_idx + 1} não tem todos os confrontos necessários.", "warning")
+                return redirect(url_for('main.novo_torneio'))
+            
+            # Verificar cada confronto do grupo
+            for confronto in confrontos_grupo:
+                # Caso 1: Resultado não preenchido (NULL ou None)
+                if confronto.pontos_dupla_a is None or confronto.pontos_dupla_b is None:
+                    flash(f"O Grupo {grupo_idx + 1}, Confronto {confronto.confronto_idx + 1} não tem resultado preenchido.", "warning")
+                    return redirect(url_for('main.novo_torneio'))
+                
+                # Caso 2: Empate (mesmo valor para ambas as duplas)
+                if confronto.pontos_dupla_a == confronto.pontos_dupla_b:
+                    flash(f"O Grupo {grupo_idx + 1}, Confronto {confronto.confronto_idx + 1} tem um empate ({confronto.pontos_dupla_a}x{confronto.pontos_dupla_b}). Não são permitidos empates.", "warning")
+                    return redirect(url_for('main.novo_torneio'))
+                
+                # Caso 3: Valor zero (pode ser 0 vs outro valor, que é válido)
+                # Não bloquear este caso, pois um placar como 0x7 é válido
+        
+        # Log para debug
+        current_app.logger.info(f"Validação completa e bem-sucedida: {total_grupos_esperados} grupos, {len(confrontos)} confrontos, todos com resultados diferentes de NULL e sem empates.")
         
         modo = session.get('modo_torneio', '28j')
         log_playoff_action("phase_accessed", f"Modo: {modo}")

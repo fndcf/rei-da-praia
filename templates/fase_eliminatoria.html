@@ -315,6 +315,24 @@
 {% block scripts %}
 <script>  
 
+    // Adicionar detector de salvamento bem-sucedido
+    document.getElementById('btnEliminatoria')?.addEventListener('click', function() {
+        // Salvar no sessionStorage que o usuário acabou de salvar dados
+        sessionStorage.setItem('dados_salvos_recentemente', 'true');
+    });
+
+    // No evento DOMContentLoaded, adicionar esta verificação
+    const dadosSalvosRecentemente = sessionStorage.getItem('dados_salvos_recentemente');
+    if (dadosSalvosRecentemente === 'true' && performance.getEntriesByType('navigation')[0].type === 'back_forward') {
+        // Limpar o flag
+        sessionStorage.removeItem('dados_salvos_recentemente');
+        
+        // Mostrar o alerta
+        if (confirm('Você acabou de salvar dados e clicou em voltar. Os dados foram salvos, mas podem não estar visíveis. Deseja recarregar a página para ver os resultados atualizados?')) {
+            window.location.reload();
+        }
+    }
+
     document.querySelector('a[href*="finalizar_torneio"]')?.addEventListener('click', function(e) {
         const jogoFinal = {{ {'20j':4, '24j':5, '28j':6, '32j':7}.get(session.get('modo_torneio', '28j'), 6) }};
         if (!confirm(`Você está prestes a finalizar o torneio. Esta ação é irreversível. Continuar?`)) {
