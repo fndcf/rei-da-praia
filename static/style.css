@@ -36,12 +36,11 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     line-height: 1.6;
     color: #333;
-    background-image: url('/static/logo_campeonato.png'); /* SUBSTITUA PELO CAMINHO DA SUA LOGO */
-    background-size: 90% auto; /* Menor para não interferir tanto na legibilidade */
+    background-image: url('/static/logo_campeonato.svg'); /* SUBSTITUA PELO CAMINHO DA SUA LOGO */
+    background-size: 80% auto; /* Menor para não interferir tanto na legibilidade */
     background-position: center;
     background-repeat: no-repeat;
     background-attachment: fixed;
-    background-color: #f0f5f0; /* Tom verde bem claro para o fundo */
     max-width: 1200px;
     margin: 0 auto;
     padding: 20px;
@@ -60,7 +59,7 @@ h1, h2, h3, h4 {
                  0px 0px 5px rgba(255, 255, 255, 0.9);
 }
 
-h1 { font-size: 2.5em; }
+h1 { font-size: 3.5em; }
 h2 { font-size: 2em; }
 h3 { font-size: 1.5em; }
 
@@ -107,12 +106,16 @@ a:hover {
     padding: 20px;
     box-shadow: var(--box-shadow);
     margin-bottom: 20px;
-    backdrop-filter: blur(4px);
     border: 1px solid rgba(211, 211, 211, 0.5);
 }
 
+.card-atencao {
+    background-color: rgba(255, 255, 255, 0.92);
+  
+  }
+
 .card-sorteados {
-  background-color: #f0f5f0;
+    background-color: rgba(255, 255, 255, 0.92);
 
 }
 
@@ -216,7 +219,6 @@ a:hover {
     border-collapse: collapse;
     margin: 15px 0;
     background-color: rgba(255, 255, 255, var(--table-opacity));
-    backdrop-filter: blur(5px);
 }
 
 .table th, .table td {
@@ -263,7 +265,6 @@ a:hover {
     border-radius: var(--border-radius);
     padding: 15px;
     margin-bottom: 30px;
-    backdrop-filter: blur(4px);
 }
 
 /* Confrontos */
@@ -272,7 +273,7 @@ a:hover {
     padding: 15px;
     border-radius: var(--border-radius);
     box-shadow: var(--box-shadow);
-    backdrop-filter: blur(4px);
+    background-color: rgba(255, 255, 255, 0.92);
 
 }
 .confronto-eliminatorio {
@@ -281,7 +282,6 @@ a:hover {
     background-color: rgba(255, 255, 255, 0.92);
     border-radius: var(--border-radius);
     box-shadow: var(--box-shadow);
-    backdrop-filter: blur(4px);
 }
 
 .confronto-eliminatorio {
@@ -376,7 +376,6 @@ a:hover {
     padding: 20px;
     margin: 30px 0;
     box-shadow: var(--box-shadow);
-    backdrop-filter: blur(4px);
 }
 
 .fase-historico {
@@ -700,7 +699,6 @@ input[type="number"] {
     margin: 20px 0;
     text-align: center;
     color: #856404;
-    backdrop-filter: blur(4px);
 }
 
 .not-found-message h3 {
@@ -763,7 +761,6 @@ input[type="number"] {
     background-color: rgba(0, 0, 0, 0.5);
     justify-content: center;
     align-items: center;
-    backdrop-filter: blur(2px);
 }
 
 .modal-content {
@@ -773,7 +770,6 @@ input[type="number"] {
     max-width: 500px;
     width: 90%;
     box-shadow: var(--box-shadow);
-    backdrop-filter: blur(5px);
 }
 
 .modal-buttons {
@@ -804,7 +800,6 @@ input:disabled {
     margin-bottom: 1rem;
     border: 1px solid transparent;
     border-radius: var(--border-radius);
-    backdrop-filter: blur(4px);
 }
 
 .alert-warning {
