@@ -338,6 +338,40 @@
 
     // Botão Abrir Fase Eliminatória
     if (btnAbrirEliminatoria) {
+        // Salvar o estado original do botão
+        const textoOriginal = btnAbrirEliminatoria.textContent;
+        
+        // Adicionar detector para quando a página é carregada do cache (botão voltar)
+        window.onpageshow = function(event) {
+            if (event.persisted) {
+                console.log("Página carregada do cache (voltando da fase eliminatória)");
+                
+                // Verificar se o botão está desabilitado
+                if (btnAbrirEliminatoria.disabled) {
+                    // Restaurar o botão ao estado original
+                    btnAbrirEliminatoria.disabled = false;
+                    btnAbrirEliminatoria.innerHTML = textoOriginal;
+                    
+                    // Resetar resultados da fase eliminatória (simular clique no botão resetar)
+                    fetch('/resetar_eliminatorias', {
+                        method: 'GET',
+                        headers: {
+                            'Cache-Control': 'no-cache',
+                            'Pragma': 'no-cache'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log("Resultados da eliminatória resetados com sucesso", data);
+                    })
+                    .catch(error => {
+                        console.error("Erro ao resetar resultados:", error);
+                    });
+                }
+            }
+        };
+        
+        // O código existente para o evento click
         btnAbrirEliminatoria.addEventListener('click', function(e) {
             e.preventDefault(); // Importante: previne o comportamento padrão
             
@@ -382,8 +416,10 @@
             
             // Mostrar loading no botão
             btnAbrirEliminatoria.disabled = true;
-            const textoOriginal = btnAbrirEliminatoria.textContent;
             btnAbrirEliminatoria.innerHTML = '<span class="spinner">⌛</span> Preparando fase eliminatória...';
+            
+            // Salvar em sessionStorage que o botão foi clicado
+            sessionStorage.setItem('eliminatoria_clicked', 'true');
             
             // IMPORTANTE: Primeiro resetar os dados da fase eliminatória
             fetch('/resetar_eliminatorias', {
@@ -412,18 +448,65 @@
                 console.error('Erro:', error);
                 alert('Falha na comunicação com o servidor. Por favor, tente novamente. Erro: ' + error.message);
                 btnAbrirEliminatoria.disabled = false;
-                btnAbrirEliminatoria.textContent = textoOriginal;
+                btnAbrirEliminatoria.innerHTML = textoOriginal;
+                // Limpar estado salvo em caso de erro
+                sessionStorage.removeItem('eliminatoria_clicked');
             });
         });
+        
+        // Verificar ao carregar a página se o botão havia sido clicado
+        if (sessionStorage.getItem('eliminatoria_clicked') === 'true') {
+            // Se estamos voltando e o botão havia sido clicado
+            // Limpar o estado
+            sessionStorage.removeItem('eliminatoria_clicked');
+            
+            // Restaurar o botão ao estado original
+            btnAbrirEliminatoria.disabled = false;
+            btnAbrirEliminatoria.innerHTML = textoOriginal;
+            
+            // Fazer reset automático dos resultados
+            fetch('/resetar_eliminatorias').then(r => r.json()).catch(e => console.error(e));
+        }
     }
 
     // Mostrar overlay de loading quando enviar o formulário
     if (formSorteio && loadingOverlay) {
+        // Primeiro verificar se a página está sendo carregada do cache (botão voltar)
+        window.onpageshow = function(event) {
+            if (event.persisted) {
+                console.log("Página carregada do cache (botão voltar)");
+                // Se o overlay estiver ativo, redirecionar para a home
+                if (loadingOverlay.classList.contains('active')) {
+                    window.location.href = "{{ url_for('main.home') }}";
+                }
+            }
+        };
+        
+        // Salvar o estado do loading no sessionStorage
+        window.addEventListener('beforeunload', function() {
+            if (loadingOverlay.classList.contains('active')) {
+                sessionStorage.setItem('loadingActive', 'true');
+            }
+        });
+        
+        // Verificar ao carregar a página se deveria estar em loading
+        document.addEventListener('DOMContentLoaded', function() {
+            if (sessionStorage.getItem('loadingActive') === 'true') {
+                // Se estiver voltando para a página e havia um loading ativo
+                // Redirecionar para a home
+                sessionStorage.removeItem('loadingActive');
+                window.location.href = "{{ url_for('main.home') }}";
+            }
+        });
+        
+        // Código original do seu listener de submit
         formSorteio.addEventListener('submit', function(e) {
             // Verifica se o formulário é válido
             if (this.checkValidity()) {
                 // Mostra o overlay de loading
                 loadingOverlay.classList.add('active');
+                // Marca que estamos em estado de loading
+                sessionStorage.setItem('loadingActive', 'true');
                     
                 // Texto para mostrar durante o sorteio
                 const loadingTexts = [
