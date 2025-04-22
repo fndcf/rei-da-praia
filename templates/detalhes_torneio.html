@@ -58,6 +58,7 @@
         <div class="card-body">
             <h1 class="card-title text-center">{{ torneio.nome }}</h1>
             <p class="text-muted text-center">Data de criação: {{ torneio.data_criacao.strftime('%d/%m/%Y') }}</p>
+            <p class="text-muted text-center">Quantidade Jogadores: {{ modo_torneio }}</p>
 
             <!-- Adicionar mensagem informativa para torneio em andamento -->
             {% if torneio_em_andamento %}

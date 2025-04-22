@@ -1,6 +1,6 @@
 """Funções para as rotas da fase eliminatoria"""
 from datetime import datetime
-from flask import Blueprint, render_template, session, url_for, redirect, request, flash, current_app, jsonify
+from flask import Blueprint, render_template, session, url_for, redirect, request, flash, current_app, jsonify, make_response
 from database.models import Jogador, Torneio, ConfrontoEliminatoria
 from database.ranking import RankingManager
 from database.db import db
@@ -26,6 +26,25 @@ def get_jogador_safe(lista, idx, default=None):
 def fase_eliminatoria():
     """Função para criar as fases eliminatorias"""
     try:
+        # Verificar se existe um torneio em andamento
+        torneio_id = session.get('torneio_id')
+        if not torneio_id:
+            # Se não tiver ID na sessão, redirecionar para home
+            flash("Não há nenhum torneio em andamento. Por favor, inicie um novo torneio.", "warning")
+            return redirect(url_for('main.home'))
+        
+        # Verificar se o torneio existe e está ativo
+        torneio = Torneio.query.get(torneio_id)
+        if not torneio:
+            flash("O torneio não foi encontrado. Por favor, inicie um novo torneio.", "warning")
+            return redirect(url_for('main.home'))
+        
+        # Verificar se o torneio está finalizado
+        torneio_finalizado = torneio.finalizado
+        if torneio_finalizado:
+            flash("Este torneio já foi finalizado. Por favor, inicie um novo torneio.", "warning")
+            return redirect(url_for('main.home'))
+        
         modo = session.get('modo_torneio', '28j')
         log_playoff_action("phase_accessed", f"Modo: {modo}")
 
@@ -275,14 +294,22 @@ def fase_eliminatoria():
                         'timeB_nomes': [j['nome'] for j in final['timeB']]
                     }
 
-        return render_template('fase_eliminatoria.html',
-                            primeiros=primeiros,
-                            segundos=segundos,
-                            confrontos=confrontos,
-                            semi_finais=semi_finais,
-                            final=final,
-                            historico_jogos=historico_jogos,
-                            modo_torneio=modo)
+        response = make_response(render_template('fase_eliminatoria.html',
+                          primeiros=primeiros,
+                          segundos=segundos,
+                          confrontos=confrontos,
+                          semi_finais=semi_finais,
+                          final=final,
+                          historico_jogos=historico_jogos,
+                          modo_torneio=modo,
+                          torneio_finalizado=torneio.finalizado))
+        
+        # Adicionar cabeçalhos para prevenir cache
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '-1'
+        
+        return response
 
     except Exception as e:
         current_app.logger.critical(

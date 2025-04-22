@@ -2,6 +2,12 @@
 
 {% block title %}Fase Eliminatória - CONANS CUP{% endblock %}
 
+{% block extra_head %}
+{% if torneio_finalizado %}
+<meta http-equiv="refresh" content="0;url={{ url_for('main.home') }}">
+{% endif %}
+{% endblock %}
+
 {% block content %}
 <body>
     <div class="container">
@@ -307,7 +313,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script>    
+<script>  
 
     document.querySelector('a[href*="finalizar_torneio"]')?.addEventListener('click', function(e) {
         const jogoFinal = {{ {'20j':4, '24j':5, '28j':6, '32j':7}.get(session.get('modo_torneio', '28j'), 6) }};

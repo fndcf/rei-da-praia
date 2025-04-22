@@ -36,6 +36,15 @@ def home():
     # Verificar se há um torneio em andamento na sessão e se ele ainda existe no banco de dados
     torneio_em_andamento = False
     torneio_id_sessao = session.get('torneio_id')
+    modo_torneio_dict = {}  # Dicionário para armazenar o modo de cada torneio
+
+    # Define um mapeamento para o número de jogadores
+    modos_descricao = {
+        '20j': '20 Jogadores',
+        '24j': '24 Jogadores',
+        '28j': '28 Jogadores',
+        '32j': '32 Jogadores'
+    }
     
     if torneio_id_sessao:
         # Verificar se o torneio existe e não está finalizado
@@ -51,8 +60,21 @@ def home():
                 session.pop(key, None)
             session['sucesso_validacao'] = "Sessão limpa automaticamente pois o torneio não existe mais ou já foi finalizado."
     
-    # Para cada torneio, recuperar campeões e vice-campeões
+    # Para cada torneio, recuperar campeões e vice-campeões e modo do torneio
     for torneio in torneios:
+
+        # Contar jogadores para determinar o modo
+        jogadores_count = Jogador.query.filter_by(torneio_id=torneio.id).count()
+        
+        if jogadores_count <= 20:
+            modo_torneio_dict[torneio.id] = modos_descricao['20j']
+        elif jogadores_count <= 24:
+            modo_torneio_dict[torneio.id] = modos_descricao['24j']
+        elif jogadores_count <= 28:
+            modo_torneio_dict[torneio.id] = modos_descricao['28j']
+        else:
+            modo_torneio_dict[torneio.id] = modos_descricao['32j']
+
         if torneio.finalizado:
             # Buscar confronto da final
             final = ConfrontoEliminatoria.query.filter_by(
@@ -96,7 +118,8 @@ def home():
                           ranking_jogadores=ranking_jogadores,
                           erro_validacao=erro_validacao,
                           sucesso_validacao=sucesso_validacao,
-                          torneio_em_andamento=torneio_em_andamento)  # Nova variável
+                          torneio_em_andamento=torneio_em_andamento,
+                          modo_torneio_dict=modo_torneio_dict)
 
 @bp.route('/novo-torneio')
 def novo_torneio():

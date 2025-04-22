@@ -33,6 +33,7 @@
                         <tr>
                             <th>Data</th>
                             <th>Nome do Torneio</th>
+                            <th>Quant Jogadores</th>
                             <th>Campeão</th>
                             <th>Vice</th>
                             <th>Status</th>
@@ -45,6 +46,7 @@
                             <tr>
                                 <td>{{ torneio.data_criacao.strftime('%d/%m/%Y') }}</td>
                                 <td>{{ torneio.nome }}</td>
+                                <td>{{ modo_torneio_dict.get(torneio.id, 'Não definido') }}</td>
                                 <td>
                                     {% if torneio.campeoes %}
                                         {{ torneio.campeoes[0] }} & {{ torneio.campeoes[1] }}
