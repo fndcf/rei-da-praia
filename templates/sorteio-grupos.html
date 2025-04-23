@@ -9,6 +9,17 @@
     </div>
     <div class="main-container">
         <h1 class="title">CONANS CUP</h1>
+
+        <!-- Sistema de flash messages do Flask -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert {{ 'erro' if category == 'error' or category == 'danger' else 'sucesso' if category == 'success' else 'alert-'+category }} mt-3 mb-3">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
         
         <!-- Exibir mensagens de erro antes do formulário -->
         {% if erro_validacao %}
