@@ -1,31 +1,44 @@
 /* ======================
-   VARIÁVEIS GLOBAIS & RESET
+   VARIÁVEIS GLOBAIS
    ====================== */
    :root {
-    /* Esquema de cores principal - tons de verde */
+    /* Colors */
     --primary-color: #2c6e49; /* Verde escuro */
     --secondary-color: #4c956c; /* Verde médio */
     --success-color: #6ab04c; /* Verde vivo */
     --danger-color: #e74c3c; /* Vermelho */
     --warning-color: #f39c12; /* Laranja */
     --info-color: #78c2ad; /* Verde água */
+    --text-on-green: #f5f5f5; /* Cor clara para texto sobre fundos verdes */
     
-    /* Tons de cinza */
+    /* Grayscale */
     --light-gray: rgba(245, 245, 245, 0.9);
     --medium-gray: rgba(221, 221, 221, 0.8);
     --dark-gray: #5a5a5a;
+    --darker-gray: #343a40;
+    --neutral-gray: #6c757d;
+    --light-neutral: #f8f9fa;
     
-    /* Bordas e sombras */
+    /* Layout */
     --border-radius: 8px;
     --box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
     --transition: all 0.3s ease;
     
-    /* Transparência para elementos flutuantes */
-    --card-opacity: 0.95; /* Mais opaco para garantir legibilidade */
+    /* Opacity levels */
+    --card-opacity: 0.95;
     --table-opacity: 0.97;
-    --text-on-green: #f5f5f5; /* Cor clara para texto sobre fundos verdes */
+    
+    /* Spacing */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
 }
 
+/* ======================
+   RESET & BASE STYLES
+   ====================== */
 * {
     margin: 0;
     padding: 0;
@@ -36,32 +49,34 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     line-height: 1.6;
     color: #333;
-    background-image: url('/static/logo_campeonato.svg'); /* SUBSTITUA PELO CAMINHO DA SUA LOGO */
-    background-size: 80% auto; /* Menor para não interferir tanto na legibilidade */
-    background-position: center;
-    background-repeat: no-repeat;
-    background-attachment: fixed;
+    background: url('/static/logo_campeonato.svg') center/80% no-repeat fixed;
     max-width: 1200px;
     margin: 0 auto;
-    padding: 20px;
-/*    backdrop-filter: contrast(0.95); */
+    padding: var(--spacing-lg);
 }
 
 /* ======================
-   TIPOGRAFIA & ELEMENTOS BASE
+   TYPOGRAPHY
    ====================== */
 h1, h2, h3, h4 {
-    color: #1e5631; /* Verde mais escuro para contraste */
-    margin-bottom: 1rem;
+    color: #1e5631;
+    margin-bottom: var(--spacing-md);
     font-weight: 600;
-    /* Texto com contorno sutil para garantir legibilidade sobre a logo */
     text-shadow: 0px 0px 3px rgba(255, 255, 255, 0.8), 
                  0px 0px 5px rgba(255, 255, 255, 0.9);
 }
 
-h1 { font-size: 3.5em; }
-h2 { font-size: 2em; }
-h3 { font-size: 1.5em; }
+h1 { font-size: 2.5rem; }
+h2 { font-size: 2rem; }
+h3 { font-size: 1.5rem; }
+h4 { font-size: 1.2rem; }
+
+.title {
+    color: #1e5631;
+    text-shadow: 0px 0px 5px rgba(255, 255, 255, 0.9),
+                 0px 0px 10px rgba(255, 255, 255, 0.8);
+    font-weight: 700;
+}
 
 a {
     text-decoration: none;
@@ -74,8 +89,27 @@ a:hover {
     text-decoration: underline;
 }
 
+/* Text utilities */
+.text-center { text-align: center; }
+.text-white { color: white !important; }
+.text-dark { color: var(--darker-gray) !important; }
+.text-muted { color: var(--dark-gray); font-size: 0.875em; }
+.text-success { 
+    color: #2c6e49 !important; 
+    font-weight: 800;
+    font-size: larger;
+}
+
+/* Card headers with correct text color */
+.card-header h1, 
+.card-header h2, 
+.card-header h3 {
+    color: var(--text-on-green);
+    text-shadow: none;
+}
+
 /* ======================
-   LAYOUT & COMPONENTES REUTILIZÁVEIS
+   LAYOUT COMPONENTS
    ====================== */
 .container {
     width: 100%;
@@ -90,7 +124,7 @@ a:hover {
     justify-content: center;
     min-height: 80vh;
     text-align: center;
-    padding: 20px;
+    padding: var(--spacing-lg);
 }
 
 .form-container {
@@ -101,31 +135,46 @@ a:hover {
 }
 
 .card {
-    
     border-radius: var(--border-radius);
-    padding: 20px;
+    padding: var(--spacing-lg);
     box-shadow: var(--box-shadow);
-    margin-bottom: 20px;
+    margin-bottom: var(--spacing-lg);
     border: 1px solid rgba(211, 211, 211, 0.5);
 }
 
-.card-atencao {
-    background-color: rgba(255, 255, 255, 0.92);
-  
-  }
-
+.card-atencao,
 .card-sorteados {
     background-color: rgba(255, 255, 255, 0.92);
-
 }
 
 .card-sorteio {
-  background-color: white;
-
+    background-color: white;
 }
 
+.card-header {
+    position: relative;
+    background-color: var(--primary-color);
+    color: var(--text-on-green);
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+}
+
+/* Utility spacing classes */
+.mt-1 { margin-top: var(--spacing-xs); }
+.mt-2 { margin-top: var(--spacing-sm); }
+.mt-3 { margin-top: var(--spacing-md); }
+.mt-4 { margin-top: var(--spacing-lg); }
+.mb-2 { margin-bottom: var(--spacing-sm); }
+.mb-3 { margin-bottom: var(--spacing-md); }
+.mb-4 { margin-bottom: var(--spacing-lg) !important; }
+.ml-2 { margin-left: var(--spacing-sm); }
+.mr-2 { margin-right: var(--spacing-sm); }
+
+/* Flexbox utilities */
+.d-flex { display: flex; }
+.justify-content-center { justify-content: center; }
+
 /* ======================
-   FORMULÁRIOS & ENTRADAS
+   FORMS & INPUTS
    ====================== */
 .form-control {
     width: 100%;
@@ -145,6 +194,28 @@ a:hover {
     box-shadow: 0 0 0 3px rgba(76, 149, 108, 0.2);
 }
 
+/* Unified styling for all input types */
+input[type="text"],
+input[type="number"],
+input[type="email"],
+select, 
+textarea {
+    padding: 10px 15px;
+    border: 2px solid var(--medium-gray);
+    border-radius: var(--border-radius);
+    font-size: 1em;
+    transition: var(--transition);
+    background-color: rgba(255, 255, 255, 0.95);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+    border-color: var(--secondary-color);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(76, 149, 108, 0.2);
+}
+
 .text-area-sorteio,
 #jogadores {
     height: 200px;
@@ -153,8 +224,62 @@ a:hover {
     background-color: rgba(255, 255, 255, 0.95);
 }
 
+/* Inputs de placar */
+.saldo-inputs-dir,
+.saldo-inputs-esq {
+    width: 70px;
+    padding: 10px;
+    text-align: center;
+    border: 2px solid var(--medium-gray);
+    border-radius: var(--border-radius);
+    font-size: 16px;
+    background-color: rgba(255, 248, 225, 0.95);
+    font-weight: bold;
+}
+
+/* Styling for placeholder inputs */
+.saldo-inputs-esq:placeholder-shown, 
+.saldo-inputs-dir:placeholder-shown {
+    color: #d32f2f; /* vermelho para placeholder */
+    font-weight: bold;
+}
+
+input:placeholder-shown {
+    color: #d32f2f;
+    font-weight: bold;
+}
+
+/* Esconde as setas nos inputs number */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Para Firefox */
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+/* Styling for disabled elements */
+button:disabled,
+select:disabled,
+textarea:disabled,
+input:disabled {
+    background-color: rgba(248, 249, 250, 0.7);
+    color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+.form-text {
+    color: var(--primary-color);
+    font-weight: bold;
+    text-shadow: 0px 0px 2px rgba(255, 255, 255, 0.9);
+}
+
 /* ======================
-   BOTÕES
+   BUTTONS
    ====================== */
 .btn {
     display: inline-block;
@@ -169,14 +294,21 @@ a:hover {
     letter-spacing: 0.5px;
 }
 
-.btn-primary {
-    background-color: var(--primary-color);
-    color: var(--text-on-green);
+/* Button variants */
+.btn-primary, .btn-detalhar, .btn-selecionar, .btn-sortear, .btn-salvar {
+    background-color: var(--neutral-gray);
+    color: white;
+    border: none;
 }
 
 .btn-success {
-    background-color: var(--success-color);
-    color: var(--text-on-green);
+    background-color: #2c6e49;
+    color: white;
+}
+
+.btn-info {
+    background-color: #5bc0de;
+    color: white;
 }
 
 .btn-warning {
@@ -189,15 +321,39 @@ a:hover {
     color: white;
 }
 
-.btn-info {
-    background-color: var(--info-color);
-    color: var(--text-on-green);
+.btn-secondary {
+    background-color: var(--dark-gray);
+    color: white;
 }
 
+/* "Voltar para Home" button style */
+.btn-voltar-home, 
+a[href*="main.home"].btn,
+a[href*="home()"].btn {
+    background-color: var(--dark-gray);
+    color: white;
+}
+
+/* Button states */
 .btn:hover {
     filter: brightness(1.1);
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary:hover,
+.btn-buscar:hover,
+.btn-detalhar:hover,
+.btn-selecionar:hover,
+.btn-sortear:hover,
+.btn-salvar:hover {
+    background-color: #5a6268;
+}
+
+#btnCancelarSelecao:hover,
+.btn-cancelar:hover,
+.modal-buttons .btn-secondary:hover {
+    background-color: #d62c1a;
 }
 
 .btn:active {
@@ -211,8 +367,70 @@ a:hover {
     box-shadow: none;
 }
 
+/* Button sizes */
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    border-radius: 0.2rem;
+}
+
+/* Button modifiers */
+.btn-outline-primary {
+    color: var(--secondary-color);
+    background-color: transparent;
+    border: 1px solid var(--secondary-color);
+}
+
+.btn-outline-primary:hover {
+    color: white;
+    background-color: var(--secondary-color);
+}
+
+/* Special button styles */
+.btn-buscar {
+    margin: 10px 5px;
+    height: 57%;
+}
+
+#btnSalvarTodos {
+    background-color: var(--dark-gray);
+    color: white;
+    margin-top: var(--spacing-md);
+    margin-bottom: 0.1rem;
+}
+
+form .btn-info[type="submit"] {
+    background-color: #5bc0de;
+}
+
+a[href*="finalizar_torneio"].btn-success {
+    background-color: var(--dark-gray);
+}
+
+#btnCancelarSelecao, 
+.btn-cancelar,
+.modal-buttons .btn-secondary {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+/* Button table styles */
+.table .btn-primary {
+    background-color: var(--neutral-gray);
+}
+
+.table .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.btn-sm.btn-primary {
+    background-color: var(--neutral-gray);
+}
+
 /* ======================
-   TABELAS
+   TABLES
    ====================== */
 .table {
     width: 100%;
@@ -237,19 +455,26 @@ a:hover {
     background-color: rgba(242, 248, 242, 0.6);
 }
 
-/* Posições de destaque - APENAS para tabelas de grupo */
+/* Table highlighting */
 .grupo .table tr:nth-child(1) td {
-    background-color: rgba(255, 215, 0, 0.8) !important; /* Ouro com transparência */
+    background-color: rgba(255, 215, 0, 0.8) !important;
     font-weight: bold;
-    color: #333; /* Escuro para contrastar com o dourado */
+    color: #333;
 }
 
 .grupo .table tr:nth-child(2) td {
-    background-color: rgba(192, 192, 192, 0.8) !important; /* Prata com transparência */
-    color: #333; /* Escuro para contrastar com o prata */
+    background-color: rgba(192, 192, 192, 0.8) !important;
+    color: #333;
 }
 
-/* Remover estilo dourado/prata de outras tabelas */
+.historico-table tr:nth-child(even) {
+    background-color: rgba(242, 248, 242, 0.6);
+}
+
+.historico-table tr:hover {
+    background-color: rgba(233, 245, 233, 0.7);
+}
+
 .historico-table tr:nth-child(1) td,
 .historico-table tr:nth-child(2) td {
     background-color: transparent !important;
@@ -257,9 +482,107 @@ a:hover {
 }
 
 /* ======================
-   COMPONENTES ESPECÍFICOS
+   COMPONENTS - BADGES
    ====================== */
-/* Grupos */
+.badge {
+    display: inline-block;
+    padding: 0.25em 0.6em;
+    font-size: 75%;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.25rem;
+}
+
+.badge.bg-success, 
+.badge.bg-warning, 
+.badge.bg-danger {
+    font-weight: bold;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.badge.bg-warning.text-dark {
+    color: #333 !important;
+    font-weight: bold;
+}
+
+.bg-success {
+    background-color: var(--success-color) !important;
+}
+
+.bg-warning {
+    background-color: var(--warning-color) !important;
+}
+
+.bg-danger {
+    background-color: var(--danger-color) !important;
+}
+
+.bg-light {
+    background-color: rgba(248, 249, 250, 0.8) !important;
+}
+
+.position-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 1rem;
+    padding: 5px 10px;
+}
+
+/* ======================
+   COMPONENTS - ALERTS
+   ====================== */
+.alert {
+    padding: 12px 15px;
+    margin-bottom: var(--spacing-md);
+    border: 1px solid transparent;
+    border-radius: var(--border-radius);
+}
+
+.alert-warning {
+    color: #856404;
+    background-color: rgba(255, 243, 205, 0.92);
+    border-color: #ffeeba;
+}
+
+.alert-info {
+    color: #0c5460;
+    background-color: rgba(209, 236, 241, 0.92);
+    border-color: #bee5eb;
+}
+
+.erro {
+    color: var(--danger-color);
+    padding: 10px;
+    margin: 10px 0;
+    background: rgba(255, 238, 238, 0.95);
+    border: 1px solid #ef9a9a;
+    border-radius: var(--border-radius);
+}
+
+.sucesso {
+    color: #2e7d32;
+    padding: 10px;
+    margin: 10px 0;
+    background: rgba(232, 245, 233, 0.95);
+    border: 1px solid #a5d6a7;
+    border-radius: var(--border-radius);
+}
+
+.counter {
+    margin-bottom: 20px;
+    font-size: 1.1em;
+    color: var(--dark-gray);
+    font-weight: bold;
+}
+
+/* ======================
+   COMPONENTS - GRUPOS
+   ====================== */
 .grupo {
     border: 1px solid rgba(211, 221, 211, 0.5);
     border-radius: var(--border-radius);
@@ -267,24 +590,21 @@ a:hover {
     margin-bottom: 30px;
 }
 
-/* Confrontos */
+/* Confrontos styling */
 .confronto {
     margin: 20px 0;
     padding: 15px;
     border-radius: var(--border-radius);
     box-shadow: var(--box-shadow);
     background-color: rgba(255, 255, 255, 0.92);
-
 }
+
 .confronto-eliminatorio {
     margin: 20px 0;
     padding: 15px;
     background-color: rgba(255, 255, 255, 0.92);
     border-radius: var(--border-radius);
     box-shadow: var(--box-shadow);
-}
-
-.confronto-eliminatorio {
     border-left: 4px solid var(--secondary-color);
 }
 
@@ -303,6 +623,23 @@ a:hover {
     gap: 15px;
     flex-wrap: wrap;
     margin: 15px 0;
+    position: relative;
+}
+
+.confronto-jogadores::after {
+    content: "⚠️";
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #d32f2f;
+    font-size: 0.8em;
+    opacity: 0.6;
+    display: none;
+}
+
+.confronto-jogadores:has(input:placeholder-shown)::after {
+    display: block;
 }
 
 .dupla {
@@ -329,43 +666,40 @@ a:hover {
     font-size: 1.5em;
 }
 
-/* Inputs de placar */
-.saldo-inputs-dir,
-.saldo-inputs-esq {
-    width: 70px;
-    padding: 10px;
-    text-align: center;
-    border: 2px solid var(--medium-gray);
-    border-radius: var(--border-radius);
-    font-size: 16px;
-    background-color: rgba(255, 255, 255, 0.95);
+/* Error/Validation States */
+.campo-vazio {
+    border: 2px solid #d32f2f !important;
+    animation: pulse 1.5s infinite;
+}
+
+.erro-empate {
+    border-color: var(--danger-color) !important;
+    background-color: rgba(255, 205, 210, 0.8) !important;
+    animation: pulse 1.5s infinite;
+}
+
+/* Valores positivos/negativos */
+.positivo {
+    color: #2e7d32;
     font-weight: bold;
 }
 
-/* Mensagens */
-.erro {
+.negativo {
     color: var(--danger-color);
-    padding: 10px;
-    margin: 10px 0;
-    background: rgba(255, 238, 238, 0.95);
-    border: 1px solid #ef9a9a;
-    border-radius: var(--border-radius);
-}
-
-.sucesso {
-    color: #2e7d32; /* Verde escuro para melhor legibilidade */
-    padding: 10px;
-    margin: 10px 0;
-    background: rgba(232, 245, 233, 0.95);
-    border: 1px solid #a5d6a7;
-    border-radius: var(--border-radius);
-}
-
-.counter {
-    margin-bottom: 20px;
-    font-size: 1.1em;
-    color: var(--dark-gray);
     font-weight: bold;
+}
+
+/* Vencedor highlighting */
+.vencedor {
+    font-weight: bold;
+    color: #fff !important;
+    background-color: var(--success-color) !important;
+    border-radius: 4px;
+    padding: 2px 6px;
+}
+
+.placar-final {
+    font-size: 2em;
 }
 
 /* ======================
@@ -414,133 +748,303 @@ a:hover {
     text-align: center;
     font-weight: bold;
     font-size: 1.1em;
-    color: var(--danger-color);
+    color: #5a6268;
 }
 
 .final-historico .placar-historico {
-    color: var(--info-color);
+    color: #2c6e49;
     font-size: 1.3em;
 }
 
 /* ======================
-   UTILITÁRIOS
+   MODALS
    ====================== */
-.text-center { text-align: center; }
-.mt-1 { margin-top: 0.5rem; }
-.mt-2 { margin-top: 1rem; }
-.mt-3 { margin-top: 1.5rem; }
-.mt-4 { margin-top: 2rem; }
-
-/* Cores para valores positivos e negativos */
-.positivo {
-    color: #2e7d32; /* Verde escuro para melhor legibilidade */
-    font-weight: bold;
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
 }
 
-.negativo {
-    color: var(--danger-color);
+.modal-content {
+    background-color: rgba(255, 255, 255, 0.98);
+    padding: 20px;
+    border-radius: var(--border-radius);
+    max-width: 500px;
+    width: 90%;
+    box-shadow: var(--box-shadow);
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+    gap: 10px;
+}
+
+.modal-header {
+    padding: 15px 20px;
+    background-color: var(--primary-color);
+    color: var(--text-on-green);
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--text-on-green);
+    text-shadow: none;
+}
+
+.modal-close {
+    color: white;
+    font-size: 28px;
     font-weight: bold;
+    cursor: pointer;
+}
+
+.modal-close:hover {
+    color: #ddd;
+}
+
+.modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modal-footer {
+    padding: 15px 20px;
+    background-color: rgba(248, 249, 250, 0.7);
+    border-top: 1px solid #ddd;
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
 }
 
 /* ======================
-   RESPONSIVIDADE
+   JOGADORES MODAL
    ====================== */
-@media (max-width: 768px) {
-    .form-container,
-    .text-area-sorteio,
-    #jogadores {
-        width: 90%;
-    }
-    
-    .tabela-container {
-        flex-direction: column;
-    }
-    
-    .confronto-jogadores {
-        flex-direction: column;
-    }
-    
-    .dupla {
-        min-width: 100%;
-    }
-    
-    .saldo-inputs-dir,
-    .saldo-inputs-esq {
-        margin: 5px 0;
-    }
-    
-    body {
-        background-size: 80% auto;
-        padding: 10px;
-    }
+#modalJogadores {
+    align-items: center;
+    justify-content: center;
 }
 
-.saldo-inputs-esq, .saldo-inputs-dir {
-    background-color: rgba(255, 248, 225, 0.95); /* amarelo claro de fundo com transparência */
+#modalJogadores .modal-content {
+    width: 850px;
+    min-width: 600px;
+    max-width: 90%;
+    max-height: 680px;
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--border-radius);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
 }
 
-.saldo-inputs-esq:placeholder-shown, 
-.saldo-inputs-dir:placeholder-shown {
-    color: #d32f2f; /* vermelho para placeholder */
-    font-weight: bold;
+#modalJogadores .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background-color: var(--primary-color);
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
 }
 
-.confronto-jogadores {
-    position: relative;
-}
-
-.confronto-jogadores::after {
-    content: "⚠️";
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #d32f2f;
-    font-size: 0.8em;
-    opacity: 0.6;
-    display: none;
-}
-
-.confronto-jogadores:has(input:placeholder-shown)::after {
-    display: block;
-}
-
-.campo-vazio {
-    border: 2px solid #d32f2f !important;
-    animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-    0% { background-color: rgba(255, 248, 225, 0.95); }
-    50% { background-color: rgba(255, 205, 210, 0.95); }
-    100% { background-color: rgba(255, 248, 225, 0.95); }
-}
-
-input:placeholder-shown {
-    color: #d32f2f;
-    font-weight: bold;
-}
-
-/* Esconde as setas nos inputs number */
-input[type="number"]::-webkit-outer-spin-button,
-input[type="number"]::-webkit-inner-spin-button {
-    -webkit-appearance: none;
+#modalJogadores .modal-header h3 {
     margin: 0;
+    color: white;
 }
 
-/* Para Firefox */
-input[type="number"] {
-    -moz-appearance: textfield;
+#modalJogadores .modal-close {
+    font-size: 28px;
+    cursor: pointer;
+    color: white;
+    opacity: 0.8;
+    transition: opacity 0.2s;
 }
 
-.form-text {
+#modalJogadores .modal-close:hover {
+    opacity: 1;
+}
+
+#modalJogadores .modal-body {
+    padding: 20px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+#modalJogadores #buscarJogador {
+    width: 100%;
+    padding: 10px 15px;
+    margin-bottom: 15px;
+    font-size: 1em;
+    border: 1px solid var(--medium-gray);
+}
+
+#modalJogadores .jogadores-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 15px;
+}
+
+#modalJogadores .jogadores-lista-container,
+#modalJogadores .jogadores-selecionados {
+    flex: 1;
+}
+
+#modalJogadores .lista-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #eee;
+}
+
+#modalJogadores .lista-header h4 {
+    margin: 0;
+    font-weight: 600;
     color: var(--primary-color);
-    font-weight: bold;
-    /* Texto com sombra sutil para garantir legibilidade */
-    text-shadow: 0px 0px 2px rgba(255, 255, 255, 0.9);
 }
 
-/* Overlay de Loading */
+#modalJogadores .jogadores-lista,
+#modalJogadores .jogadores-selecionados > ul {
+    min-height: 280px;
+    max-height: 280px;
+    padding: 12px;
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: var(--border-radius);
+    background-color: #f9f9f9;
+    overflow-y: auto;
+}
+
+#modalJogadores .jogador-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 10px;
+    margin-bottom: 5px;
+    background-color: white;
+    border-radius: 4px;
+    border: 1px solid #eee;
+    transition: all 0.2s;
+}
+
+#modalJogadores .jogador-item:hover {
+    background-color: #f0f5f0;
+}
+
+#modalJogadores .jogador-item.selecionado {
+    background-color: #e3f2fd;
+    border-color: #90caf9;
+}
+
+#modalJogadores .jogador-item input[type="checkbox"] {
+    margin-right: 10px;
+}
+
+#modalJogadores .lista-selecionados {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+#modalJogadores .lista-selecionados li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    margin-bottom: 5px;
+    background-color: #e3f2fd;
+    border-radius: 4px;
+    border: 1px solid #90caf9;
+}
+
+#modalJogadores .lista-selecionados button {
+    background: none;
+    border: none;
+    color: #d32f2f;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: bold;
+    opacity: 0.7;
+}
+
+#modalJogadores .lista-selecionados button:hover {
+    opacity: 1;
+}
+
+#modalJogadores .modal-footer {
+    padding: 15px 20px;
+    background-color: #f8f9fa;
+    border-top: 1px solid #eee;
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+}
+
+#modalJogadores .modal-footer button {
+    padding: 8px 18px;
+    font-size: 1em;
+}
+
+.jogadores-lista-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ======================
+   AUTOCOMPLETE
+   ====================== */
+.autocomplete-container {
+    position: relative;
+    width: 100%;
+}
+
+.autocomplete-items {
+    position: absolute;
+    border: 1px solid var(--medium-gray);
+    border-top: none;
+    z-index: 99;
+    top: 100%;
+    left: 0;
+    right: 0;
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    max-height: 200px;
+    overflow-y: auto;
+    background-color: rgba(255, 255, 255, 0.98);
+    box-shadow: var(--box-shadow);
+}
+
+.autocomplete-items div {
+    padding: 10px;
+    cursor: pointer;
+    text-align: left;
+}
+
+.autocomplete-items div:hover {
+    background-color: rgba(245, 248, 245, 0.8);
+}
+
+.autocomplete-active {
+    background-color: var(--secondary-color) !important;
+    color: white;
+}
+
+/* ======================
+   LOADING OVERLAY
+   ====================== */
 .loading-overlay {
     position: fixed;
     top: 0;
@@ -586,111 +1090,9 @@ input[type="number"] {
     font-weight: bold;
 }
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-/* Estilos específicos para tabela de histórico */
-.historico-table tr:nth-child(even) {
-    background-color: rgba(242, 248, 242, 0.6);
-}
-
-.historico-table tr:hover {
-    background-color: rgba(233, 245, 233, 0.7);
-}
-
-/* Estilo para botões em tabelas */
-.table .btn-sm {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.875rem;
-    border-radius: 0.2rem;
-}
-
-/* Badges */
-.badge {
-    display: inline-block;
-    padding: 0.25em 0.6em;
-    font-size: 75%;
-    font-weight: 700;
-    line-height: 1;
-    text-align: center;
-    white-space: nowrap;
-    vertical-align: baseline;
-    border-radius: 0.25rem;
-}
-
-.bg-success {
-    background-color: var(--success-color) !important;
-}
-
-.bg-warning {
-    background-color: var(--warning-color) !important;
-}
-
-.text-white {
-    color: white !important;
-}
-
-.text-dark {
-    color: #343a40 !important;
-}
-
-.bg-danger {
-    background-color: var(--danger-color) !important;
-}
-
-.ml-2 {
-    margin-left: 0.5rem;
-}
-
-.text-muted {
-    color: var(--dark-gray);
-    font-size: 0.875em;
-}
-
-/* Estilos para o autocomplete */
-.autocomplete-container {
-    position: relative;
-    width: 100%;
-}
-
-.autocomplete-items {
-    position: absolute;
-    border: 1px solid var(--medium-gray);
-    border-top: none;
-    z-index: 99;
-    top: 100%;
-    left: 0;
-    right: 0;
-    border-radius: 0 0 var(--border-radius) var(--border-radius);
-    max-height: 200px;
-    overflow-y: auto;
-    background-color: rgba(255, 255, 255, 0.98);
-    box-shadow: var(--box-shadow);
-}
-
-.autocomplete-items div {
-    padding: 10px;
-    cursor: pointer;
-    text-align: left;
-}
-
-.autocomplete-items div:hover {
-    background-color: rgba(245, 248, 245, 0.8);
-}
-
-.autocomplete-active {
-    background-color: var(--secondary-color) !important;
-    color: white;
-}
-
-/* Mensagem de jogador não encontrado */
+/* ======================
+   PLAYER NOT FOUND MESSAGE
+   ====================== */
 .not-found-message {
     background-color: rgba(255, 243, 205, 0.92);
     border: 1px solid #ffeeba;
@@ -710,134 +1112,191 @@ input[type="number"] {
     margin-bottom: 15px;
 }
 
-/* Botões outline */
-.btn-outline-primary {
-    color: var(--secondary-color);
-    background-color: transparent;
-    border: 1px solid var(--secondary-color);
+/* ======================
+   ANIMATIONS
+   ====================== */
+@keyframes pulse {
+    0% { 
+        background-color: rgba(255, 248, 225, 0.95);
+        transform: scale(1);
+    }
+    50% { 
+        background-color: rgba(255, 205, 210, 0.95);
+        transform: scale(1.02);
+    }
+    100% { 
+        background-color: rgba(255, 248, 225, 0.95);
+        transform: scale(1);
+    }
 }
 
-.btn-outline-primary:hover {
-    color: white;
-    background-color: var(--secondary-color);
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
-.mr-2 {
-    margin-right: 0.5rem;
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
-.mb-2 {
-    margin-bottom: 0.5rem;
+@keyframes slideIn {
+    from { transform: translateY(-50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
 }
 
-.mb-3 {
-    margin-bottom: 1rem;
+/* ======================
+   CARD ADJUSTMENTS
+   ====================== */
+.card .d-flex.flex-column.align-items-center.w-50 {
+    width: 70% !important;
 }
 
-.position-badge {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    font-size: 1rem;
-    padding: 5px 10px;
-}
-
-.card-header {
-    position: relative;
-    background-color: var(--primary-color);
-    color: var(--text-on-green);
-    border-radius: var(--border-radius) var(--border-radius) 0 0;
-}
-
-/* Estilos para o modal de confirmação */
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
+.card .autocomplete-container {
     width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    justify-content: center;
-    align-items: center;
+    margin-bottom: 15px;
 }
 
-.modal-content {
-    background-color: rgba(255, 255, 255, 0.98);
-    padding: 20px;
-    border-radius: var(--border-radius);
-    max-width: 500px;
-    width: 90%;
-    box-shadow: var(--box-shadow);
+.card #nome_jogador {
+    width: 100%;
+    font-size: 1.1em;
+    padding: 10px 15px;
+    height: 45px;
 }
 
-.modal-buttons {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 20px;
-    gap: 10px;
+.card .d-flex.flex-column.align-items-center button[type="submit"] {
+    width: auto;
+    padding: 8px 20px;
+    font-size: 1em;
 }
 
-.btn-secondary {
-    background-color: var(--dark-gray);
-    color: white;
+.card h2.text-center {
+    margin-bottom: 20px;
 }
 
-/* Estilos para elementos desabilitados */
-button:disabled,
-select:disabled,
-textarea:disabled,
-input:disabled {
-    background-color: rgba(248, 249, 250, 0.7);
-    color: #6c757d;
-    cursor: not-allowed;
-    opacity: 0.65;
+/* ======================
+   RESPONSIVE STYLES
+   ====================== */
+/* For large tablets and desktops */
+@media (min-width: 992px) {
+    h1 { font-size: 3.5rem; }
+    
+    .container {
+        padding: 0 30px;
+    }
+    
+    .form-container {
+        width: 50%;
+    }
 }
 
-.alert {
-    padding: 12px 15px;
-    margin-bottom: 1rem;
-    border: 1px solid transparent;
-    border-radius: var(--border-radius);
+/* For tablets and small desktops */
+@media (max-width: 991px) {
+    body {
+        padding: 15px;
+    }
+    
+    h1 { font-size: 3rem; }
+    
+    .form-container {
+        width: 70%;
+    }
+    
+    .card {
+        padding: 15px;
+    }
 }
 
-.alert-warning {
-    color: #856404;
-    background-color: rgba(255, 243, 205, 0.92);
-    border-color: #ffeeba;
+/* For medium-sized devices */
+@media (max-width: 768px) {
+    body {
+        background-size: 90% auto;
+        padding: 10px;
+    }
+    
+    h1 { font-size: 2.5rem; }
+    h2 { font-size: 1.8rem; }
+    h3 { font-size: 1.3rem; }
+    
+    .form-container,
+    .text-area-sorteio,
+    #jogadores {
+        width: 90%;
+    }
+    
+    .tabela-container {
+        flex-direction: column;
+    }
+    
+    .confronto-jogadores {
+        flex-direction: column;
+    }
+    
+    .dupla {
+        min-width: 100%;
+    }
+    
+    .saldo-inputs-dir,
+    .saldo-inputs-esq {
+        margin: 5px 0;
+    }
+    
+    .card .d-flex.flex-column.align-items-center.w-50 {
+        width: 90% !important;
+    }
+    
+    #modalJogadores .modal-content {
+        width: 95%;
+        min-width: unset;
+        height: 90vh;
+        max-height: 90vh;
+    }
+    
+    #modalJogadores .jogadores-container {
+        grid-template-columns: 1fr;
+    }
+    
+    #modalJogadores .jogadores-lista,
+    #modalJogadores .jogadores-selecionados > ul {
+        min-height: 180px;
+        max-height: 200px;
+    }
+    
+    .jogo-historico {
+        flex-wrap: wrap;
+    }
+    
+    .dupla-historico {
+        flex: 0 0 100%;
+        margin: 5px 0;
+    }
 }
 
-.alert-info {
-    color: #0c5460;
-    background-color: rgba(209, 236, 241, 0.92);
-    border-color: #bee5eb;
-}
-
-/* Outros ajustes visuais */
-.bg-light {
-    background-color: rgba(248, 249, 250, 0.8) !important;
-}
-
-/* Estilos para layout flexbox */
-.d-flex {
-    display: flex;
-}
-
-.justify-content-center {
-    justify-content: center;
-}
-
-.ml-2 {
-    margin-left: 0.5rem;
-}
-
-.mr-2 {
-    margin-right: 0.5rem;
-}
-
-/* Ajustes para responsividade em dispositivos pequenos */
+/* For small mobile devices */
 @media (max-width: 576px) {
+    body {
+        background-size: 100% auto;
+        padding: 8px;
+    }
+    
+    h1 { font-size: 2rem; }
+    h2 { font-size: 1.5rem; }
+    h3 { font-size: 1.2rem; }
+    
+    .card {
+        padding: 12px;
+    }
+    
+    .btn {
+        padding: 8px 15px;
+        font-size: 0.9em;
+    }
+    
+    .table th, .table td {
+        padding: 8px;
+        font-size: 0.9em;
+    }
+    
     .d-flex {
         flex-direction: column;
     }
@@ -846,592 +1305,30 @@ input:disabled {
         margin: 0.5rem 0;
     }
     
-    body {
-        background-size: 100% auto;
+    .form-container {
+        width: 100%;
+    }
+    
+    .modal-content {
+        width: 95%;
+        padding: 15px;
+    }
+    
+    .modal-header, .modal-footer {
+        padding: 10px 15px;
+    }
+    
+    .modal-body {
+        padding: 15px;
+    }
+    
+    #modalJogadores .jogadores-lista,
+    #modalJogadores .jogadores-selecionados > ul {
+        min-height: 150px;
+        max-height: 180px;
+    }
+    
+    .placar-final {
+        font-size: 1.5em;
     }
 }
-
-/* Estilos para o modal de seleção de jogadores */
-.modal-header {
-    padding: 15px 20px;
-    background-color: var(--primary-color);
-    color: var(--text-on-green);
-    border-radius: var(--border-radius) var(--border-radius) 0 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.modal-header h3 {
-    margin: 0;
-    color: var(--text-on-green);
-    text-shadow: none;
-}
-
-.modal-close {
-    color: white;
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-.modal-close:hover {
-    color: #ddd;
-}
-
-.modal-body {
-    padding: 20px;
-    overflow-y: auto;
-    flex: 1;
-}
-
-.modal-footer {
-    padding: 15px 20px;
-    background-color: rgba(248, 249, 250, 0.7);
-    border-top: 1px solid #ddd;
-    border-radius: 0 0 var(--border-radius) var(--border-radius);
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-}
-
-.jogadores-container {
-    display: flex;
-    gap: 20px;
-    margin-top: 15px;
-}
-
-.jogadores-lista {
-    flex: 1;
-    min-height: 300px;
-    max-height: 400px;
-    overflow-y: auto;
-    border: 1px solid rgba(221, 221, 221, 0.5);
-    border-radius: var(--border-radius);
-    padding: 10px;
-    background-color: rgba(255, 255, 255, 0.9);
-}
-
-.jogadores-selecionados {
-    flex: 1;
-    min-height: 300px;
-    max-height: 400px;
-    overflow-y: auto;
-    border: 1px solid rgba(221, 221, 221, 0.5);
-    border-radius: var(--border-radius);
-    padding: 10px;
-    background-color: rgba(255, 255, 255, 0.9);
-}
-
-.jogador-item {
-    display: flex;
-    align-items: center;
-    padding: 8px 10px;
-    border-bottom: 1px solid rgba(238, 238, 238, 0.8);
-    cursor: pointer;
-}
-
-.jogador-item:hover {
-    background-color: rgba(232, 245, 232, 0.7);
-}
-
-.jogador-item.selecionado {
-    background-color: rgba(227, 242, 227, 0.7);
-}
-
-.jogador-item input[type="checkbox"] {
-    margin-right: 10px;
-}
-
-.lista-selecionados {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.lista-selecionados li {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 10px;
-    border-bottom: 1px solid rgba(238, 238, 238, 0.8);
-    background-color: rgba(227, 242, 227, 0.7);
-    margin-bottom: 5px;
-    border-radius: 4px;
-}
-
-.lista-selecionados button {
-    background: none;
-    border: none;
-    color: var(--danger-color);
-    cursor: pointer;
-    font-size: 16px;
-}
-
-@keyframes slideIn {
-    from {transform: translateY(-50px); opacity: 0;}
-    to {transform: translateY(0); opacity: 1;}
-}
-
-.jogadores-lista-container {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-.lista-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-    padding: 0 5px;
-}
-
-.lista-header h4 {
-    margin: 0;
-    font-size: 1rem;
-}
-
-.btn-sm {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.875rem;
-    line-height: 1.5;
-    border-radius: 0.2rem;
-}
-
-/* Ajustes específicos para o destaque de vencedores */
-.vencedor {
-    font-weight: bold;
-    color: #fff !important;
-    background-color: var(--success-color) !important;
-    border-radius: 4px;
-    padding: 2px 6px;
-}
-
-/* Estilo para erro de empate */
-.erro-empate {
-    border-color: var(--danger-color) !important;
-    background-color: rgba(255, 205, 210, 0.8) !important;
-    animation: pulse 1.5s infinite;
-}
-
-/* Badges para status de torneio */
-.badge.bg-success, 
-.badge.bg-warning, 
-.badge.bg-danger {
-    font-weight: bold;
-    padding: 4px 8px;
-    border-radius: 4px;
-}
-
-/* Ajustes adicionais para garantir legibilidade */
-.card-header h1, 
-.card-header h2, 
-.card-header h3 {
-    color: var(--text-on-green);
-    text-shadow: none;  /* Sem sombra para texto em fundo colorido */
-}
-
-/* Garantir que o texto do título principal seja legível */
-.title {
-    color: #1e5631;
-    text-shadow: 0px 0px 5px rgba(255, 255, 255, 0.9),
-                 0px 0px 10px rgba(255, 255, 255, 0.8);
-    font-weight: 700;
-}
-
-/* Melhorar contraste em badges */
-.badge.bg-warning.text-dark {
-    color: #333 !important;
-    font-weight: bold;
-}
-/* ====================
-   AJUSTES DE CORES E BOTÕES
-   ==================== */
-
-/* Ponto 1: Padrão para os botões "Voltar para Home" */
-.btn-voltar-home, 
-a[href*="main.home"].btn,
-a[href*="home()"].btn {
-    background-color: #5a6268; /* Cinza neutro */
-    color: white;
-}
-
-/* Ponto 2: Botões principais em cor mais neutra */
-.btn-primary,
-.btn-detalhar,
-.btn-selecionar,
-.btn-sortear,
-.btn-salvar {
-    background-color: #6c757d; /* Cinza escuro neutro */
-    color: white;
-    border: none;
-}
-
-.btn-buscar {
-    
-    margin: 10px 5px;
-    height: 57%;
-}
-
-.btn-primary:hover,
-.btn-buscar:hover,
-.btn-detalhar:hover,
-.btn-selecionar:hover,
-.btn-sortear:hover,
-.btn-salvar:hover {
-    background-color: #5a6268;
-}
-
-/* Manter botões de destaque com cores específicas */
-.btn-success {
-    background-color: #2c6e49; /* Verde escuro */
-    color: white;
-}
-
-.btn-info {
-    background-color: #5bc0de; /* Azul claro */
-    color: white;
-}
-
-.btn-warning {
-    background-color: #f39c12; /* Laranja */
-    color: white;
-}
-
-.btn-danger {
-    background-color: #e74c3c; /* Vermelho */
-    color: white;
-}
-
-/* Ponto 3: Diferenciação para botões lado a lado "Salvar Resultado Final" e "Finalizar Torneio" */
-form .btn-info[type="submit"] {
-    background-color: #5bc0de; /* Azul claro para Salvar Resultado */
-}
-
-a[href*="finalizar_torneio"].btn-success {
-    background-color: #5a6268; /* Verde escuro para Finalizar Torneio */
-}
-
-/* Ponto 4: Cor dos resultados de quartas e semi */
-.placar-historico {
-    color: #5a6268; /* Cinza escuro em vez de vermelho */
-    font-weight: bold;
-}
-
-.final-historico .placar-historico {
-    color: #2c6e49; /* Verde escuro para a final */
-    font-size: 1.3em;
-}
-
-/* Ponto 5: Melhorar posição do botão "Ver detalhes da fase de grupos" */
-.text-center.mb-4 {
-    margin-bottom: 2rem !important; /* Aumenta o espaçamento inferior */
-    padding-bottom: 0.5rem;
-}
-
-/* Ponto 6: Cores para campeões e vice-campeões */
-/* Campeões com verde escuro */
-.card.border-success .card-header {
-    background-color: #2c6e49;
-}
-
-.text-success {
-  color: #2c6e49 !important;
-  font-weight: 800;
-  font-size: larger;
-
-}
-.card.border-success .card-body {
-    color: #2c6e49 !important;
-}
-
-/* Vice-campeões com cinza elegante */
-.card.border-primary .card-header {
-    background-color: #5a6268;
-}
-
-.card.border-primary .card-body .text-primary {
-    color: #5a6268 !important;
-}
-
-/* Ajuste adicional: melhorar contraste em seleção de jogadores */
-.jogador-item.selecionado {
-    background-color: #e9ecef;
-    border-left: 3px solid #2c6e49;
-}
-
-.lista-selecionados li {
-    background-color: #e9ecef;
-    border-left: 3px solid #2c6e49;
-}
-
-/* Ajuste para botões "Salvar Todos os Grupos" */
-#btnSalvarTodos {
-    background-color: #5a6268; /* Cinza neutro */
-    color: white;
-    margin-top: 1rem; /* Mais espaço em cima */
-    margin-bottom: 1.5rem; /* Mais espaço embaixo */
-}
-
-/* Ajuste para botões nas tabelas - consistência visual */
-.table .btn-primary {
-    background-color: #6c757d;
-}
-
-.table .btn-sm {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.875rem;
-}
-
-/* Melhorar visual dos botões "Ver Perfil" e similares */
-.btn-sm.btn-primary {
-    background-color: #6c757d;
-}
-
-/* Ajuste para botão "Cancelar" na seleção de jogadores - tornar vermelho */
-#btnCancelarSelecao, 
-.btn-cancelar,
-.modal-buttons .btn-secondary {
-  background-color: #e74c3c; /* Vermelho */
-  color: white;
-}
-
-#btnCancelarSelecao:hover,
-.btn-cancelar:hover,
-.modal-buttons .btn-secondary:hover {
-  background-color: #d62c1a; /* Vermelho mais escuro no hover */
-}
-
-/* Reduzir espaçamento entre "Salvar Jogos" e "Abrir Fase Eliminatória" */
-#btnSalvarTodos {
-  margin-bottom: 0.1rem; /* Reduz o espaçamento inferior */
-}
-
-.container.text-center.mt-4 {
-  margin-top: 1rem !important; /* Reduz o espaçamento superior */
-}
-
-/* Ajuste adicional para manter o espaçamento consistente */
-.container.text-center.mt-4 #btnAbrirEliminatoria {
-  margin-top: 0;
-  margin-bottom: 1.5rem; /* Mantém um espaçamento adequado abaixo */
-}
-/* Ajustes para o card de pesquisa de jogador na home page */
-.card .d-flex.flex-column.align-items-center.w-50 {
-  width: 70% !important; /* Aumenta a largura do container do formulário */
-}
-
-.card .autocomplete-container {
-  width: 100%;
-  margin-bottom: 15px;
-}
-
-.card #nome_jogador {
-  width: 100%;
-  font-size: 1.1em;
-  padding: 10px 15px;
-  height: 45px;
-}
-
-.card .d-flex.flex-column.align-items-center button[type="submit"] {
-  width: auto;
-  padding: 8px 20px;
-  font-size: 1em;
-}
-
-/* Ajustes responsivos */
-@media (max-width: 768px) {
-  .card .d-flex.flex-column.align-items-center.w-50 {
-      width: 90% !important;
-  }
-}
-
-/* Ajuste adicional para melhorar a aparência do card */
-.card h2.text-center {
-  margin-bottom: 20px;
-}
-
-/* Ajustes revisados para o modal de seleção de jogadores - mais compacto */
-#modalJogadores {
-  align-items: center;
-  justify-content: center;
-}
-
-#modalJogadores .modal-content {
-  width: 850px; /* Largura fixa */
-  min-width: 600px; /* Largura mínima */
-  max-width: 90%; /* Máximo para telas pequenas */
-  max-height: 680px; /* Altura máxima fixa */
-  display: flex;
-  flex-direction: column;
-  border-radius: var(--border-radius);
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
-}
-
-#modalJogadores .modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px 20px;
-  background-color: var(--primary-color);
-  border-radius: var(--border-radius) var(--border-radius) 0 0;
-}
-
-#modalJogadores .modal-header h3 {
-  margin: 0;
-  color: white;
-}
-
-#modalJogadores .modal-close {
-  font-size: 28px;
-  cursor: pointer;
-  color: white;
-  opacity: 0.8;
-  transition: opacity 0.2s;
-}
-
-#modalJogadores .modal-close:hover {
-  opacity: 1;
-}
-
-#modalJogadores .modal-body {
-  padding: 20px;
-  flex: 1;
-  overflow-y: auto;
-}
-
-#modalJogadores #buscarJogador {
-  width: 100%;
-  padding: 10px 15px;
-  margin-bottom: 15px;
-  font-size: 1em;
-  border: 1px solid var(--medium-gray);
-}
-
-#modalJogadores .jogadores-container {
-  display: flex;
-  gap: 20px; /* Espaço moderado entre as duas seções */
-}
-
-#modalJogadores .jogadores-lista-container,
-#modalJogadores .jogadores-selecionados {
-  flex: 1; /* Distribuição igual de espaço */
-}
-
-#modalJogadores .lista-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid #eee;
-}
-
-#modalJogadores .lista-header h4 {
-  margin: 0;
-  font-weight: 600;
-  color: var(--primary-color);
-}
-
-#modalJogadores .jogadores-lista,
-#modalJogadores .jogadores-selecionados > ul {
-  min-height: 280px; /* Altura mais moderada */
-  max-height: 280px; /* Limitar altura fixa */
-  padding: 12px;
-  border: 1px solid rgba(0,0,0,0.1);
-  border-radius: var(--border-radius);
-  background-color: #f9f9f9;
-  overflow-y: auto;
-}
-
-#modalJogadores .jogador-item {
-  display: flex;
-  align-items: center;
-  padding: 8px 10px;
-  margin-bottom: 5px;
-  background-color: white;
-  border-radius: 4px;
-  border: 1px solid #eee;
-  transition: all 0.2s;
-}
-
-#modalJogadores .jogador-item:hover {
-  background-color: #f0f5f0;
-}
-
-#modalJogadores .jogador-item.selecionado {
-  background-color: #e3f2fd;
-  border-color: #90caf9;
-}
-
-#modalJogadores .lista-selecionados {
-  padding: 0;
-  margin: 0;
-  list-style: none;
-}
-
-#modalJogadores .lista-selecionados li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 10px;
-  margin-bottom: 5px;
-  background-color: #e3f2fd;
-  border-radius: 4px;
-  border: 1px solid #90caf9;
-}
-
-#modalJogadores .lista-selecionados button {
-  background: none;
-  border: none;
-  color: #d32f2f;
-  cursor: pointer;
-  font-size: 18px;
-  font-weight: bold;
-  opacity: 0.7;
-}
-
-#modalJogadores .lista-selecionados button:hover {
-  opacity: 1;
-}
-
-#modalJogadores .modal-footer {
-  padding: 15px 20px;
-  background-color: #f8f9fa;
-  border-top: 1px solid #eee;
-  border-radius: 0 0 var(--border-radius) var(--border-radius);
-  display: flex;
-  justify-content: flex-end;
-  gap: 15px;
-}
-
-#modalJogadores .modal-footer button {
-  padding: 8px 18px;
-  font-size: 1em;
-}
-
-/* Melhor responsividade */
-@media (max-width: 768px) {
-  #modalJogadores .modal-content {
-      width: 95%;
-      min-width: unset; /* Remove min-width em telas pequenas */
-      height: 90vh;
-      max-height: 90vh;
-  }
-  
-  #modalJogadores .jogadores-container {
-      flex-direction: column;
-      gap: 15px;
-  }
-  
-  #modalJogadores .jogadores-lista,
-  #modalJogadores .jogadores-selecionados > ul {
-      min-height: 180px;
-      max-height: 200px; /* Menor altura em telas pequenas */
-  }
-}
-.placar-final {
-  font-size: 2em;
-}
-
