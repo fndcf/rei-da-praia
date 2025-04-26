@@ -2,7 +2,7 @@
 import random
 import re
 from datetime import datetime
-from flask import Blueprint, request, redirect, url_for, session, current_app
+from flask import Blueprint, request, redirect, url_for, session, current_app, jsonify
 from database.models import Jogador, Torneio, Confronto, JogadorPermanente, ParticipacaoTorneio
 from database.db import db
 
@@ -668,3 +668,366 @@ def carregar_torneio(torneio_id):
         current_app.logger.error(error_msg, exc_info=True)
         session['erro_validacao'] = error_msg
         return redirect(url_for('main.home'))
+    
+@bp.route('/trocar_jogador', methods=['POST'])
+def trocar_jogador():
+    """Função para trocar um jogador com outro jogador de outro grupo aleatório"""
+    try:
+        # Obter dados da requisição
+        data = request.get_json()
+        jogador_id = data.get('jogador_id')
+        grupo_atual_idx = int(data.get('grupo_atual'))
+        
+        # Verificar se o torneio existe na sessão
+        torneio_id = session.get('torneio_id')
+        if not torneio_id:
+            return jsonify({'success': False, 'error': 'Torneio não encontrado na sessão'}), 400
+        
+        log_action("player_swap_start", f"Jogador ID: {jogador_id}, Grupo atual: {grupo_atual_idx}")
+        
+        # Verificar quantos grupos existem no torneio atual
+        total_grupos = len(session.get('grupos', []))
+        log_action("player_swap_debug", f"Total de grupos na sessão: {total_grupos}")
+        
+        if total_grupos <= 1:
+            log_action("player_swap_error", "Não há grupos suficientes para fazer a troca")
+            return jsonify({
+                'success': False, 
+                'error': 'É necessário ter pelo menos 2 grupos para fazer a troca'
+            }), 400
+        
+        # Verificar se o jogador existe
+        jogador = Jogador.query.get(jogador_id)
+        if not jogador:
+            log_action("player_swap_error", f"Jogador ID {jogador_id} não encontrado")
+            return jsonify({'success': False, 'error': 'Jogador não encontrado'}), 400
+        
+        # Verificar se existem confrontos já registrados
+        confrontos_existentes = Confronto.query.filter(
+            Confronto.torneio_id == torneio_id,
+            db.or_(
+                Confronto.pontos_dupla_a != None, 
+                Confronto.pontos_dupla_b != None
+            )
+        ).first()
+        
+        if confrontos_existentes:
+            log_action("player_swap_error", "Confrontos já registrados impedem a troca")
+            return jsonify({
+                'success': False, 
+                'error': 'Não é possível trocar jogadores após registrar resultados. Você precisa resetar os resultados primeiro.'
+            }), 400
+        
+        # Escolher um grupo de destino diferente do atual
+        # Vamos listar todos os índices de grupos e escolher um diferente
+        grupos_disponiveis = list(range(total_grupos))
+        
+        # Remover o grupo atual das opções
+        if grupo_atual_idx in grupos_disponiveis:
+            grupos_disponiveis.remove(grupo_atual_idx)
+        
+        if not grupos_disponiveis:
+            log_action("player_swap_error", "Não há outros grupos disponíveis")
+            return jsonify({'success': False, 'error': 'Não há outros grupos disponíveis para troca'}), 400
+        
+        # Selecionar um grupo de destino aleatoriamente
+        grupo_destino_idx = random.choice(grupos_disponiveis)
+        
+        log_action("player_swap_destination", f"Grupo destino: {grupo_destino_idx}")
+        
+        if grupo_destino_idx >= len(session['grupos']):
+            log_action("player_swap_error", f"Índice de grupo destino inválido: {grupo_destino_idx}")
+            return jsonify({'success': False, 'error': f'Índice de grupo destino inválido: {grupo_destino_idx}'}), 400
+        
+        # Obter todos os jogadores do grupo de destino da sessão
+        jogadores_destino_sessao = session['grupos'][grupo_destino_idx]
+        
+        if not jogadores_destino_sessao:
+            log_action("player_swap_error", f"Não há jogadores no grupo de destino {grupo_destino_idx}")
+            return jsonify({'success': False, 'error': 'Não há jogadores no grupo de destino'}), 400
+        
+        # Selecionar um jogador aleatório do grupo de destino
+        jogador_destino_sessao = random.choice(jogadores_destino_sessao)
+        jogador_destino_id = jogador_destino_sessao['id']
+        
+        # Verificar se o jogador de destino existe no banco
+        jogador_destino = Jogador.query.get(jogador_destino_id)
+        if not jogador_destino:
+            log_action("player_swap_error", f"Jogador destino ID {jogador_destino_id} não encontrado")
+            return jsonify({'success': False, 'error': 'Jogador destino não encontrado'}), 400
+        
+        log_action("player_swap_target", f"Jogador destino: {jogador_destino.nome} (ID: {jogador_destino.id})")
+        
+        # Fazer a troca dos grupos no banco de dados
+        temp_grupo_idx = jogador.grupo_idx
+        jogador.grupo_idx = jogador_destino.grupo_idx
+        jogador_destino.grupo_idx = temp_grupo_idx
+        
+        # Atualizar os confrontos na sessão
+        # 1. Trocar os jogadores nos grupos
+        jogador_atual_idx = None
+        jogador_destino_idx = None
+        
+        # Encontrar posições dos jogadores nos grupos
+        for i, j in enumerate(session['grupos'][grupo_atual_idx]):
+            if int(j['id']) == int(jogador_id):
+                jogador_atual_idx = i
+                break
+                
+        for i, j in enumerate(session['grupos'][grupo_destino_idx]):
+            if int(j['id']) == int(jogador_destino_id):
+                jogador_destino_idx = i
+                break
+        
+        if jogador_atual_idx is None or jogador_destino_idx is None:
+            log_action("player_swap_error", "Não foi possível encontrar os jogadores nos grupos")
+            return jsonify({'success': False, 'error': 'Não foi possível encontrar os jogadores nos grupos'}), 400
+        
+        # Fazer a troca
+        temp = session['grupos'][grupo_atual_idx][jogador_atual_idx]
+        session['grupos'][grupo_atual_idx][jogador_atual_idx] = session['grupos'][grupo_destino_idx][jogador_destino_idx]
+        session['grupos'][grupo_destino_idx][jogador_destino_idx] = temp
+        
+        # 2. Atualizar os confrontos
+        session['confrontos'] = []
+        
+        for grupo_idx, grupo in enumerate(session['grupos']):
+            confrontos_grupo = gerar_confrontos(grupo)
+            session['confrontos'].append(confrontos_grupo)
+        
+        # Remover os confrontos atuais do banco de dados
+        Confronto.query.filter_by(torneio_id=torneio_id).delete()
+        db.session.flush()
+        
+        # Recriar os confrontos no banco de dados
+        for grupo_idx, grupo_confrontos in enumerate(session['confrontos']):
+            for confronto_idx, confronto in enumerate(grupo_confrontos):
+                novo_confronto = Confronto(
+                    torneio_id=torneio_id,
+                    grupo_idx=grupo_idx,
+                    confronto_idx=confronto_idx,
+                    jogador_a1_id=confronto[0]['id'],
+                    jogador_a2_id=confronto[1]['id'],
+                    jogador_b1_id=confronto[2]['id'],
+                    jogador_b2_id=confronto[3]['id']
+                )
+                db.session.add(novo_confronto)
+            
+            log_action("confrontos_recreated", f"Confrontos recriados para o grupo {grupo_idx}")
+        
+        # Salvar alterações no banco
+        db.session.commit()
+        session.modified = True
+        
+        log_action("player_swap_success", 
+                  f"Troca concluída: Jogador {jogador.nome} movido para grupo {grupo_destino_idx}, "
+                  f"Jogador {jogador_destino.nome} movido para grupo {grupo_atual_idx}")
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Jogadores trocados com sucesso',
+            'novo_grupo': grupo_destino_idx,
+            'jogador_trocado_nome': jogador_destino.nome
+        })
+    
+    except Exception as e:
+        db.session.rollback()
+        error_msg = f"Erro ao trocar jogadores: {str(e)}"
+        current_app.logger.error(error_msg, exc_info=True)
+        return jsonify({'success': False, 'error': error_msg}), 500
+    
+@bp.route('/buscar_jogadores_disponiveis', methods=['GET'])
+def buscar_jogadores_disponiveis():
+    """Endpoint para buscar jogadores que não estão no torneio atual"""
+    try:
+        termo = request.args.get('termo', '')
+        if len(termo) < 2:
+            return jsonify([])
+        
+        torneio_id = session.get('torneio_id')
+        if not torneio_id:
+            return jsonify([])
+        
+        # Obter IDs dos jogadores que já estão no torneio atual
+        jogadores_torneio = Jogador.query.filter_by(torneio_id=torneio_id).all()
+        jogadores_permanentes_ids = [j.jogador_permanente_id for j in jogadores_torneio if j.jogador_permanente_id]
+        
+        # Buscar jogadores permanentes que contenham o termo e não estão no torneio atual
+        jogadores = JogadorPermanente.query.filter(
+            JogadorPermanente.nome.ilike(f'%{termo}%'),
+            ~JogadorPermanente.id.in_(jogadores_permanentes_ids) if jogadores_permanentes_ids else True
+        ).order_by(JogadorPermanente.nome).limit(10).all()
+        
+        # Formatando resultado
+        resultados = [{'id': j.id, 'nome': j.nome} for j in jogadores]
+        
+        return jsonify(resultados)
+    
+    except Exception as e:
+        current_app.logger.error(f"Erro ao buscar jogadores disponíveis: {str(e)}", exc_info=True)
+        return jsonify([])
+
+@bp.route('/substituir_jogador', methods=['POST'])
+def substituir_jogador():
+    """Função para substituir um jogador por outro jogador"""
+    try:
+        # Obter dados da requisição
+        data = request.get_json()
+        jogador_id = data.get('jogador_id')
+        grupo_atual = int(data.get('grupo_atual'))
+        jogador_existente = data.get('jogador_existente', False)
+        novo_jogador_id = data.get('novo_jogador_id')
+        novo_jogador_nome = data.get('novo_jogador_nome', '').strip()
+        
+        # Verificar se o torneio existe na sessão
+        torneio_id = session.get('torneio_id')
+        if not torneio_id:
+            return jsonify({'success': False, 'error': 'Torneio não encontrado na sessão'}), 400
+        
+        log_action("player_substitution_start", 
+                  f"Jogador ID: {jogador_id}, Grupo: {grupo_atual}, " 
+                  f"Usando jogador existente: {jogador_existente}")
+        
+        # Verificar se o jogador a ser substituído existe
+        jogador = Jogador.query.get(jogador_id)
+        if not jogador:
+            log_action("player_substitution_error", f"Jogador ID {jogador_id} não encontrado")
+            return jsonify({'success': False, 'error': 'Jogador não encontrado'}), 400
+        
+        # Verificar se existem confrontos já registrados
+        confrontos_existentes = Confronto.query.filter(
+            Confronto.torneio_id == torneio_id,
+            db.or_(
+                Confronto.pontos_dupla_a != None, 
+                Confronto.pontos_dupla_b != None
+            )
+        ).first()
+        
+        if confrontos_existentes:
+            log_action("player_substitution_error", "Confrontos já registrados impedem a substituição")
+            return jsonify({
+                'success': False, 
+                'error': 'Não é possível substituir jogadores após registrar resultados. Você precisa resetar os resultados primeiro.'
+            }), 400
+        
+        # Obter ou criar o jogador permanente para substituição
+        jogador_permanente_novo = None
+        
+        if jogador_existente and novo_jogador_id:
+            # Usar jogador permanente existente
+            jogador_permanente_novo = JogadorPermanente.query.get(novo_jogador_id)
+            if not jogador_permanente_novo:
+                log_action("player_substitution_error", f"Jogador permanente ID {novo_jogador_id} não encontrado")
+                return jsonify({'success': False, 'error': 'Jogador permanente não encontrado'}), 400
+        else:
+            # Criar novo jogador permanente
+            if not novo_jogador_nome:
+                log_action("player_substitution_error", "Nome do novo jogador não fornecido")
+                return jsonify({'success': False, 'error': 'Nome do novo jogador não fornecido'}), 400
+            
+            # Verificar se já existe um jogador com esse nome
+            jogador_existente = JogadorPermanente.query.filter(
+                JogadorPermanente.nome.ilike(novo_jogador_nome)
+            ).first()
+            
+            if jogador_existente:
+                jogador_permanente_novo = jogador_existente
+                log_action("player_substitution_info", 
+                          f"Usando jogador permanente existente com nome {novo_jogador_nome}")
+            else:
+                # Criar novo jogador permanente
+                jogador_permanente_novo = JogadorPermanente(nome=novo_jogador_nome)
+                db.session.add(jogador_permanente_novo)
+                db.session.flush()
+                log_action("player_substitution_info", 
+                          f"Criado novo jogador permanente: {novo_jogador_nome} (ID: {jogador_permanente_novo.id})")
+        
+        # Verificar se o jogador já está no torneio
+        jogador_ja_no_torneio = Jogador.query.filter_by(
+            torneio_id=torneio_id,
+            jogador_permanente_id=jogador_permanente_novo.id
+        ).first()
+        
+        if jogador_ja_no_torneio:
+            log_action("player_substitution_error", f"Jogador {jogador_permanente_novo.nome} já está no torneio")
+            return jsonify({
+                'success': False, 
+                'error': f'O jogador {jogador_permanente_novo.nome} já está participando do torneio atual'
+            }), 400
+        
+        # Atualizar o jogador no banco de dados
+        nome_antigo = jogador.nome
+        jogador.nome = jogador_permanente_novo.nome
+        jogador.jogador_permanente_id = jogador_permanente_novo.id
+        
+        # Criar ou atualizar a participação no torneio
+        participacao = ParticipacaoTorneio.query.filter_by(
+            jogador_permanente_id=jogador_permanente_novo.id,
+            torneio_id=torneio_id
+        ).first()
+        
+        if not participacao:
+            participacao = ParticipacaoTorneio(
+                jogador_permanente_id=jogador_permanente_novo.id,
+                torneio_id=torneio_id,
+                grupo_idx=grupo_atual
+            )
+            db.session.add(participacao)
+        
+        # Encontrar o jogador na sessão e atualizá-lo
+        for idx, j in enumerate(session['grupos'][grupo_atual]):
+            if int(j['id']) == int(jogador_id):
+                # Atualizar jogador na sessão
+                j['nome'] = jogador_permanente_novo.nome
+                break
+        
+        # Atualizar também no dicionário de jogadores
+        session['jogadores'][jogador_permanente_novo.nome] = session['jogadores'].pop(nome_antigo)
+        session['jogadores'][jogador_permanente_novo.nome]['nome'] = jogador_permanente_novo.nome
+        
+        # Atualizar confrontos na sessão
+        for idx_grupo, grupo_confrontos in enumerate(session['confrontos']):
+            for idx_confronto, confronto in enumerate(grupo_confrontos):
+                for idx_jogador in range(4):
+                    if confronto[idx_jogador]['nome'] == nome_antigo:
+                        session['confrontos'][idx_grupo][idx_confronto][idx_jogador]['nome'] = jogador_permanente_novo.nome
+        
+        # Remover os confrontos atuais do banco de dados
+        Confronto.query.filter_by(torneio_id=torneio_id).delete()
+        db.session.flush()
+        
+        # Recriar os confrontos no banco de dados
+        for grupo_idx, grupo_confrontos in enumerate(session['confrontos']):
+            for confronto_idx, confronto in enumerate(grupo_confrontos):
+                novo_confronto = Confronto(
+                    torneio_id=torneio_id,
+                    grupo_idx=grupo_idx,
+                    confronto_idx=confronto_idx,
+                    jogador_a1_id=session['jogadores'][confronto[0]['nome']]['id'],
+                    jogador_a2_id=session['jogadores'][confronto[1]['nome']]['id'],
+                    jogador_b1_id=session['jogadores'][confronto[2]['nome']]['id'],
+                    jogador_b2_id=session['jogadores'][confronto[3]['nome']]['id']
+                )
+                db.session.add(novo_confronto)
+            
+            log_action("confrontos_recreated", f"Confrontos recriados para o grupo {grupo_idx}")
+        
+        # Salvar alterações no banco
+        db.session.commit()
+        session.modified = True
+        
+        log_action("player_substitution_success", 
+                  f"Substituição concluída: Jogador {nome_antigo} substituído por {jogador_permanente_novo.nome}")
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Jogador substituído com sucesso',
+            'nome_antigo': nome_antigo,
+            'novo_jogador_nome': jogador_permanente_novo.nome
+        })
+    
+    except Exception as e:
+        db.session.rollback()
+        error_msg = f"Erro ao substituir jogador: {str(e)}"
+        current_app.logger.error(error_msg, exc_info=True)
+        return jsonify({'success': False, 'error': error_msg}), 500

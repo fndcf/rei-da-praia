@@ -53,6 +53,12 @@
                     </button>
                 </form>
             </div>
+            <button id="btnTrocarJogador" class="btn btn-warning">
+                Trocar Jogador de Grupo
+            </button>
+            <button id="btnSubstituirJogador" class="btn btn-info">
+                Substituir Jogador
+            </button>
         </div>
         {% else %}
         <!-- Formulário de sorteio normal quando não há grupos -->
@@ -129,6 +135,109 @@
         </form>
         {% endif %}
     </div>
+
+    <!-- Trocar Jogador de grupo -->
+    {% if grupos %}
+    <!-- Modal para Troca de Jogadores -->
+    <div id="modalTrocarJogador" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Trocar Jogador de Grupo</h3>
+                <span class="modal-close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p class="alert alert-info">Selecione <strong>um jogador</strong> para trocá-lo aleatoriamente de grupo.</p>
+                
+                <div class="jogadores-container">
+                    <div class="jogadores-lista-container">
+                        <div class="lista-header">
+                            <h4>Jogadores do Torneio</h4>
+                        </div>
+                        <div class="jogadores-lista" id="listaTrocaJogadores">
+                            <!-- Lista de jogadores agrupados -->
+                            {% for grupo_idx, grupo in enumerate(grupos) %}
+                                <h5 class="mt-3">Grupo {{ grupo_idx + 1 }}</h5>
+                                {% for jogador in grupo %}
+                                    <div class="jogador-item" data-nome="{{ jogador.nome }}" data-id="{{ jogador.id }}" data-grupo="{{ grupo_idx }}">
+                                        <input type="radio" name="jogador_trocar" value="{{ jogador.id }}">
+                                        <span>{{ jogador.nome }}</span>
+                                    </div>
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="btnCancelarTroca">Cancelar</button>
+                <button type="button" class="btn btn-success" id="btnConfirmarTroca">Sortear Troca</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Substituição de Jogador -->
+    {% if grupos %}
+
+    <!-- Modal para Substituição de Jogador -->
+    <div id="modalSubstituirJogador" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Substituir Jogador</h3>
+                <span class="modal-close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p class="alert alert-info">Selecione <strong>um jogador</strong> do torneio para substituí-lo.</p>
+                
+                <!-- Seleção do jogador a ser substituído -->
+                <div class="jogadores-lista" id="listaJogadoresSubstituir">
+                    <!-- Lista de jogadores agrupados -->
+                    {% for grupo_idx, grupo in enumerate(grupos) %}
+                        <h5 class="mt-3">Grupo {{ grupo_idx + 1 }}</h5>
+                        {% for jogador in grupo %}
+                            <div class="jogador-item" data-nome="{{ jogador.nome }}" data-id="{{ jogador.id }}" data-grupo="{{ grupo_idx }}">
+                                <input type="radio" name="jogador_substituir" value="{{ jogador.id }}">
+                                <span>{{ jogador.nome }}</span>
+                            </div>
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+                
+                <div class="form-group mt-4">
+                    <h4>Substituir por:</h4>
+                    
+                    <div class="tabs-container">
+                        <div class="tabs">
+                            <div class="tab active" data-target="jogador-existente">Jogador existente</div>
+                            <div class="tab" data-target="jogador-novo">Novo jogador</div>
+                        </div>
+                        
+                        <div class="tab-content" id="jogador-existente">
+                            <input type="text" id="buscarJogadorSubstituicao" class="form-control mb-2" 
+                                placeholder="Digite para buscar jogadores que não estão no torneio atual...">
+                            
+                            <div class="jogadores-lista" id="listaJogadoresExistentes">
+                                <p class="text-muted">Comece a digitar para buscar jogadores disponíveis...</p>
+                            </div>
+                        </div>
+                        
+                        <div class="tab-content" id="jogador-novo" style="display: none;">
+                            <input type="text" id="novoJogadorNome" class="form-control" 
+                                placeholder="Digite o nome do novo jogador...">
+                            <div id="validacao-novo-jogador" class="text-danger mt-1" style="display: none;">
+                                Este jogador já está no torneio atual.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="btnCancelarSubstituicao">Cancelar</button>
+                <button type="button" class="btn btn-success" id="btnConfirmarSubstituicao">Substituir Jogador</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Listagem de Grupos -->
     {% if grupos %}
@@ -264,6 +373,405 @@
         const modalClose = document.querySelector('.modal-close');
         const btnCancelarSelecao = document.getElementById('btnCancelarSelecao');
         const btnConfirmarSelecao = document.getElementById('btnConfirmarSelecao');
+
+        const btnTrocarJogador = document.getElementById('btnTrocarJogador');
+        const modalTrocarJogador = document.getElementById('modalTrocarJogador');
+        const modalCloseTroca = modalTrocarJogador?.querySelector('.modal-close');
+        const btnCancelarTroca = document.getElementById('btnCancelarTroca');
+        const btnConfirmarTroca = document.getElementById('btnConfirmarTroca');     
+        
+        // Elementos do modal de substituição
+        const btnSubstituirJogador = document.getElementById('btnSubstituirJogador');
+        const modalSubstituirJogador = document.getElementById('modalSubstituirJogador');
+        const modalCloseSubstituir = modalSubstituirJogador?.querySelector('.modal-close');
+        const btnCancelarSubstituicao = document.getElementById('btnCancelarSubstituicao');
+        const btnConfirmarSubstituicao = document.getElementById('btnConfirmarSubstituicao');
+        
+        // Elementos das abas
+        const tabs = modalSubstituirJogador?.querySelectorAll('.tab');
+        const tabContents = modalSubstituirJogador?.querySelectorAll('.tab-content');
+        
+        // Elementos para busca e validação
+        const buscarJogadorSubstituicao = document.getElementById('buscarJogadorSubstituicao');
+        const novoJogadorNome = document.getElementById('novoJogadorNome');
+        const validacaoNovoJogador = document.getElementById('validacao-novo-jogador');
+
+    // Inicialização de variáveis
+    let modoSubstituicao = 'jogador-existente'; // Padrão: substituir por jogador existente
+    
+    // Obter nomes de jogadores atuais do torneio para validação
+    const jogadoresAtuais = [];
+    document.querySelectorAll('#listaJogadoresSubstituir .jogador-item').forEach(item => {
+        jogadoresAtuais.push(item.dataset.nome.toLowerCase());
+    });
+
+    // Abrir modal de substituição
+    if (btnSubstituirJogador && modalSubstituirJogador) {
+        btnSubstituirJogador.addEventListener('click', function() {
+            // Limpar seleção anterior
+            const radios = document.querySelectorAll('input[name="jogador_substituir"]');
+            radios.forEach(radio => radio.checked = false);
+            
+            // Limpar campos de busca e novo jogador
+            if (buscarJogadorSubstituicao) buscarJogadorSubstituicao.value = '';
+            if (novoJogadorNome) novoJogadorNome.value = '';
+            if (validacaoNovoJogador) validacaoNovoJogador.style.display = 'none';
+            
+            // Resetar para a primeira aba
+            if (tabs && tabs.length > 0) {
+                tabs.forEach(tab => tab.classList.remove('active'));
+                tabs[0].classList.add('active');
+                
+                if (tabContents) {
+                    tabContents.forEach(content => content.style.display = 'none');
+                    document.getElementById('jogador-existente').style.display = 'block';
+                }
+                
+                modoSubstituicao = 'jogador-existente';
+            }
+            
+            // Limpar lista de jogadores existentes
+            const listaJogadoresExistentes = document.getElementById('listaJogadoresExistentes');
+            if (listaJogadoresExistentes) {
+                listaJogadoresExistentes.innerHTML = '<p class="text-muted">Comece a digitar para buscar jogadores disponíveis...</p>';
+            }
+            
+            // Abrir modal
+            modalSubstituirJogador.style.display = 'flex';
+        });
+    }
+    
+    // Alternar entre as abas
+    if (tabs) {
+        tabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                const target = this.dataset.target;
+                
+                // Atualizar abas ativas
+                tabs.forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Mostrar conteúdo correspondente
+                if (tabContents) {
+                    tabContents.forEach(content => content.style.display = 'none');
+                    document.getElementById(target).style.display = 'block';
+                }
+                
+                modoSubstituicao = target;
+            });
+        });
+    }
+    
+    // Fechar modal de substituição
+    if (modalCloseSubstituir) {
+        modalCloseSubstituir.addEventListener('click', function() {
+            modalSubstituirJogador.style.display = 'none';
+        });
+    }
+    
+    if (btnCancelarSubstituicao) {
+        btnCancelarSubstituicao.addEventListener('click', function() {
+            modalSubstituirJogador.style.display = 'none';
+        });
+    }
+    
+    // Fechar modal ao clicar fora
+    window.addEventListener('click', function(event) {
+        if (event.target === modalSubstituirJogador) {
+            modalSubstituirJogador.style.display = 'none';
+        }
+    });
+    
+    // Tratar clique nos itens de jogador (para facilitar a seleção)
+    document.querySelectorAll('#listaJogadoresSubstituir .jogador-item').forEach(item => {
+        item.addEventListener('click', function() {
+            // Encontrar o radio button dentro deste item
+            const radio = this.querySelector('input[type="radio"]');
+            if (radio) {
+                // Desmarcar todos os outros
+                document.querySelectorAll('input[name="jogador_substituir"]').forEach(r => r.checked = false);
+                // Marcar este
+                radio.checked = true;
+            }
+        });
+    });
+    
+    // Buscar jogadores para substituição
+    if (buscarJogadorSubstituicao) {
+        buscarJogadorSubstituicao.addEventListener('input', function() {
+            const termo = this.value.trim();
+            
+            // Se o termo tiver pelo menos 2 caracteres, buscar
+            if (termo.length >= 2) {
+                buscarJogadoresDisponiveis(termo);
+            } else if (termo.length === 0) {
+                // Se o termo estiver vazio, limpar a lista
+                const listaJogadoresExistentes = document.getElementById('listaJogadoresExistentes');
+                if (listaJogadoresExistentes) {
+                    listaJogadoresExistentes.innerHTML = '<p class="text-muted">Comece a digitar para buscar jogadores disponíveis...</p>';
+                }
+            }
+        });
+    }
+    
+    // Validação do nome do novo jogador
+    if (novoJogadorNome) {
+        novoJogadorNome.addEventListener('input', function() {
+            const nome = this.value.trim().toLowerCase();
+            
+            if (nome.length > 0 && jogadoresAtuais.includes(nome)) {
+                validacaoNovoJogador.style.display = 'block';
+                btnConfirmarSubstituicao.disabled = true;
+            } else {
+                validacaoNovoJogador.style.display = 'none';
+                btnConfirmarSubstituicao.disabled = false;
+            }
+        });
+    }
+    
+    // Processar a substituição quando o botão for clicado
+    if (btnConfirmarSubstituicao) {
+        btnConfirmarSubstituicao.addEventListener('click', function() {
+            // Verificar se um jogador a ser substituído foi selecionado
+            const radioSelecionado = document.querySelector('input[name="jogador_substituir"]:checked');
+            
+            if (!radioSelecionado) {
+                alert('Por favor, selecione um jogador para substituir.');
+                return;
+            }
+            
+            // Obter o ID do jogador e seu grupo atual
+            const jogadorItem = radioSelecionado.closest('.jogador-item');
+            const jogadorId = jogadorItem.dataset.id;
+            const grupoAtual = jogadorItem.dataset.grupo;
+            const jogadorNomeAntigo = jogadorItem.dataset.nome;
+            
+            let novoJogadorId = null;
+            let novoJogadorNomeVal = '';
+            
+            if (modoSubstituicao === 'jogador-existente') {
+                // Verificar se um jogador existente foi selecionado
+                const radioJogadorExistente = document.querySelector('input[name="jogador_substituicao"]:checked');
+                
+                if (!radioJogadorExistente) {
+                    alert('Por favor, selecione um jogador existente para fazer a substituição.');
+                    return;
+                }
+                
+                novoJogadorId = radioJogadorExistente.value;
+                novoJogadorNomeVal = radioJogadorExistente.dataset.nome;
+            } else {
+                // Verificar se um nome foi digitado para o novo jogador
+                novoJogadorNomeVal = novoJogadorNome.value.trim();
+                
+                if (!novoJogadorNomeVal) {
+                    alert('Por favor, digite um nome para o novo jogador.');
+                    return;
+                }
+                
+                // Verificar se o nome já existe no torneio
+                if (jogadoresAtuais.includes(novoJogadorNomeVal.toLowerCase())) {
+                    alert('Este jogador já está participando do torneio atual.');
+                    return;
+                }
+            }
+            
+            // Mostrar carregamento
+            btnConfirmarSubstituicao.disabled = true;
+            btnConfirmarSubstituicao.innerHTML = '<span class="spinner">⌛</span> Processando...';
+            
+            // Fazer requisição para a API
+            fetch('/substituir_jogador', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    jogador_id: jogadorId,
+                    grupo_atual: grupoAtual,
+                    jogador_existente: modoSubstituicao === 'jogador-existente',
+                    novo_jogador_id: novoJogadorId,
+                    novo_jogador_nome: novoJogadorNomeVal
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erro na resposta do servidor: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Exibir mensagem de sucesso
+                    alert(`O jogador ${jogadorNomeAntigo} foi substituído por ${data.novo_jogador_nome} no Grupo ${parseInt(grupoAtual) + 1}.`);
+                    
+                    // Recarregar a página para mostrar os novos grupos
+                    window.location.reload();
+                } else {
+                    throw new Error(data.error || 'Erro desconhecido ao substituir jogador.');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Falha ao substituir jogador: ' + error.message);
+                btnConfirmarSubstituicao.disabled = false;
+                btnConfirmarSubstituicao.innerHTML = 'Substituir Jogador';
+            });
+        });
+    }
+    
+    // Função para buscar jogadores disponíveis
+    function buscarJogadoresDisponiveis(termo) {
+        const listaJogadoresExistentes = document.getElementById('listaJogadoresExistentes');
+        if (!listaJogadoresExistentes) return;
+        
+        // Exibir estado de carregamento
+        listaJogadoresExistentes.innerHTML = '<p class="text-center"><i>Buscando jogadores disponíveis...</i></p>';
+        
+        // Fazer a requisição AJAX para buscar jogadores que não estão no torneio atual
+        fetch(`/buscar_jogadores_disponiveis?termo=${encodeURIComponent(termo)}`)
+            .then(response => response.json())
+            .then(data => {
+                // Verificar se temos jogadores para exibir
+                if (data.length === 0) {
+                    listaJogadoresExistentes.innerHTML = '<p class="text-center">Nenhum jogador disponível encontrado</p>';
+                    return;
+                }
+                
+                // Construir a lista de jogadores
+                let html = '';
+                data.forEach(jogador => {
+                    html += `
+                        <div class="jogador-item" data-nome="${jogador.nome}">
+                            <input type="radio" name="jogador_substituicao" value="${jogador.id}" data-nome="${jogador.nome}">
+                            <span>${jogador.nome}</span>
+                        </div>
+                    `;
+                });
+                
+                listaJogadoresExistentes.innerHTML = html;
+                
+                // Adicionar evento de clique para os itens
+                listaJogadoresExistentes.querySelectorAll('.jogador-item').forEach(item => {
+                    item.addEventListener('click', function() {
+                        const radio = this.querySelector('input[type="radio"]');
+                        if (radio) {
+                            document.querySelectorAll('input[name="jogador_substituicao"]').forEach(r => r.checked = false);
+                            radio.checked = true;
+                        }
+                    });
+                });
+            })
+            .catch(error => {
+                console.error('Erro ao buscar jogadores:', error);
+                listaJogadoresExistentes.innerHTML = '<p class="text-center text-danger">Erro ao buscar jogadores</p>';
+            });
+    }
+
+    // Abrir modal de troca
+    if (btnTrocarJogador && modalTrocarJogador) {
+        btnTrocarJogador.addEventListener('click', function() {
+            // Limpar seleção anterior
+            const radios = document.querySelectorAll('input[name="jogador_trocar"]');
+            radios.forEach(radio => radio.checked = false);
+            
+            // Abrir modal
+            modalTrocarJogador.style.display = 'flex';
+        });
+    }
+
+    // Fechar modal de troca
+    if (modalCloseTroca) {
+        modalCloseTroca.addEventListener('click', function() {
+            modalTrocarJogador.style.display = 'none';
+        });
+    }
+
+    if (btnCancelarTroca) {
+        btnCancelarTroca.addEventListener('click', function() {
+            modalTrocarJogador.style.display = 'none';
+        });
+    }
+
+    // Fechar modal ao clicar fora
+    window.addEventListener('click', function(event) {
+        if (event.target === modalTrocarJogador) {
+            modalTrocarJogador.style.display = 'none';
+        }
+    });
+
+    // Tratar clique nos itens de jogador (para facilitar a seleção)
+    document.querySelectorAll('#listaTrocaJogadores .jogador-item').forEach(item => {
+        item.addEventListener('click', function() {
+            // Encontrar o radio button dentro deste item
+            const radio = this.querySelector('input[type="radio"]');
+            if (radio) {
+                // Desmarcar todos os outros
+                document.querySelectorAll('input[name="jogador_trocar"]').forEach(r => r.checked = false);
+                // Marcar este
+                radio.checked = true;
+            }
+        });
+    });
+
+    // Processar a troca quando o botão for clicado
+    if (btnConfirmarTroca) {
+        btnConfirmarTroca.addEventListener('click', function() {
+            // Verificar se um jogador foi selecionado
+            const radioSelecionado = document.querySelector('input[name="jogador_trocar"]:checked');
+            
+            if (!radioSelecionado) {
+                alert('Por favor, selecione um jogador para trocar de grupo.');
+                return;
+            }
+            
+            // Obter o ID do jogador e seu grupo atual
+            const jogadorItem = radioSelecionado.closest('.jogador-item');
+            const jogadorId = jogadorItem.dataset.id;
+            const grupoAtual = jogadorItem.dataset.grupo;
+            const jogadorNome = jogadorItem.dataset.nome;
+            
+            // Mostrar carregamento
+            btnConfirmarTroca.disabled = true;
+            btnConfirmarTroca.innerHTML = '<span class="spinner">⌛</span> Processando...';
+            
+            // Fazer requisição para a API
+            fetch('/trocar_jogador', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    jogador_id: jogadorId,
+                    grupo_atual: grupoAtual
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erro na resposta do servidor: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Exibir mensagem de sucesso
+                    alert(`O jogador ${jogadorNome} foi movido do Grupo ${parseInt(grupoAtual) + 1} para o Grupo ${data.novo_grupo + 1}.\n\nO jogador ${data.jogador_trocado_nome} foi movido para o Grupo ${parseInt(grupoAtual) + 1}.`);
+                    
+                    // Recarregar a página para mostrar os novos grupos
+                    window.location.reload();
+                } else {
+                    throw new Error(data.error || 'Erro desconhecido ao trocar jogador.');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Falha ao trocar jogador: ' + error.message);
+                btnConfirmarTroca.disabled = false;
+                btnConfirmarTroca.innerHTML = 'Sortear Troca';
+            });
+        });
+    }    
+
 
     // Verificar se temos grupos
     const existemGrupos = {% if grupos %}true{% else %}false{% endif %};
