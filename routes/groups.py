@@ -32,6 +32,7 @@ def criar_grupos(jogadores, modo):
     """Divide os jogadores em grupos de 4 com logging"""
     random.shuffle(jogadores)
     num_groups = {
+        '16j': (16, 4),
         '20j': (20, 5),
         '24j': (24, 6),
         '28j': (28, 7),
@@ -80,7 +81,7 @@ def sorteio():
                 if nome.strip() and re.match(r'^[a-zA-ZÀ-ú0-9\s,]+$', nome.strip())]
         
         expected_players = {
-            '20j': 20, '24j': 24, 
+            '16j': 16,'20j': 20, '24j': 24, 
             '28j': 28, '32j': 32
         }.get(modo, 28)
         

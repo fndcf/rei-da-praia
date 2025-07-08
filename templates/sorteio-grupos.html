@@ -67,6 +67,7 @@
                 <label for="modo_torneio" class="form-text">Formato do Torneio:</label>
                 <select id="modo_torneio" name="modo_torneio" class="form-control" required>
                     <option value="">Selecione o formato</option>
+                    <option value="16j" {% if modo_torneio == '16j' %}selected{% endif %}>16 Jogadores (4 grupos de 4)</option>
                     <option value="20j" {% if modo_torneio == '20j' %}selected{% endif %}>20 Jogadores (5 grupos de 4)</option>
                     <option value="24j" {% if modo_torneio == '24j' %}selected{% endif %}>24 Jogadores (6 grupos de 4)</option>
                     <option value="28j" {% if modo_torneio == '28j' %}selected{% endif %}>28 Jogadores (7 grupos de 4)</option>
@@ -1244,7 +1245,9 @@
                 
                 // Número esperado de jogadores
                 let numEsperado;
-                if (modo === '20j') {
+                if (modo === '16j') {
+                    numEsperado = 16;
+                } else if (modo === '20j') {
                     numEsperado = 20;
                 } else if (modo === '24j') {
                     numEsperado = 24;
@@ -1399,7 +1402,9 @@
             }
             
             let numJogadores;
-            if (modo === '20j') {
+            if (modo === '16j') {
+                numJogadores = 16;
+            } else if (modo === '20j') {
                 numJogadores = 20;
             } else if (modo === '24j') {
                 numJogadores = 24;
@@ -1426,7 +1431,9 @@
             if (!modo) return;
             
             let numEsperado;
-            if (modo === '20j') {
+            if (modo === '16j') {
+                numEsperado = 16;
+            } else if (modo === '20j') {
                 numEsperado = 20;
             } else if (modo === '24j') {
                 numEsperado = 24;

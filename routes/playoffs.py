@@ -48,6 +48,7 @@ def fase_eliminatoria():
         # Verificar modo do torneio para determinar número de grupos
         modo = session.get('modo_torneio', '28j')
         total_grupos_esperados = {
+            '16j': 4,
             '20j': 5,
             '24j': 6,
             '28j': 7,
@@ -121,6 +122,18 @@ def fase_eliminatoria():
 
         # Configuração centralizada para todos os modos
         config = {
+            '16j': {
+                'semi_finais': [
+                    {'timeA': [get_jogador_safe(primeiros, 0), get_jogador_safe(primeiros, 1)],
+                     'timeB': [get_jogador_safe(segundos, 2), get_jogador_safe(segundos, 3)], 
+                     'jogo': 1},
+                    {'timeA': [get_jogador_safe(primeiros, 2), get_jogador_safe(primeiros, 3)],
+                     'timeB': [get_jogador_safe(segundos, 0), get_jogador_safe(segundos, 1)], 
+                     'jogo': 2},
+                ],
+                'required_players': {'primeiros': 4, 'segundos': 4},
+                'final_jogo': 3
+            },
             '20j': {
                 'quartas': [
                     {'timeA': [get_jogador_safe(segundos, 1), get_jogador_safe(segundos, 2)],

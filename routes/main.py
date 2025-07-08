@@ -40,6 +40,7 @@ def home():
 
     # Define um mapeamento para o número de jogadores
     modos_descricao = {
+        '16j': '16 Jogadores',
         '20j': '20 Jogadores',
         '24j': '24 Jogadores',
         '28j': '28 Jogadores',
@@ -66,7 +67,9 @@ def home():
         # Contar jogadores para determinar o modo
         jogadores_count = Jogador.query.filter_by(torneio_id=torneio.id).count()
         
-        if jogadores_count <= 20:
+        if jogadores_count <= 16:
+            modo_torneio_dict[torneio.id] = modos_descricao['16j']
+        elif jogadores_count <= 20:
             modo_torneio_dict[torneio.id] = modos_descricao['20j']
         elif jogadores_count <= 24:
             modo_torneio_dict[torneio.id] = modos_descricao['24j']
@@ -127,7 +130,7 @@ def novo_torneio():
     try:
         # Inicialização de sessão
         session.setdefault('valores_salvos', {})
-        modos_validos = ['20j', '24j', '28j', '32j']
+        modos_validos = ['16j','20j', '24j', '28j', '32j']
         modo_atual = session.get('modo_torneio', '28j')
         
         # Verificar se existe um torneio em andamento
@@ -180,6 +183,7 @@ def novo_torneio():
             torneio_em_andamento=torneio_em_andamento,
             nome_torneio=nome_torneio,
             modos_disponiveis=[
+                {'value': '16j', 'text': '16 Jogadores (4 grupos de 4)'},
                 {'value': '20j', 'text': '20 Jogadores (5 grupos de 4)'},
                 {'value': '24j', 'text': '24 Jogadores (6 grupos de 4)'},
                 {'value': '28j', 'text': '28 Jogadores (7 grupos de 4)'},
@@ -328,6 +332,7 @@ def detalhes_torneio(torneio_id):
     
     # Calcular o modo do torneio baseado no número de grupos
     modo_torneio = {
+        4: '16j',
         5: '20j',
         6: '24j',
         7: '28j',
