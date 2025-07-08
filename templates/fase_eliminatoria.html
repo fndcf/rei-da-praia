@@ -91,7 +91,8 @@
         <div class="historico-container card">
             <h2>Histórico de Jogos</h2>
             
-            <!-- Quartas de Final -->
+            <!-- Quartas de Final (não mostra para 16j) -->
+            {% if modo_torneio != '16j' %}
             {% for key, jogo in historico_jogos.items() if 'Quartas' in key %}
             <div class="fase-historico">
                 {% if loop.first %}
@@ -110,6 +111,7 @@
                 </div>
             </div>
             {% endfor %}
+            {% endif %}
             
             <!-- Semi-Finais -->
             {% for key, jogo in historico_jogos.items() if 'Semi' in key %}
@@ -150,8 +152,8 @@
             {% endif %}
         </div>
         
-        <!-- Fase Eliminatória (Quartas) -->
-        {% if confrontos and not semi_finais %}
+        <!-- Fase Eliminatória (Quartas) - Não mostra para 16j -->
+        {% if confrontos and not semi_finais and modo_torneio != '16j' %}
         <section class="mt-4">
             <h2>
                 {% if modo_torneio == '20j' %}

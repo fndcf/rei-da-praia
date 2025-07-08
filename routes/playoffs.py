@@ -194,19 +194,29 @@ def fase_eliminatoria():
             current_app.logger.error(f"Modo de torneio inválido: {modo}")
             flash("Modo de torneio inválido", "error")
             return redirect(url_for('main.novo_torneio'))
-
-        # Validação de jogadores suficientes
-        req = config['required_players']
-        if len(primeiros) < req['primeiros'] or len(segundos) < req['segundos']:
-            error_msg = (f"Jogadores insuficientes para modo {modo}. "
-                       f"Necessário: {req['primeiros']}P/{req['segundos']}S. "
-                       f"Encontrado: {len(primeiros)}P/{len(segundos)}S")
-            current_app.logger.error(error_msg)
-            flash("Erro: Configuração de torneio incompleta", "error")
-            return redirect(url_for('main.novo_torneio'))
+        
+        if modo == '16j':
+            # Para 16j, só precisamos dos 4 primeiros e 4 segundos colocados
+            if len(primeiros) < 4 or len(segundos) < 4:
+                error_msg = (f"Jogadores insuficientes para modo {modo}. "
+                        f"Necessário: 4 primeiros/4 segundos. "
+                        f"Encontrado: {len(primeiros)} primeiros/{len(segundos)} segundos")
+                current_app.logger.error(error_msg)
+                flash("Erro: Configuração de torneio incompleta", "error")
+                return redirect(url_for('main.novo_torneio'))
+        else:
+            # Validação normal para outros modos
+            req = config['required_players']
+            if len(primeiros) < req['primeiros'] or len(segundos) < req['segundos']:
+                error_msg = (f"Jogadores insuficientes para modo {modo}. "
+                        f"Necessário: {req['primeiros']}P/{req['segundos']}S. "
+                        f"Encontrado: {len(primeiros)}P/{len(segundos)}S")
+                current_app.logger.error(error_msg)
+                flash("Erro: Configuração de torneio incompleta", "error")
+                return redirect(url_for('main.novo_torneio'))
 
         # Geração de confrontos
-        confrontos = config['quartas']
+        confrontos = config.get('quartas', [])
         historico_jogos = {}
         semi_finais = []
         final = None
@@ -223,76 +233,97 @@ def fase_eliminatoria():
                 }
 
         # Geração das semi-finais (se todas quartas estiverem salvas)
-        if all(f'eliminatoria_jogo{j["jogo"]}' in session for j in confrontos):
-            if modo == '20j':
-                vencedor_jogo1 = 'timeA' if session['eliminatoria_jogo1']['timeA'] > session['eliminatoria_jogo1']['timeB'] else 'timeB'
-                
-                semi_finais = [
-                    {
-                        'timeA': [get_jogador_safe(primeiros, 0), get_jogador_safe(primeiros, 1)],
-                        'timeB': confrontos[0][vencedor_jogo1],
-                        'jogo': 2
-                    },
-                    {
-                        'timeA': [get_jogador_safe(primeiros, 2), get_jogador_safe(primeiros, 3)],
-                        'timeB': [get_jogador_safe(primeiros, 4), get_jogador_safe(segundos, 0)],
-                        'jogo': 3
-                    }
-                ]
+        historico_jogos = {}
+        semi_finais = []
+        final = None
 
-            elif modo == '24j':
-                vencedor_jogo1 = 'timeA' if session['eliminatoria_jogo1']['timeA'] > session['eliminatoria_jogo1']['timeB'] else 'timeB'
-                vencedor_jogo2 = 'timeA' if session['eliminatoria_jogo2']['timeA'] > session['eliminatoria_jogo2']['timeB'] else 'timeB'
-                
-                semi_finais = [
-                    {
-                        'timeA': [get_jogador_safe(primeiros, 0), get_jogador_safe(primeiros, 1)],
-                        'timeB': confrontos[0][vencedor_jogo1],
-                        'jogo': 3
-                    },
-                    {
-                        'timeA': [get_jogador_safe(primeiros, 2), get_jogador_safe(primeiros, 3)],
-                        'timeB': confrontos[1][vencedor_jogo2],
-                        'jogo': 4
+        # Para 16 jogadores, pular quartas e ir direto para semi-finais
+        if modo == '16j':
+            # Usar as semi-finais definidas na configuração
+            semi_finais = config['semi_finais']
+        else:
+            # Processa histórico das quartas para outros modos
+            for jogo in confrontos:
+                jogo_key = f'eliminatoria_jogo{jogo["jogo"]}'
+                if jogo_key in session:
+                    historico_jogos[f'Quartas - Jogo {jogo["jogo"]}'] = {
+                        'timeA': session[jogo_key]['timeA'],
+                        'timeB': session[jogo_key]['timeB'],
+                        'timeA_nomes': [j['nome'] for j in jogo['timeA']],
+                        'timeB_nomes': [j['nome'] for j in jogo['timeB']]
                     }
-                ]
 
-            elif modo == '28j':
-                vencedor_jogo1 = 'timeA' if session['eliminatoria_jogo1']['timeA'] > session['eliminatoria_jogo1']['timeB'] else 'timeB'
-                vencedor_jogo2 = 'timeA' if session['eliminatoria_jogo2']['timeA'] > session['eliminatoria_jogo2']['timeB'] else 'timeB'
-                vencedor_jogo3 = 'timeA' if session['eliminatoria_jogo3']['timeA'] > session['eliminatoria_jogo3']['timeB'] else 'timeB'
-                
-                semi_finais = [
-                    {
-                        'timeA': [get_jogador_safe(primeiros, 0), get_jogador_safe(primeiros, 1)],
-                        'timeB': confrontos[0][vencedor_jogo1],
-                        'jogo': 4
-                    },
-                    {
-                        'timeA': confrontos[1][vencedor_jogo2],
-                        'timeB': confrontos[2][vencedor_jogo3],
-                        'jogo': 5
-                    }
-                ]
+            # Geração das semi-finais (se todas quartas estiverem salvas)
+            if all(f'eliminatoria_jogo{j["jogo"]}' in session for j in confrontos):
+                if modo == '20j':
+                    vencedor_jogo1 = 'timeA' if session['eliminatoria_jogo1']['timeA'] > session['eliminatoria_jogo1']['timeB'] else 'timeB'
+                    
+                    semi_finais = [
+                        {
+                            'timeA': [get_jogador_safe(primeiros, 0), get_jogador_safe(primeiros, 1)],
+                            'timeB': confrontos[0][vencedor_jogo1],
+                            'jogo': 2
+                        },
+                        {
+                            'timeA': [get_jogador_safe(primeiros, 2), get_jogador_safe(primeiros, 3)],
+                            'timeB': [get_jogador_safe(primeiros, 4), get_jogador_safe(segundos, 0)],
+                            'jogo': 3
+                        }
+                    ]
 
-            elif modo == '32j':
-                vencedor_jogo1 = 'timeA' if session['eliminatoria_jogo1']['timeA'] > session['eliminatoria_jogo1']['timeB'] else 'timeB'
-                vencedor_jogo2 = 'timeA' if session['eliminatoria_jogo2']['timeA'] > session['eliminatoria_jogo2']['timeB'] else 'timeB'
-                vencedor_jogo3 = 'timeA' if session['eliminatoria_jogo3']['timeA'] > session['eliminatoria_jogo3']['timeB'] else 'timeB'
-                vencedor_jogo4 = 'timeA' if session['eliminatoria_jogo4']['timeA'] > session['eliminatoria_jogo4']['timeB'] else 'timeB'
-                
-                semi_finais = [
-                    {
-                        'timeA': confrontos[0][vencedor_jogo1],
-                        'timeB': confrontos[1][vencedor_jogo2],
-                        'jogo': 5
-                    },
-                    {
-                        'timeA': confrontos[2][vencedor_jogo3],
-                        'timeB': confrontos[3][vencedor_jogo4],
-                        'jogo': 6
-                    }
-                ]
+                elif modo == '24j':
+                    vencedor_jogo1 = 'timeA' if session['eliminatoria_jogo1']['timeA'] > session['eliminatoria_jogo1']['timeB'] else 'timeB'
+                    vencedor_jogo2 = 'timeA' if session['eliminatoria_jogo2']['timeA'] > session['eliminatoria_jogo2']['timeB'] else 'timeB'
+                    
+                    semi_finais = [
+                        {
+                            'timeA': [get_jogador_safe(primeiros, 0), get_jogador_safe(primeiros, 1)],
+                            'timeB': confrontos[0][vencedor_jogo1],
+                            'jogo': 3
+                        },
+                        {
+                            'timeA': [get_jogador_safe(primeiros, 2), get_jogador_safe(primeiros, 3)],
+                            'timeB': confrontos[1][vencedor_jogo2],
+                            'jogo': 4
+                        }
+                    ]
+
+                elif modo == '28j':
+                    vencedor_jogo1 = 'timeA' if session['eliminatoria_jogo1']['timeA'] > session['eliminatoria_jogo1']['timeB'] else 'timeB'
+                    vencedor_jogo2 = 'timeA' if session['eliminatoria_jogo2']['timeA'] > session['eliminatoria_jogo2']['timeB'] else 'timeB'
+                    vencedor_jogo3 = 'timeA' if session['eliminatoria_jogo3']['timeA'] > session['eliminatoria_jogo3']['timeB'] else 'timeB'
+                    
+                    semi_finais = [
+                        {
+                            'timeA': [get_jogador_safe(primeiros, 0), get_jogador_safe(primeiros, 1)],
+                            'timeB': confrontos[0][vencedor_jogo1],
+                            'jogo': 4
+                        },
+                        {
+                            'timeA': confrontos[1][vencedor_jogo2],
+                            'timeB': confrontos[2][vencedor_jogo3],
+                            'jogo': 5
+                        }
+                    ]
+
+                elif modo == '32j':
+                    vencedor_jogo1 = 'timeA' if session['eliminatoria_jogo1']['timeA'] > session['eliminatoria_jogo1']['timeB'] else 'timeB'
+                    vencedor_jogo2 = 'timeA' if session['eliminatoria_jogo2']['timeA'] > session['eliminatoria_jogo2']['timeB'] else 'timeB'
+                    vencedor_jogo3 = 'timeA' if session['eliminatoria_jogo3']['timeA'] > session['eliminatoria_jogo3']['timeB'] else 'timeB'
+                    vencedor_jogo4 = 'timeA' if session['eliminatoria_jogo4']['timeA'] > session['eliminatoria_jogo4']['timeB'] else 'timeB'
+                    
+                    semi_finais = [
+                        {
+                            'timeA': confrontos[0][vencedor_jogo1],
+                            'timeB': confrontos[1][vencedor_jogo2],
+                            'jogo': 5
+                        },
+                        {
+                            'timeA': confrontos[2][vencedor_jogo3],
+                            'timeB': confrontos[3][vencedor_jogo4],
+                            'jogo': 6
+                        }
+                    ]
 
             # Processa histórico das semi-finais
             for jogo in semi_finais:
@@ -308,8 +339,19 @@ def fase_eliminatoria():
             # Geração da final (se todas semi-finais estiverem salvas)
             if all(f'eliminatoria_jogo{j["jogo"]}' in session for j in semi_finais):
                 final_jogo = config['final_jogo']
-                
-                if modo == '20j':
+
+                if modo == '16j':
+                    # Para 16j, os jogos das semi são 1 e 2, final é 3
+                    vencedor_jogo1 = 'timeA' if session['eliminatoria_jogo1']['timeA'] > session['eliminatoria_jogo1']['timeB'] else 'timeB'
+                    vencedor_jogo2 = 'timeA' if session['eliminatoria_jogo2']['timeA'] > session['eliminatoria_jogo2']['timeB'] else 'timeB'
+                    
+                    final = {
+                        'timeA': semi_finais[0][vencedor_jogo1],
+                        'timeB': semi_finais[1][vencedor_jogo2],
+                        'jogo': final_jogo
+                    }
+
+                elif modo == '20j':
                     vencedor_jogo2 = 'timeA' if session['eliminatoria_jogo2']['timeA'] > session['eliminatoria_jogo2']['timeB'] else 'timeB'
                     vencedor_jogo3 = 'timeA' if session['eliminatoria_jogo3']['timeA'] > session['eliminatoria_jogo3']['timeB'] else 'timeB'
                     
@@ -393,6 +435,9 @@ def salvar_eliminatorias():
         torneio_id = session.get('torneio_id')
         log_playoff_action("save_quarterfinals_start")
 
+        if modo == '16j':
+            return redirect(url_for('playoffs.fase_eliminatoria'))
+
         num_jogos = {'20j':1, '24j':2, '28j':3, '32j':4}.get(modo, 3)
         
         for jogo in range(1, num_jogos + 1):
@@ -471,7 +516,10 @@ def salvar_semi_finais():
     try:
         modo = request.form.get('modo', '28j')
         torneio_id = session.get('torneio_id')
-        inicio_semis = {'20j':2, '24j':3, '28j':4, '32j':5}.get(modo, 4)
+        if modo == '16j':
+            inicio_semis = 1
+        else:
+            inicio_semis = {'20j':2, '24j':3, '28j':4, '32j':5}.get(modo, 4)
         log_playoff_action("save_semifinals_start", f"Jogos: {inicio_semis}-{inicio_semis+1}")
 
         for jogo in [inicio_semis, inicio_semis + 1]:
@@ -547,7 +595,7 @@ def salvar_final():
     try:
         modo = request.form.get('modo', '28j')
         torneio_id = session.get('torneio_id')
-        jogo_final = {'20j':4, '24j':5, '28j':6, '32j':7}.get(modo, 6)
+        jogo_final = {'16j':3, '20j':4, '24j':5, '28j':6, '32j':7}.get(modo, 6)
 
         # Obter os nomes dos jogadores do formulário
         timeA_jogador1 = request.form.get('timeA_jogador1', 'N/A')
@@ -640,7 +688,7 @@ def finalizar_torneio():
     try:
         modo = session.get('modo_torneio', '28j')
         torneio_id = session.get('torneio_id')
-        jogo_final = {'20j':4, '24j':5, '28j':6, '32j':7}.get(modo, 6)
+        jogo_final = {'16j':3, '20j':4, '24j':5, '28j':6, '32j':7}.get(modo, 6)
         
         if f'eliminatoria_jogo{jogo_final}' not in session:
             flash("A final ainda não foi disputada!", "error")
