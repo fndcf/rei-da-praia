@@ -1,16 +1,19 @@
 <!DOCTYPE html>
 <html lang="pt">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}CONANS CUP{% endblock %}</title>
+    <title>{% block title %}REAIS DA PRAIA{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ timestamp }}">
     {% block extra_head %}{% endblock %}
 </head>
+
 <body>
     <div class="main-container">
         {% block content %}{% endblock %}
     </div>
     {% block scripts %}{% endblock %}
 </body>
+
 </html>
