@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
+
 <body>
     <div class="loading-overlay" id="loadingOverlay">
         <div class="spinner"></div>
@@ -8,36 +9,36 @@
         <div class="loading-text">Sorteando grupos...</div>
     </div>
     <div class="main-container">
-        <h1 class="title">CONANS CUP</h1>
+        <h1 class="title">Reis da Praia</h1>
 
         <!-- Sistema de flash messages do Flask -->
         {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert {{ 'erro' if category == 'error' or category == 'danger' else 'sucesso' if category == 'success' else 'alert-'+category }} mt-3 mb-3">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert {{ 'erro' if category == 'error' or category == 'danger' else 'sucesso' if category == 'success' else 'alert-'+category }} mt-3 mb-3">
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
         {% endwith %}
-        
+
         <!-- Exibir mensagens de erro antes do formulário -->
         {% if erro_validacao %}
         <div class="erro mt-3 mb-3">
             {{ erro_validacao }}
         </div>
         {% endif %}
-    
+
         <!-- Exibir mensagens de sucesso -->
         {% if sucesso_validacao %}
         <div class="sucesso mt-3 mb-3">
             {{ sucesso_validacao }}
         </div>
         {% endif %}
-        
+
         <!-- Formulário oculto para salvar todos os grupos - SEMPRE PRESENTE independente de condicionais -->
         <form id="formSalvarTodos" method="POST" action="{{ url_for('groups.salvar_todos_grupos') }}" style="display: none;"></form>
-        
+
         {% if grupos %}
         <!-- Se já existem grupos, mostrar informações em vez do formulário -->
         <div class="card card-sorteados" id="gruposSorteadosInfo">
@@ -47,8 +48,7 @@
             <div class="text-center mt-3 mb-3">
                 <p>Para realizar um novo sorteio, você precisa cancelar o torneio atual.</p>
                 <form action="{{ url_for('main.cancelar_torneio') }}" method="get">
-                    <button type="submit" class="btn btn-danger mt-2"
-                            onclick="return confirm('Tem certeza que deseja cancelar este torneio? Todos os dados serão perdidos.')">
+                    <button type="submit" class="btn btn-danger mt-2" onclick="return confirm('Tem certeza que deseja cancelar este torneio? Todos os dados serão perdidos.')">
                         Cancelar Torneio Atual
                     </button>
                 </form>
@@ -67,35 +67,46 @@
                 <label for="modo_torneio" class="form-text">Formato do Torneio:</label>
                 <select id="modo_torneio" name="modo_torneio" class="form-control" required>
                     <option value="">Selecione o formato</option>
-                    <option value="16j" {% if modo_torneio == '16j' %}selected{% endif %}>16 Jogadores (4 grupos de 4)</option>
-                    <option value="20j" {% if modo_torneio == '20j' %}selected{% endif %}>20 Jogadores (5 grupos de 4)</option>
-                    <option value="24j" {% if modo_torneio == '24j' %}selected{% endif %}>24 Jogadores (6 grupos de 4)</option>
-                    <option value="28j" {% if modo_torneio == '28j' %}selected{% endif %}>28 Jogadores (7 grupos de 4)</option>
-                    <option value="32j" {% if modo_torneio == '32j' %}selected{% endif %}>32 Jogadores (8 grupos de 4)</option>                   
+                    <option value="16j" {% if modo_torneio=='16j' %}selected{% endif %}>16 Jogadores (4 grupos de 4)</option>
+                    <option value="20j" {% if modo_torneio=='20j' %}selected{% endif %}>20 Jogadores (5 grupos de 4)</option>
+                    <option value="24j" {% if modo_torneio=='24j' %}selected{% endif %}>24 Jogadores (6 grupos de 4)</option>
+                    <option value="28j" {% if modo_torneio=='28j' %}selected{% endif %}>28 Jogadores (7 grupos de 4)</option>
+                    <option value="32j" {% if modo_torneio=='32j' %}selected{% endif %}>32 Jogadores (8 grupos de 4)</option>
                 </select>
             </div>
-            
+
+            <!-- NOVO: Campo para escolher formato das eliminatórias (TODOS OS MODOS) -->
+            <div class="form-group" id="formato-eliminatoria-container" style="display: none;">
+                <label for="formato_eliminatoria" class="form-text">Formato da Fase Eliminatória:</label>
+                <select name="formato_eliminatoria" id="formato_eliminatoria" class="form-control">
+                    <option value="separados">Melhores Campanhas</option>
+                    <option value="mistos">Cruzamento Equilibrado</option>
+                </select>
+                <small class="form-text text-muted">
+                    <strong>Melhores Campanhas:</strong> Separados em melhores primeiros e melhores segundos<br>
+                    <strong>Cruzamento Equilibrado:</strong> Cruzamento entre melhores primeiros com os melhores segundos, equilibrando os níveis
+                </small>
+            </div>
+
             <div class="form-group">
                 <p id="instrucoes">Insira os jogadores separados por vírgula:</p>
-                <textarea id="jogadores" name="jogadores" class="form-control" required
-                    oninput="this.value = this.value.replace(/[^a-zA-ZÀ-ú0-9\s,]/g, '')" 
-                    placeholder="Jogador1, Jogador2, Jogador3, ..."></textarea>
+                <textarea id="jogadores" name="jogadores" class="form-control" required oninput="this.value = this.value.replace(/[^a-zA-ZÀ-ú0-9\s,]/g, '')" placeholder="Jogador1, Jogador2, Jogador3, ..."></textarea>
                 <p id="contador-jogadores" class="counter">0 jogadores</p>
-                
+
                 <!-- Novo botão para selecionar jogadores existentes -->
                 <button type="button" id="btnSelecionarJogadores" class="btn btn-info mb-3">
                     Selecionar Jogadores Existentes
                 </button>
             </div>
-            
+
             <!-- Campo Nome do Torneio em um novo div form-group para ficar abaixo -->
             <div class="form-group">
                 <label for="nome_torneio" class="form-text">Nome do Torneio:</label>
                 <input type="text" id="nome_torneio" name="nome_torneio" class="form-control" required>
             </div>
-              
+
             <button type="submit" class="btn btn-success" id="btnSortear">Sortear Grupos</button>
-            
+
             <!-- Modal para seleção de jogadores -->
             <div id="modalJogadores" class="modal">
                 <div class="modal-content">
@@ -104,9 +115,8 @@
                         <span class="modal-close">&times;</span>
                     </div>
                     <div class="modal-body">
-                        <input type="text" id="buscarJogador" class="form-control mb-2" 
-                               placeholder="Buscar jogador...">
-                        
+                        <input type="text" id="buscarJogador" class="form-control mb-2" placeholder="Buscar jogador...">
+
                         <div class="jogadores-container">
                             <div class="jogadores-lista-container">
                                 <div class="lista-header">
@@ -120,7 +130,7 @@
                                     <p class="text-muted">Carregando jogadores...</p>
                                 </div>
                             </div>
-                            
+
                             <div class="jogadores-selecionados">
                                 <h4>Jogadores Selecionados (<span id="contadorSelecionados">0</span>)</h4>
                                 <ul id="jogadoresSelecionados" class="lista-selecionados"></ul>
@@ -148,7 +158,7 @@
             </div>
             <div class="modal-body">
                 <p class="alert alert-info">Selecione <strong>um jogador</strong> para trocá-lo aleatoriamente de grupo.</p>
-                
+
                 <div class="jogadores-container">
                     <div class="jogadores-lista-container">
                         <div class="lista-header">
@@ -157,13 +167,13 @@
                         <div class="jogadores-lista" id="listaTrocaJogadores">
                             <!-- Lista de jogadores agrupados -->
                             {% for grupo_idx, grupo in enumerate(grupos) %}
-                                <h5 class="mt-3">Grupo {{ grupo_idx + 1 }}</h5>
-                                {% for jogador in grupo %}
-                                    <div class="jogador-item" data-nome="{{ jogador.nome }}" data-id="{{ jogador.id }}" data-grupo="{{ grupo_idx }}">
-                                        <input type="radio" name="jogador_trocar" value="{{ jogador.id }}">
-                                        <span>{{ jogador.nome }}</span>
-                                    </div>
-                                {% endfor %}
+                            <h5 class="mt-3">Grupo {{ grupo_idx + 1 }}</h5>
+                            {% for jogador in grupo %}
+                            <div class="jogador-item" data-nome="{{ jogador.nome }}" data-id="{{ jogador.id }}" data-grupo="{{ grupo_idx }}">
+                                <input type="radio" name="jogador_trocar" value="{{ jogador.id }}">
+                                <span>{{ jogador.nome }}</span>
+                            </div>
+                            {% endfor %}
                             {% endfor %}
                         </div>
                     </div>
@@ -189,42 +199,40 @@
             </div>
             <div class="modal-body">
                 <p class="alert alert-info">Selecione <strong>um jogador</strong> do torneio para substituí-lo.</p>
-                
+
                 <!-- Seleção do jogador a ser substituído -->
                 <div class="jogadores-lista" id="listaJogadoresSubstituir">
                     <!-- Lista de jogadores agrupados -->
                     {% for grupo_idx, grupo in enumerate(grupos) %}
-                        <h5 class="mt-3">Grupo {{ grupo_idx + 1 }}</h5>
-                        {% for jogador in grupo %}
-                            <div class="jogador-item" data-nome="{{ jogador.nome }}" data-id="{{ jogador.id }}" data-grupo="{{ grupo_idx }}">
-                                <input type="radio" name="jogador_substituir" value="{{ jogador.id }}">
-                                <span>{{ jogador.nome }}</span>
-                            </div>
-                        {% endfor %}
+                    <h5 class="mt-3">Grupo {{ grupo_idx + 1 }}</h5>
+                    {% for jogador in grupo %}
+                    <div class="jogador-item" data-nome="{{ jogador.nome }}" data-id="{{ jogador.id }}" data-grupo="{{ grupo_idx }}">
+                        <input type="radio" name="jogador_substituir" value="{{ jogador.id }}">
+                        <span>{{ jogador.nome }}</span>
+                    </div>
+                    {% endfor %}
                     {% endfor %}
                 </div>
-                
+
                 <div class="form-group mt-4">
                     <h4>Substituir por:</h4>
-                    
+
                     <div class="tabs-container">
                         <div class="tabs">
                             <div class="tab active" data-target="jogador-existente">Jogador existente</div>
                             <div class="tab" data-target="jogador-novo">Novo jogador</div>
                         </div>
-                        
+
                         <div class="tab-content" id="jogador-existente">
-                            <input type="text" id="buscarJogadorSubstituicao" class="form-control mb-2" 
-                                placeholder="Digite para buscar jogadores que não estão no torneio atual...">
-                            
+                            <input type="text" id="buscarJogadorSubstituicao" class="form-control mb-2" placeholder="Digite para buscar jogadores que não estão no torneio atual...">
+
                             <div class="jogadores-lista" id="listaJogadoresExistentes">
                                 <p class="text-muted">Comece a digitar para buscar jogadores disponíveis...</p>
                             </div>
                         </div>
-                        
+
                         <div class="tab-content" id="jogador-novo" style="display: none;">
-                            <input type="text" id="novoJogadorNome" class="form-control" 
-                                placeholder="Digite o nome do novo jogador...">
+                            <input type="text" id="novoJogadorNome" class="form-control" placeholder="Digite o nome do novo jogador...">
                             <div id="validacao-novo-jogador" class="text-danger mt-1" style="display: none;">
                                 Este jogador já está no torneio atual.
                             </div>
@@ -244,7 +252,7 @@
     {% if grupos %}
     <div class="container">
         <h2 class="text-center mt-4">Grupos Sorteados - {{ grupos|length }} Grupos</h2>
-        
+
         {% for grupo in grupos %}
         <div class="grupo card mt-2">
             <h3>Grupo {{ loop.index }}</h3>
@@ -281,11 +289,11 @@
 
     {% if confrontos %}
     <div class="container">
-        <h2 class="text-center mt-4">Confrontos</h2>        
-               
+        <h2 class="text-center mt-4">Confrontos</h2>
+
         <!-- Formulário oculto para salvar todos os grupos -->
         <form id="formSalvarTodos" method="POST" action="{{ url_for('groups.salvar_todos_grupos') }}" style="display: none;"></form>
-        
+
         {% for grupo_idx, grupo_confrontos in enumerate(confrontos) %}
         <form method="POST" action="{{ url_for('groups.salvar_grupo', grupo_idx=grupo_idx) }}" class="card mt-2 form-grupo">
             <h3>Grupo {{ grupo_idx + 1 }}</h3>
@@ -293,19 +301,9 @@
             <div class="confronto">
                 <div class="confronto-jogadores">
                     <span class="dupla">{{ confronto[0]['nome'] }} & {{ confronto[1]['nome'] }}</span>
-                    <input class="saldo-inputs-esq"  
-                           id="grupo_{{ grupo_idx }}_confronto_{{ confronto_idx }}_duplaA_favor"
-                           name="grupo_{{ grupo_idx }}_confronto_{{ confronto_idx }}_duplaA_favor" 
-                           value="{{ valores_salvos.get('grupo_{}_confronto_{}_duplaA_favor'.format(grupo_idx, confronto_idx), '') }}" 
-                           min="0" max="7" maxlength="1" required
-                           oninput="this.value = this.value.replace(/[^0-7]/g, '')">
+                    <input class="saldo-inputs-esq" id="grupo_{{ grupo_idx }}_confronto_{{ confronto_idx }}_duplaA_favor" name="grupo_{{ grupo_idx }}_confronto_{{ confronto_idx }}_duplaA_favor" value="{{ valores_salvos.get('grupo_{}_confronto_{}_duplaA_favor'.format(grupo_idx, confronto_idx), '') }}" min="0" max="7" maxlength="1" required oninput="this.value = this.value.replace(/[^0-7]/g, '')">
                     <span class="vs">⚔️</span>
-                    <input class="saldo-inputs-dir"  
-                           id="grupo_{{ grupo_idx }}_confronto_{{ confronto_idx }}_duplaB_favor"
-                           name="grupo_{{ grupo_idx }}_confronto_{{ confronto_idx }}_duplaB_favor" 
-                           value="{{ valores_salvos.get('grupo_{}_confronto_{}_duplaB_favor'.format(grupo_idx, confronto_idx), '') }}" 
-                           min="0" max="7" maxlength="1" required
-                           oninput="this.value = this.value.replace(/[^0-7]/g, '')">
+                    <input class="saldo-inputs-dir" id="grupo_{{ grupo_idx }}_confronto_{{ confronto_idx }}_duplaB_favor" name="grupo_{{ grupo_idx }}_confronto_{{ confronto_idx }}_duplaB_favor" value="{{ valores_salvos.get('grupo_{}_confronto_{}_duplaB_favor'.format(grupo_idx, confronto_idx), '') }}" min="0" max="7" maxlength="1" required oninput="this.value = this.value.replace(/[^0-7]/g, '')">
                     <span class="dupla">{{ confronto[2]['nome'] }} & {{ confronto[3]['nome'] }}</span>
                 </div>
             </div>
@@ -337,7 +335,7 @@
 <script>
 
     // Adicionar detector de salvamento bem-sucedido
-    document.getElementById('btnSalvarTodos')?.addEventListener('click', function() {
+    document.getElementById('btnSalvarTodos')?.addEventListener('click', function () {
         // Salvar no sessionStorage que o usuário acabou de salvar dados
         sessionStorage.setItem('dados_salvos_recentemente', 'true');
     });
@@ -347,15 +345,15 @@
     if (dadosSalvosRecentemente === 'true' && performance.getEntriesByType('navigation')[0].type === 'back_forward') {
         // Limpar o flag
         sessionStorage.removeItem('dados_salvos_recentemente');
-        
+
         // Mostrar o alerta
         if (confirm('Você acabou de salvar dados e clicou em voltar. Os dados foram salvos, mas podem não estar visíveis. Deseja recarregar a página para ver os resultados atualizados?')) {
             window.location.reload();
         }
     }
 
-    document.addEventListener('DOMContentLoaded', function() {       
-    
+    document.addEventListener('DOMContentLoaded', function () {
+
         // Verificar se elementos existem antes de tentar acessá-los
         const modoSelect = document.getElementById('modo_torneio');
         const instrucoes = document.getElementById('instrucoes');
@@ -379,407 +377,425 @@
         const modalTrocarJogador = document.getElementById('modalTrocarJogador');
         const modalCloseTroca = modalTrocarJogador?.querySelector('.modal-close');
         const btnCancelarTroca = document.getElementById('btnCancelarTroca');
-        const btnConfirmarTroca = document.getElementById('btnConfirmarTroca');     
-        
+        const btnConfirmarTroca = document.getElementById('btnConfirmarTroca');
+
         // Elementos do modal de substituição
         const btnSubstituirJogador = document.getElementById('btnSubstituirJogador');
         const modalSubstituirJogador = document.getElementById('modalSubstituirJogador');
         const modalCloseSubstituir = modalSubstituirJogador?.querySelector('.modal-close');
         const btnCancelarSubstituicao = document.getElementById('btnCancelarSubstituicao');
         const btnConfirmarSubstituicao = document.getElementById('btnConfirmarSubstituicao');
-        
+
         // Elementos das abas
         const tabs = modalSubstituirJogador?.querySelectorAll('.tab');
         const tabContents = modalSubstituirJogador?.querySelectorAll('.tab-content');
-        
+
         // Elementos para busca e validação
         const buscarJogadorSubstituicao = document.getElementById('buscarJogadorSubstituicao');
         const novoJogadorNome = document.getElementById('novoJogadorNome');
         const validacaoNovoJogador = document.getElementById('validacao-novo-jogador');
 
-    // Inicialização de variáveis
-    let modoSubstituicao = 'jogador-existente'; // Padrão: substituir por jogador existente
-    
-    // Obter nomes de jogadores atuais do torneio para validação
-    const jogadoresAtuais = [];
-    document.querySelectorAll('#listaJogadoresSubstituir .jogador-item').forEach(item => {
-        jogadoresAtuais.push(item.dataset.nome.toLowerCase());
-    });
-
-    // Abrir modal de substituição
-    if (btnSubstituirJogador && modalSubstituirJogador) {
-        btnSubstituirJogador.addEventListener('click', function() {
-            // Limpar seleção anterior
-            const radios = document.querySelectorAll('input[name="jogador_substituir"]');
-            radios.forEach(radio => radio.checked = false);
-            
-            // Limpar campos de busca e novo jogador
-            if (buscarJogadorSubstituicao) buscarJogadorSubstituicao.value = '';
-            if (novoJogadorNome) novoJogadorNome.value = '';
-            if (validacaoNovoJogador) validacaoNovoJogador.style.display = 'none';
-            
-            // Resetar para a primeira aba
-            if (tabs && tabs.length > 0) {
-                tabs.forEach(tab => tab.classList.remove('active'));
-                tabs[0].classList.add('active');
-                
-                if (tabContents) {
-                    tabContents.forEach(content => content.style.display = 'none');
-                    document.getElementById('jogador-existente').style.display = 'block';
+        // Mostrar/ocultar opção de formato baseado no modo selecionado
+        const formatoEliminatoriaContainer = document.getElementById('formato-eliminatoria-container');
+        if (modoSelect && formatoEliminatoriaContainer) {
+            modoSelect.addEventListener('change', function () {
+                // Mostrar para todos os modos (exceto quando nenhum está selecionado)
+                if (this.value !== '') {
+                    formatoEliminatoriaContainer.style.display = 'block';
+                } else {
+                    formatoEliminatoriaContainer.style.display = 'none';
                 }
-                
-                modoSubstituicao = 'jogador-existente';
-            }
-            
-            // Limpar lista de jogadores existentes
-            const listaJogadoresExistentes = document.getElementById('listaJogadoresExistentes');
-            if (listaJogadoresExistentes) {
-                listaJogadoresExistentes.innerHTML = '<p class="text-muted">Comece a digitar para buscar jogadores disponíveis...</p>';
-            }
-            
-            // Abrir modal
-            modalSubstituirJogador.style.display = 'flex';
-        });
-    }
-    
-    // Alternar entre as abas
-    if (tabs) {
-        tabs.forEach(tab => {
-            tab.addEventListener('click', function() {
-                const target = this.dataset.target;
-                
-                // Atualizar abas ativas
-                tabs.forEach(t => t.classList.remove('active'));
-                this.classList.add('active');
-                
-                // Mostrar conteúdo correspondente
-                if (tabContents) {
-                    tabContents.forEach(content => content.style.display = 'none');
-                    document.getElementById(target).style.display = 'block';
-                }
-                
-                modoSubstituicao = target;
             });
-        });
-    }
-    
-    // Fechar modal de substituição
-    if (modalCloseSubstituir) {
-        modalCloseSubstituir.addEventListener('click', function() {
-            modalSubstituirJogador.style.display = 'none';
-        });
-    }
-    
-    if (btnCancelarSubstituicao) {
-        btnCancelarSubstituicao.addEventListener('click', function() {
-            modalSubstituirJogador.style.display = 'none';
-        });
-    }
-    
-    // Fechar modal ao clicar fora
-    window.addEventListener('click', function(event) {
-        if (event.target === modalSubstituirJogador) {
-            modalSubstituirJogador.style.display = 'none';
-        }
-    });
-    
-    // Tratar clique nos itens de jogador (para facilitar a seleção)
-    document.querySelectorAll('#listaJogadoresSubstituir .jogador-item').forEach(item => {
-        item.addEventListener('click', function() {
-            // Encontrar o radio button dentro deste item
-            const radio = this.querySelector('input[type="radio"]');
-            if (radio) {
-                // Desmarcar todos os outros
-                document.querySelectorAll('input[name="jogador_substituir"]').forEach(r => r.checked = false);
-                // Marcar este
-                radio.checked = true;
+
+            // Inicializar visibilidade
+            if (modoSelect.value !== '') {
+                formatoEliminatoriaContainer.style.display = 'block';
             }
+        }
+
+        // Inicialização de variáveis
+        let modoSubstituicao = 'jogador-existente'; // Padrão: substituir por jogador existente
+
+        // Obter nomes de jogadores atuais do torneio para validação
+        const jogadoresAtuais = [];
+        document.querySelectorAll('#listaJogadoresSubstituir .jogador-item').forEach(item => {
+            jogadoresAtuais.push(item.dataset.nome.toLowerCase());
         });
-    });
-    
-    // Buscar jogadores para substituição
-    if (buscarJogadorSubstituicao) {
-        buscarJogadorSubstituicao.addEventListener('input', function() {
-            const termo = this.value.trim();
-            
-            // Se o termo tiver pelo menos 2 caracteres, buscar
-            if (termo.length >= 2) {
-                buscarJogadoresDisponiveis(termo);
-            } else if (termo.length === 0) {
-                // Se o termo estiver vazio, limpar a lista
+
+        // Abrir modal de substituição
+        if (btnSubstituirJogador && modalSubstituirJogador) {
+            btnSubstituirJogador.addEventListener('click', function () {
+                // Limpar seleção anterior
+                const radios = document.querySelectorAll('input[name="jogador_substituir"]');
+                radios.forEach(radio => radio.checked = false);
+
+                // Limpar campos de busca e novo jogador
+                if (buscarJogadorSubstituicao) buscarJogadorSubstituicao.value = '';
+                if (novoJogadorNome) novoJogadorNome.value = '';
+                if (validacaoNovoJogador) validacaoNovoJogador.style.display = 'none';
+
+                // Resetar para a primeira aba
+                if (tabs && tabs.length > 0) {
+                    tabs.forEach(tab => tab.classList.remove('active'));
+                    tabs[0].classList.add('active');
+
+                    if (tabContents) {
+                        tabContents.forEach(content => content.style.display = 'none');
+                        document.getElementById('jogador-existente').style.display = 'block';
+                    }
+
+                    modoSubstituicao = 'jogador-existente';
+                }
+
+                // Limpar lista de jogadores existentes
                 const listaJogadoresExistentes = document.getElementById('listaJogadoresExistentes');
                 if (listaJogadoresExistentes) {
                     listaJogadoresExistentes.innerHTML = '<p class="text-muted">Comece a digitar para buscar jogadores disponíveis...</p>';
                 }
+
+                // Abrir modal
+                modalSubstituirJogador.style.display = 'flex';
+            });
+        }
+
+        // Alternar entre as abas
+        if (tabs) {
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function () {
+                    const target = this.dataset.target;
+
+                    // Atualizar abas ativas
+                    tabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+
+                    // Mostrar conteúdo correspondente
+                    if (tabContents) {
+                        tabContents.forEach(content => content.style.display = 'none');
+                        document.getElementById(target).style.display = 'block';
+                    }
+
+                    modoSubstituicao = target;
+                });
+            });
+        }
+
+        // Fechar modal de substituição
+        if (modalCloseSubstituir) {
+            modalCloseSubstituir.addEventListener('click', function () {
+                modalSubstituirJogador.style.display = 'none';
+            });
+        }
+
+        if (btnCancelarSubstituicao) {
+            btnCancelarSubstituicao.addEventListener('click', function () {
+                modalSubstituirJogador.style.display = 'none';
+            });
+        }
+
+        // Fechar modal ao clicar fora
+        window.addEventListener('click', function (event) {
+            if (event.target === modalSubstituirJogador) {
+                modalSubstituirJogador.style.display = 'none';
             }
         });
-    }
-    
-    // Validação do nome do novo jogador
-    if (novoJogadorNome) {
-        novoJogadorNome.addEventListener('input', function() {
-            const nome = this.value.trim().toLowerCase();
-            
-            if (nome.length > 0 && jogadoresAtuais.includes(nome)) {
-                validacaoNovoJogador.style.display = 'block';
-                btnConfirmarSubstituicao.disabled = true;
-            } else {
-                validacaoNovoJogador.style.display = 'none';
-                btnConfirmarSubstituicao.disabled = false;
-            }
-        });
-    }
-    
-    // Processar a substituição quando o botão for clicado
-    if (btnConfirmarSubstituicao) {
-        btnConfirmarSubstituicao.addEventListener('click', function() {
-            // Verificar se um jogador a ser substituído foi selecionado
-            const radioSelecionado = document.querySelector('input[name="jogador_substituir"]:checked');
-            
-            if (!radioSelecionado) {
-                alert('Por favor, selecione um jogador para substituir.');
-                return;
-            }
-            
-            // Obter o ID do jogador e seu grupo atual
-            const jogadorItem = radioSelecionado.closest('.jogador-item');
-            const jogadorId = jogadorItem.dataset.id;
-            const grupoAtual = jogadorItem.dataset.grupo;
-            const jogadorNomeAntigo = jogadorItem.dataset.nome;
-            
-            let novoJogadorId = null;
-            let novoJogadorNomeVal = '';
-            
-            if (modoSubstituicao === 'jogador-existente') {
-                // Verificar se um jogador existente foi selecionado
-                const radioJogadorExistente = document.querySelector('input[name="jogador_substituicao"]:checked');
-                
-                if (!radioJogadorExistente) {
-                    alert('Por favor, selecione um jogador existente para fazer a substituição.');
-                    return;
+
+        // Tratar clique nos itens de jogador (para facilitar a seleção)
+        document.querySelectorAll('#listaJogadoresSubstituir .jogador-item').forEach(item => {
+            item.addEventListener('click', function () {
+                // Encontrar o radio button dentro deste item
+                const radio = this.querySelector('input[type="radio"]');
+                if (radio) {
+                    // Desmarcar todos os outros
+                    document.querySelectorAll('input[name="jogador_substituir"]').forEach(r => r.checked = false);
+                    // Marcar este
+                    radio.checked = true;
                 }
-                
-                novoJogadorId = radioJogadorExistente.value;
-                novoJogadorNomeVal = radioJogadorExistente.dataset.nome;
-            } else {
-                // Verificar se um nome foi digitado para o novo jogador
-                novoJogadorNomeVal = novoJogadorNome.value.trim();
-                
-                if (!novoJogadorNomeVal) {
-                    alert('Por favor, digite um nome para o novo jogador.');
-                    return;
-                }
-                
-                // Verificar se o nome já existe no torneio
-                if (jogadoresAtuais.includes(novoJogadorNomeVal.toLowerCase())) {
-                    alert('Este jogador já está participando do torneio atual.');
-                    return;
-                }
-            }
-            
-            // Mostrar carregamento
-            btnConfirmarSubstituicao.disabled = true;
-            btnConfirmarSubstituicao.innerHTML = '<span class="spinner">⌛</span> Processando...';
-            
-            // Fazer requisição para a API
-            fetch('/substituir_jogador', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    jogador_id: jogadorId,
-                    grupo_atual: grupoAtual,
-                    jogador_existente: modoSubstituicao === 'jogador-existente',
-                    novo_jogador_id: novoJogadorId,
-                    novo_jogador_nome: novoJogadorNomeVal
-                })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Erro na resposta do servidor: ' + response.status);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    // Exibir mensagem de sucesso
-                    alert(`O jogador ${jogadorNomeAntigo} foi substituído por ${data.novo_jogador_nome} no Grupo ${parseInt(grupoAtual) + 1}.`);
-                    
-                    // Recarregar a página para mostrar os novos grupos
-                    window.location.reload();
-                } else {
-                    throw new Error(data.error || 'Erro desconhecido ao substituir jogador.');
-                }
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-                alert('Falha ao substituir jogador: ' + error.message);
-                btnConfirmarSubstituicao.disabled = false;
-                btnConfirmarSubstituicao.innerHTML = 'Substituir Jogador';
             });
         });
-    }
-    
-    // Função para buscar jogadores disponíveis
-    function buscarJogadoresDisponiveis(termo) {
-        const listaJogadoresExistentes = document.getElementById('listaJogadoresExistentes');
-        if (!listaJogadoresExistentes) return;
-        
-        // Exibir estado de carregamento
-        listaJogadoresExistentes.innerHTML = '<p class="text-center"><i>Buscando jogadores disponíveis...</i></p>';
-        
-        // Fazer a requisição AJAX para buscar jogadores que não estão no torneio atual
-        fetch(`/buscar_jogadores_disponiveis?termo=${encodeURIComponent(termo)}`)
-            .then(response => response.json())
-            .then(data => {
-                // Verificar se temos jogadores para exibir
-                if (data.length === 0) {
-                    listaJogadoresExistentes.innerHTML = '<p class="text-center">Nenhum jogador disponível encontrado</p>';
+
+        // Buscar jogadores para substituição
+        if (buscarJogadorSubstituicao) {
+            buscarJogadorSubstituicao.addEventListener('input', function () {
+                const termo = this.value.trim();
+
+                // Se o termo tiver pelo menos 2 caracteres, buscar
+                if (termo.length >= 2) {
+                    buscarJogadoresDisponiveis(termo);
+                } else if (termo.length === 0) {
+                    // Se o termo estiver vazio, limpar a lista
+                    const listaJogadoresExistentes = document.getElementById('listaJogadoresExistentes');
+                    if (listaJogadoresExistentes) {
+                        listaJogadoresExistentes.innerHTML = '<p class="text-muted">Comece a digitar para buscar jogadores disponíveis...</p>';
+                    }
+                }
+            });
+        }
+
+        // Validação do nome do novo jogador
+        if (novoJogadorNome) {
+            novoJogadorNome.addEventListener('input', function () {
+                const nome = this.value.trim().toLowerCase();
+
+                if (nome.length > 0 && jogadoresAtuais.includes(nome)) {
+                    validacaoNovoJogador.style.display = 'block';
+                    btnConfirmarSubstituicao.disabled = true;
+                } else {
+                    validacaoNovoJogador.style.display = 'none';
+                    btnConfirmarSubstituicao.disabled = false;
+                }
+            });
+        }
+
+        // Processar a substituição quando o botão for clicado
+        if (btnConfirmarSubstituicao) {
+            btnConfirmarSubstituicao.addEventListener('click', function () {
+                // Verificar se um jogador a ser substituído foi selecionado
+                const radioSelecionado = document.querySelector('input[name="jogador_substituir"]:checked');
+
+                if (!radioSelecionado) {
+                    alert('Por favor, selecione um jogador para substituir.');
                     return;
                 }
-                
-                // Construir a lista de jogadores
-                let html = '';
-                data.forEach(jogador => {
-                    html += `
+
+                // Obter o ID do jogador e seu grupo atual
+                const jogadorItem = radioSelecionado.closest('.jogador-item');
+                const jogadorId = jogadorItem.dataset.id;
+                const grupoAtual = jogadorItem.dataset.grupo;
+                const jogadorNomeAntigo = jogadorItem.dataset.nome;
+
+                let novoJogadorId = null;
+                let novoJogadorNomeVal = '';
+
+                if (modoSubstituicao === 'jogador-existente') {
+                    // Verificar se um jogador existente foi selecionado
+                    const radioJogadorExistente = document.querySelector('input[name="jogador_substituicao"]:checked');
+
+                    if (!radioJogadorExistente) {
+                        alert('Por favor, selecione um jogador existente para fazer a substituição.');
+                        return;
+                    }
+
+                    novoJogadorId = radioJogadorExistente.value;
+                    novoJogadorNomeVal = radioJogadorExistente.dataset.nome;
+                } else {
+                    // Verificar se um nome foi digitado para o novo jogador
+                    novoJogadorNomeVal = novoJogadorNome.value.trim();
+
+                    if (!novoJogadorNomeVal) {
+                        alert('Por favor, digite um nome para o novo jogador.');
+                        return;
+                    }
+
+                    // Verificar se o nome já existe no torneio
+                    if (jogadoresAtuais.includes(novoJogadorNomeVal.toLowerCase())) {
+                        alert('Este jogador já está participando do torneio atual.');
+                        return;
+                    }
+                }
+
+                // Mostrar carregamento
+                btnConfirmarSubstituicao.disabled = true;
+                btnConfirmarSubstituicao.innerHTML = '<span class="spinner">⌛</span> Processando...';
+
+                // Fazer requisição para a API
+                fetch('/substituir_jogador', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        jogador_id: jogadorId,
+                        grupo_atual: grupoAtual,
+                        jogador_existente: modoSubstituicao === 'jogador-existente',
+                        novo_jogador_id: novoJogadorId,
+                        novo_jogador_nome: novoJogadorNomeVal
+                    })
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Erro na resposta do servidor: ' + response.status);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            // Exibir mensagem de sucesso
+                            alert(`O jogador ${jogadorNomeAntigo} foi substituído por ${data.novo_jogador_nome} no Grupo ${parseInt(grupoAtual) + 1}.`);
+
+                            // Recarregar a página para mostrar os novos grupos
+                            window.location.reload();
+                        } else {
+                            throw new Error(data.error || 'Erro desconhecido ao substituir jogador.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erro:', error);
+                        alert('Falha ao substituir jogador: ' + error.message);
+                        btnConfirmarSubstituicao.disabled = false;
+                        btnConfirmarSubstituicao.innerHTML = 'Substituir Jogador';
+                    });
+            });
+        }
+
+        // Função para buscar jogadores disponíveis
+        function buscarJogadoresDisponiveis(termo) {
+            const listaJogadoresExistentes = document.getElementById('listaJogadoresExistentes');
+            if (!listaJogadoresExistentes) return;
+
+            // Exibir estado de carregamento
+            listaJogadoresExistentes.innerHTML = '<p class="text-center"><i>Buscando jogadores disponíveis...</i></p>';
+
+            // Fazer a requisição AJAX para buscar jogadores que não estão no torneio atual
+            fetch(`/buscar_jogadores_disponiveis?termo=${encodeURIComponent(termo)}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Verificar se temos jogadores para exibir
+                    if (data.length === 0) {
+                        listaJogadoresExistentes.innerHTML = '<p class="text-center">Nenhum jogador disponível encontrado</p>';
+                        return;
+                    }
+
+                    // Construir a lista de jogadores
+                    let html = '';
+                    data.forEach(jogador => {
+                        html += `
                         <div class="jogador-item" data-nome="${jogador.nome}">
                             <input type="radio" name="jogador_substituicao" value="${jogador.id}" data-nome="${jogador.nome}">
                             <span>${jogador.nome}</span>
                         </div>
                     `;
-                });
-                
-                listaJogadoresExistentes.innerHTML = html;
-                
-                // Adicionar evento de clique para os itens
-                listaJogadoresExistentes.querySelectorAll('.jogador-item').forEach(item => {
-                    item.addEventListener('click', function() {
-                        const radio = this.querySelector('input[type="radio"]');
-                        if (radio) {
-                            document.querySelectorAll('input[name="jogador_substituicao"]').forEach(r => r.checked = false);
-                            radio.checked = true;
-                        }
                     });
-                });
-            })
-            .catch(error => {
-                console.error('Erro ao buscar jogadores:', error);
-                listaJogadoresExistentes.innerHTML = '<p class="text-center text-danger">Erro ao buscar jogadores</p>';
-            });
-    }
 
-    // Abrir modal de troca
-    if (btnTrocarJogador && modalTrocarJogador) {
-        btnTrocarJogador.addEventListener('click', function() {
-            // Limpar seleção anterior
-            const radios = document.querySelectorAll('input[name="jogador_trocar"]');
-            radios.forEach(radio => radio.checked = false);
-            
-            // Abrir modal
-            modalTrocarJogador.style.display = 'flex';
-        });
-    }
+                    listaJogadoresExistentes.innerHTML = html;
 
-    // Fechar modal de troca
-    if (modalCloseTroca) {
-        modalCloseTroca.addEventListener('click', function() {
-            modalTrocarJogador.style.display = 'none';
-        });
-    }
-
-    if (btnCancelarTroca) {
-        btnCancelarTroca.addEventListener('click', function() {
-            modalTrocarJogador.style.display = 'none';
-        });
-    }
-
-    // Fechar modal ao clicar fora
-    window.addEventListener('click', function(event) {
-        if (event.target === modalTrocarJogador) {
-            modalTrocarJogador.style.display = 'none';
-        }
-    });
-
-    // Tratar clique nos itens de jogador (para facilitar a seleção)
-    document.querySelectorAll('#listaTrocaJogadores .jogador-item').forEach(item => {
-        item.addEventListener('click', function() {
-            // Encontrar o radio button dentro deste item
-            const radio = this.querySelector('input[type="radio"]');
-            if (radio) {
-                // Desmarcar todos os outros
-                document.querySelectorAll('input[name="jogador_trocar"]').forEach(r => r.checked = false);
-                // Marcar este
-                radio.checked = true;
-            }
-        });
-    });
-
-    // Processar a troca quando o botão for clicado
-    if (btnConfirmarTroca) {
-        btnConfirmarTroca.addEventListener('click', function() {
-            // Verificar se um jogador foi selecionado
-            const radioSelecionado = document.querySelector('input[name="jogador_trocar"]:checked');
-            
-            if (!radioSelecionado) {
-                alert('Por favor, selecione um jogador para trocar de grupo.');
-                return;
-            }
-            
-            // Obter o ID do jogador e seu grupo atual
-            const jogadorItem = radioSelecionado.closest('.jogador-item');
-            const jogadorId = jogadorItem.dataset.id;
-            const grupoAtual = jogadorItem.dataset.grupo;
-            const jogadorNome = jogadorItem.dataset.nome;
-            
-            // Mostrar carregamento
-            btnConfirmarTroca.disabled = true;
-            btnConfirmarTroca.innerHTML = '<span class="spinner">⌛</span> Processando...';
-            
-            // Fazer requisição para a API
-            fetch('/trocar_jogador', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    jogador_id: jogadorId,
-                    grupo_atual: grupoAtual
+                    // Adicionar evento de clique para os itens
+                    listaJogadoresExistentes.querySelectorAll('.jogador-item').forEach(item => {
+                        item.addEventListener('click', function () {
+                            const radio = this.querySelector('input[type="radio"]');
+                            if (radio) {
+                                document.querySelectorAll('input[name="jogador_substituicao"]').forEach(r => r.checked = false);
+                                radio.checked = true;
+                            }
+                        });
+                    });
                 })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Erro na resposta do servidor: ' + response.status);
+                .catch(error => {
+                    console.error('Erro ao buscar jogadores:', error);
+                    listaJogadoresExistentes.innerHTML = '<p class="text-center text-danger">Erro ao buscar jogadores</p>';
+                });
+        }
+
+        // Abrir modal de troca
+        if (btnTrocarJogador && modalTrocarJogador) {
+            btnTrocarJogador.addEventListener('click', function () {
+                // Limpar seleção anterior
+                const radios = document.querySelectorAll('input[name="jogador_trocar"]');
+                radios.forEach(radio => radio.checked = false);
+
+                // Abrir modal
+                modalTrocarJogador.style.display = 'flex';
+            });
+        }
+
+        // Fechar modal de troca
+        if (modalCloseTroca) {
+            modalCloseTroca.addEventListener('click', function () {
+                modalTrocarJogador.style.display = 'none';
+            });
+        }
+
+        if (btnCancelarTroca) {
+            btnCancelarTroca.addEventListener('click', function () {
+                modalTrocarJogador.style.display = 'none';
+            });
+        }
+
+        // Fechar modal ao clicar fora
+        window.addEventListener('click', function (event) {
+            if (event.target === modalTrocarJogador) {
+                modalTrocarJogador.style.display = 'none';
+            }
+        });
+
+        // Tratar clique nos itens de jogador (para facilitar a seleção)
+        document.querySelectorAll('#listaTrocaJogadores .jogador-item').forEach(item => {
+            item.addEventListener('click', function () {
+                // Encontrar o radio button dentro deste item
+                const radio = this.querySelector('input[type="radio"]');
+                if (radio) {
+                    // Desmarcar todos os outros
+                    document.querySelectorAll('input[name="jogador_trocar"]').forEach(r => r.checked = false);
+                    // Marcar este
+                    radio.checked = true;
                 }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    // Exibir mensagem de sucesso
-                    alert(`O jogador ${jogadorNome} foi movido do Grupo ${parseInt(grupoAtual) + 1} para o Grupo ${data.novo_grupo + 1}.\n\nO jogador ${data.jogador_trocado_nome} foi movido para o Grupo ${parseInt(grupoAtual) + 1}.`);
-                    
-                    // Recarregar a página para mostrar os novos grupos
-                    window.location.reload();
-                } else {
-                    throw new Error(data.error || 'Erro desconhecido ao trocar jogador.');
-                }
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-                alert('Falha ao trocar jogador: ' + error.message);
-                btnConfirmarTroca.disabled = false;
-                btnConfirmarTroca.innerHTML = 'Sortear Troca';
             });
         });
-    }    
+
+        // Processar a troca quando o botão for clicado
+        if (btnConfirmarTroca) {
+            btnConfirmarTroca.addEventListener('click', function () {
+                // Verificar se um jogador foi selecionado
+                const radioSelecionado = document.querySelector('input[name="jogador_trocar"]:checked');
+
+                if (!radioSelecionado) {
+                    alert('Por favor, selecione um jogador para trocar de grupo.');
+                    return;
+                }
+
+                // Obter o ID do jogador e seu grupo atual
+                const jogadorItem = radioSelecionado.closest('.jogador-item');
+                const jogadorId = jogadorItem.dataset.id;
+                const grupoAtual = jogadorItem.dataset.grupo;
+                const jogadorNome = jogadorItem.dataset.nome;
+
+                // Mostrar carregamento
+                btnConfirmarTroca.disabled = true;
+                btnConfirmarTroca.innerHTML = '<span class="spinner">⌛</span> Processando...';
+
+                // Fazer requisição para a API
+                fetch('/trocar_jogador', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        jogador_id: jogadorId,
+                        grupo_atual: grupoAtual
+                    })
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Erro na resposta do servidor: ' + response.status);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            // Exibir mensagem de sucesso
+                            alert(`O jogador ${jogadorNome} foi movido do Grupo ${parseInt(grupoAtual) + 1} para o Grupo ${data.novo_grupo + 1}.\n\nO jogador ${data.jogador_trocado_nome} foi movido para o Grupo ${parseInt(grupoAtual) + 1}.`);
+
+                            // Recarregar a página para mostrar os novos grupos
+                            window.location.reload();
+                        } else {
+                            throw new Error(data.error || 'Erro desconhecido ao trocar jogador.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erro:', error);
+                        alert('Falha ao trocar jogador: ' + error.message);
+                        btnConfirmarTroca.disabled = false;
+                        btnConfirmarTroca.innerHTML = 'Sortear Troca';
+                    });
+            });
+        }
 
 
-    // Verificar se temos grupos
-    const existemGrupos = {% if grupos %}true{% else %}false{% endif %};
-    
+        // Verificar se temos grupos
+        const existemGrupos = {% if grupos %}true{% else %}false{% endif %};
+
     // Funcionalidade do botão Cancelar Torneio
     if (btnCancelarTorneio) {
-        btnCancelarTorneio.addEventListener('click', function() {
+        btnCancelarTorneio.addEventListener('click', function () {
             if (confirm('Tem certeza que deseja cancelar este torneio? Todos os dados serão perdidos.')) {
                 window.location.href = "{{ url_for('main.cancelar_torneio') }}";
             }
@@ -788,7 +804,7 @@
 
     // Funcionalidade do botão Salvar Todos
     if (btnSalvarTodos) {
-        btnSalvarTodos.addEventListener('click', function() {
+        btnSalvarTodos.addEventListener('click', function () {
 
             // Validar confrontos: esquerda e direita devem ser preenchidos juntos
             const inputsEsq = document.querySelectorAll('.saldo-inputs-esq');
@@ -835,9 +851,9 @@
                         mensagem += `Confronto ${empate.confronto}: ${empate.jogadoresEsq} x ${empate.jogadoresDir} (${empate.placar})\n`;
                     });
                     mensagem += '\nPor favor, corrija os resultados antes de salvar.';
-                    
+
                     alert(mensagem);
-                    
+
                     // Rolar até o primeiro empate
                     const primeiroInputComErro = document.querySelector('.erro-empate');
                     if (primeiroInputComErro) {
@@ -855,12 +871,12 @@
                 alert("Erro: Formulário não encontrado. Por favor, recarregue a página.");
                 return;
             }
-            
+
             formSalvarTodos.innerHTML = ''; // Limpar o formulário
-            
+
             // Selecionar todos os inputs com id que começa com "grupo_"
             const todosInputs = document.querySelectorAll('input[id^="grupo_"]');
-            
+
             // Adicionar cada input como um campo oculto no formulário
             todosInputs.forEach(input => {
                 const hiddenInput = document.createElement('input');
@@ -879,18 +895,18 @@
     if (btnAbrirEliminatoria) {
         // Salvar o estado original do botão
         const textoOriginal = btnAbrirEliminatoria.textContent;
-        
+
         // Adicionar detector para quando a página é carregada do cache (botão voltar)
-        window.onpageshow = function(event) {
+        window.onpageshow = function (event) {
             if (event.persisted) {
                 console.log("Página carregada do cache (voltando da fase eliminatória)");
-                
+
                 // Verificar se o botão está desabilitado
                 if (btnAbrirEliminatoria.disabled) {
                     // Restaurar o botão ao estado original
                     btnAbrirEliminatoria.disabled = false;
                     btnAbrirEliminatoria.innerHTML = textoOriginal;
-                    
+
                     // Resetar resultados da fase eliminatória (simular clique no botão resetar)
                     fetch('/resetar_eliminatorias', {
                         method: 'GET',
@@ -899,21 +915,21 @@
                             'Pragma': 'no-cache'
                         }
                     })
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log("Resultados da eliminatória resetados com sucesso", data);
-                    })
-                    .catch(error => {
-                        console.error("Erro ao resetar resultados:", error);
-                    });
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log("Resultados da eliminatória resetados com sucesso", data);
+                        })
+                        .catch(error => {
+                            console.error("Erro ao resetar resultados:", error);
+                        });
                 }
             }
         };
-        
+
         // O código existente para o evento click
-        btnAbrirEliminatoria.addEventListener('click', function(e) {
+        btnAbrirEliminatoria.addEventListener('click', function (e) {
             e.preventDefault(); // Importante: previne o comportamento padrão
-            
+
             // Primeiro validar se não há empates
             const empates = (typeof validarSemEmpates === 'function') ? validarSemEmpates() : [];
             if (empates.length > 0) {
@@ -923,9 +939,9 @@
                     mensagem += `Confronto ${empate.confronto}: ${empate.jogadoresEsq} x ${empate.jogadoresDir} (${empate.placar})\n`;
                 });
                 mensagem += '\nPor favor, corrija os resultados antes de avançar.';
-                
+
                 alert(mensagem);
-                
+
                 // Rolar até o primeiro empate
                 const primeiroInputComErro = document.querySelector('.erro-empate');
                 if (primeiroInputComErro) {
@@ -934,7 +950,7 @@
                 }
                 return;
             }
-            
+
             // Se não houver empates, continuar verificando campos vazios
             const inputsVazios = document.querySelectorAll('.saldo-inputs-esq[value=""], .saldo-inputs-dir[value=""]');
             if (inputsVazios.length > 0) {
@@ -952,14 +968,14 @@
                 }
                 return;
             }
-            
+
             // Mostrar loading no botão
             btnAbrirEliminatoria.disabled = true;
             btnAbrirEliminatoria.innerHTML = '<span class="spinner">⌛</span> Preparando fase eliminatória...';
-            
+
             // Salvar em sessionStorage que o botão foi clicado
             sessionStorage.setItem('eliminatoria_clicked', 'true');
-            
+
             // IMPORTANTE: Primeiro resetar os dados da fase eliminatória
             fetch('/resetar_eliminatorias', {
                 method: 'GET',
@@ -968,41 +984,41 @@
                     'Pragma': 'no-cache'
                 }
             })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Erro na resposta do servidor: ' + response.status);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    // Redirecionar com timestamp para evitar cache
-                    const timestamp = new Date().getTime();
-                    window.location.href = "/fase_eliminatoria?t=" + timestamp;
-                } else {
-                    throw new Error('Erro ao preparar fase eliminatória: ' + (data.error || 'Erro desconhecido'));
-                }
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-                alert('Falha na comunicação com o servidor. Por favor, tente novamente. Erro: ' + error.message);
-                btnAbrirEliminatoria.disabled = false;
-                btnAbrirEliminatoria.innerHTML = textoOriginal;
-                // Limpar estado salvo em caso de erro
-                sessionStorage.removeItem('eliminatoria_clicked');
-            });
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Erro na resposta do servidor: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // Redirecionar com timestamp para evitar cache
+                        const timestamp = new Date().getTime();
+                        window.location.href = "/fase_eliminatoria?t=" + timestamp;
+                    } else {
+                        throw new Error('Erro ao preparar fase eliminatória: ' + (data.error || 'Erro desconhecido'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    alert('Falha na comunicação com o servidor. Por favor, tente novamente. Erro: ' + error.message);
+                    btnAbrirEliminatoria.disabled = false;
+                    btnAbrirEliminatoria.innerHTML = textoOriginal;
+                    // Limpar estado salvo em caso de erro
+                    sessionStorage.removeItem('eliminatoria_clicked');
+                });
         });
-        
+
         // Verificar ao carregar a página se o botão havia sido clicado
         if (sessionStorage.getItem('eliminatoria_clicked') === 'true') {
             // Se estamos voltando e o botão havia sido clicado
             // Limpar o estado
             sessionStorage.removeItem('eliminatoria_clicked');
-            
+
             // Restaurar o botão ao estado original
             btnAbrirEliminatoria.disabled = false;
             btnAbrirEliminatoria.innerHTML = textoOriginal;
-            
+
             // Fazer reset automático dos resultados
             fetch('/resetar_eliminatorias').then(r => r.json()).catch(e => console.error(e));
         }
@@ -1011,7 +1027,7 @@
     // Mostrar overlay de loading quando enviar o formulário
     if (formSorteio && loadingOverlay) {
         // Primeiro verificar se a página está sendo carregada do cache (botão voltar)
-        window.onpageshow = function(event) {
+        window.onpageshow = function (event) {
             if (event.persisted) {
                 console.log("Página carregada do cache (botão voltar)");
                 // Se o overlay estiver ativo, redirecionar para a home
@@ -1020,16 +1036,16 @@
                 }
             }
         };
-        
+
         // Salvar o estado do loading no sessionStorage
-        window.addEventListener('beforeunload', function() {
+        window.addEventListener('beforeunload', function () {
             if (loadingOverlay.classList.contains('active')) {
                 sessionStorage.setItem('loadingActive', 'true');
             }
         });
-        
+
         // Verificar ao carregar a página se deveria estar em loading
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             if (sessionStorage.getItem('loadingActive') === 'true') {
                 // Se estiver voltando para a página e havia um loading ativo
                 // Redirecionar para a home
@@ -1037,16 +1053,16 @@
                 window.location.href = "{{ url_for('main.home') }}";
             }
         });
-        
+
         // Código original do seu listener de submit
-        formSorteio.addEventListener('submit', function(e) {
+        formSorteio.addEventListener('submit', function (e) {
             // Verifica se o formulário é válido
             if (this.checkValidity()) {
                 // Mostra o overlay de loading
                 loadingOverlay.classList.add('active');
                 // Marca que estamos em estado de loading
                 sessionStorage.setItem('loadingActive', 'true');
-                    
+
                 // Texto para mostrar durante o sorteio
                 const loadingTexts = [
                     "Embaralhando jogadores...",
@@ -1055,23 +1071,23 @@
                     "Definindo confrontos...",
                     "Quase pronto..."
                 ];
-                    
+
                 let currentText = 0;
                 const loadingTextElement = loadingOverlay.querySelector('.loading-text');
-                    
+
                 // Alterna entre os textos para dar sensação de progresso
-                const textInterval = setInterval(function() {
+                const textInterval = setInterval(function () {
                     loadingTextElement.style.opacity = 0;
-                        
-                    setTimeout(function() {
+
+                    setTimeout(function () {
                         loadingTextElement.textContent = loadingTexts[currentText];
                         loadingTextElement.style.opacity = 1;
                         currentText = (currentText + 1) % loadingTexts.length;
                     }, 300);
                 }, 2000);
-                    
+
                 // Limpar intervalo se o usuário navegar para fora da página
-                window.addEventListener('beforeunload', function() {
+                window.addEventListener('beforeunload', function () {
                     clearInterval(textInterval);
                 });
             }
@@ -1082,63 +1098,63 @@
     if (btnSelecionarJogadores && modalJogadores) {
         // Inicializar array para jogadores selecionados
         let selecionados = [];
-        
+
         // Abrir modal e carregar jogadores
-        btnSelecionarJogadores.addEventListener('click', function() {
+        btnSelecionarJogadores.addEventListener('click', function () {
             // Verificar se a textarea já tem jogadores
             if (textarea) {
                 const jogadoresAtuais = textarea.value.split(',')
                     .map(nome => nome.trim())
                     .filter(nome => nome !== '');
-                
+
                 // Limpar a lista de selecionados atual
                 selecionados = [...jogadoresAtuais];
                 atualizarListaSelecionados();
             }
-            
+
             // Abrir o modal
             modalJogadores.style.display = 'flex';
-            
+
             // Carregar a lista de jogadores do banco de dados
             carregarJogadores();
         });
-        
+
         // Fechar modal
         if (modalClose) {
-            modalClose.addEventListener('click', function() {
+            modalClose.addEventListener('click', function () {
                 modalJogadores.style.display = 'none';
             });
         }
-        
+
         if (btnCancelarSelecao) {
-            btnCancelarSelecao.addEventListener('click', function() {
+            btnCancelarSelecao.addEventListener('click', function () {
                 modalJogadores.style.display = 'none';
             });
         }
-        
+
         // Fechar modal ao clicar fora
-        window.addEventListener('click', function(event) {
+        window.addEventListener('click', function (event) {
             if (event.target === modalJogadores) {
                 modalJogadores.style.display = 'none';
             }
         });
-        
+
         // Funcionalidade do botão Selecionar Todos
         if (btnSelecionarTodos) {
-            btnSelecionarTodos.addEventListener('click', function() {
+            btnSelecionarTodos.addEventListener('click', function () {
                 // Obter todos os itens de jogador atualmente exibidos na lista
                 const jogadoresItems = document.querySelectorAll('.jogador-item');
-                
+
                 // Verificar se todos estão selecionados para determinar a ação
-                const todosJaSelecionados = Array.from(jogadoresItems).every(item => 
+                const todosJaSelecionados = Array.from(jogadoresItems).every(item =>
                     item.classList.contains('selecionado'));
-                
+
                 // Se todos já estão selecionados, vamos desselecioná-los
                 // Caso contrário, selecionamos todos
                 jogadoresItems.forEach(item => {
                     const nome = item.dataset.nome;
                     const checkbox = item.querySelector('input[type="checkbox"]');
-                    
+
                     if (todosJaSelecionados) {
                         // Desselecionando
                         if (selecionados.includes(nome)) {
@@ -1155,28 +1171,28 @@
                         }
                     }
                 });
-                
+
                 // Atualizar o texto do botão baseado na nova ação
                 this.textContent = todosJaSelecionados ? 'Selecionar Todos' : 'Desselecionar Todos';
-                
+
                 // Atualizar a lista de selecionados
                 atualizarListaSelecionados();
             });
         }
-        
+
         // Função para carregar jogadores
         function carregarJogadores(termo = '') {
             const listaJogadores = document.getElementById('listaJogadores');
             if (!listaJogadores) return;
-            
+
             // URL da API para buscar jogadores
-            const url = termo 
-                ? `{{ url_for('main.buscar_jogadores') }}?termo=${encodeURIComponent(termo)}` 
+            const url = termo
+                ? `{{ url_for('main.buscar_jogadores') }}?termo=${encodeURIComponent(termo)}`
                 : "{{ url_for('main.listar_todos_jogadores') }}";
-            
+
             // Exibir estado de carregamento
             listaJogadores.innerHTML = '<p class="text-center"><i>Carregando jogadores...</i></p>';
-            
+
             // Fazer a requisição AJAX
             fetch(url)
                 .then(response => response.json())
@@ -1186,7 +1202,7 @@
                         listaJogadores.innerHTML = '<p class="text-center">Nenhum jogador encontrado</p>';
                         return;
                     }
-                    
+
                     // Construir a lista de jogadores
                     let html = '';
                     data.forEach(jogador => {
@@ -1199,16 +1215,16 @@
                             </div>
                         `;
                     });
-                    
+
                     listaJogadores.innerHTML = html;
-                    
+
                     // Atualizar o texto do botão Selecionar Todos
                     if (btnSelecionarTodos) {
                         // Verificar se todos os jogadores carregados já estão selecionados
-                        const todosJaSelecionados = data.every(jogador => 
+                        const todosJaSelecionados = data.every(jogador =>
                             selecionados.includes(jogador.nome));
-                        
-                        btnSelecionarTodos.textContent = todosJaSelecionados ? 
+
+                        btnSelecionarTodos.textContent = todosJaSelecionados ?
                             'Desselecionar Todos' : 'Selecionar Todos';
                     }
                 })
@@ -1217,12 +1233,12 @@
                     listaJogadores.innerHTML = '<p class="text-center text-danger">Erro ao carregar jogadores</p>';
                 });
         }
-        
+
         // Filtrar jogadores
         if (buscarJogadorInput) {
-            buscarJogadorInput.addEventListener('input', function() {
+            buscarJogadorInput.addEventListener('input', function () {
                 const termo = this.value.trim();
-                
+
                 // Se o termo tiver pelo menos 2 caracteres, buscar
                 if (termo.length >= 2) {
                     carregarJogadores(termo);
@@ -1232,17 +1248,17 @@
                 }
             });
         }
-        
+
         // Confirmar seleção 
         if (btnConfirmarSelecao && textarea && modoSelect) {
-            btnConfirmarSelecao.addEventListener('click', function() {
+            btnConfirmarSelecao.addEventListener('click', function () {
                 // Modo do torneio atual
                 const modo = modoSelect.value;
                 if (!modo) {
                     alert("Por favor, selecione o formato do torneio primeiro.");
                     return;
                 }
-                
+
                 // Número esperado de jogadores
                 let numEsperado;
                 if (modo === '16j') {
@@ -1256,47 +1272,47 @@
                 } else {
                     numEsperado = 32;
                 }
-                
+
                 // Verificar se o número de jogadores selecionados é adequado
                 if (selecionados.length > numEsperado) {
                     alert(`Você selecionou ${selecionados.length} jogadores, mas o formato escolhido requer exatamente ${numEsperado} jogadores.\n\nPor favor, remova ${selecionados.length - numEsperado} jogadores da seleção.`);
                     return;
                 }
-                
+
                 // Preencher a textarea com os jogadores selecionados
                 textarea.value = selecionados.join(', ');
-                
+
                 // Fechar o modal
                 modalJogadores.style.display = 'none';
-                
+
                 // Atualizar o contador de jogadores
                 if (contador) {
                     contador.textContent = `${selecionados.length}/${numEsperado} jogadores`;
-                    
+
                     // Feedback visual
-                    contador.style.color = 
-                        selecionados.length === numEsperado ? 'var(--success-color)' : 
-                        selecionados.length > numEsperado ? 'var(--danger-color)' : 'var(--warning-color)';
+                    contador.style.color =
+                        selecionados.length === numEsperado ? 'var(--success-color)' :
+                            selecionados.length > numEsperado ? 'var(--danger-color)' : 'var(--warning-color)';
                 }
-                
+
                 // Disparar evento de input para validar a textarea
                 textarea.dispatchEvent(new Event('input'));
             });
         }
-        
+
         // Função para atualizar a lista de jogadores selecionados
         function atualizarListaSelecionados() {
             const contadorSelecionados = document.getElementById('contadorSelecionados');
             const jogadoresSelecionados = document.getElementById('jogadoresSelecionados');
-            
+
             if (!contadorSelecionados || !jogadoresSelecionados) return;
-            
+
             // Atualizar o contador
             contadorSelecionados.textContent = selecionados.length;
-            
+
             // Atualizar a lista visual
             jogadoresSelecionados.innerHTML = '';
-            
+
             selecionados.forEach(nome => {
                 const li = document.createElement('li');
                 li.innerHTML = `
@@ -1306,12 +1322,12 @@
                 jogadoresSelecionados.appendChild(li);
             });
         }
-        
+
         // Expor funções necessárias no escopo global
-        window.toggleJogador = function(element) {
+        window.toggleJogador = function (element) {
             const nome = element.dataset.nome;
             const checkbox = element.querySelector('input[type="checkbox"]');
-            
+
             // Toggle seleção
             if (selecionados.includes(nome)) {
                 // Remover da seleção
@@ -1324,50 +1340,50 @@
                 element.classList.add('selecionado');
                 checkbox.checked = true;
             }
-            
+
             // Atualizar a lista de selecionados
             atualizarListaSelecionados();
         };
-        
-        window.removerSelecionado = function(nome) {
+
+        window.removerSelecionado = function (nome) {
             // Remover da lista de selecionados
             selecionados = selecionados.filter(n => n !== nome);
-            
+
             // Atualizar checkbox na lista principal
             const jogadorItem = document.querySelector(`.jogador-item[data-nome="${nome}"]`);
             if (jogadorItem) {
                 jogadorItem.classList.remove('selecionado');
                 jogadorItem.querySelector('input[type="checkbox"]').checked = false;
             }
-            
+
             // Atualizar a lista de selecionados
             atualizarListaSelecionados();
         };
     }
 
     // Implementação da função validarSemEmpates - definida no escopo global para ser acessível a outros handlers
-    window.validarSemEmpates = function() {
+    window.validarSemEmpates = function () {
         let empatesEncontrados = [];
-        
+
         // Selecionar todos os confrontos
         const confrontos = document.querySelectorAll('.confronto');
-        
+
         confrontos.forEach((confronto, index) => {
             const inputsEsq = confronto.querySelector('.saldo-inputs-esq');
             const inputsDir = confronto.querySelector('.saldo-inputs-dir');
-            
+
             if (inputsEsq && inputsDir) {
                 // Verificar se ambos os campos estão preenchidos
                 if (inputsEsq.value !== '' && inputsDir.value !== '') {
                     const valorEsq = parseInt(inputsEsq.value);
                     const valorDir = parseInt(inputsDir.value);
-                    
+
                     // Verificar se é empate (agora permitindo 0, desde que não seja empate)
                     if (valorEsq === valorDir) {
                         // Destacar inputs com erro
                         inputsEsq.classList.add('erro-empate');
                         inputsDir.classList.add('erro-empate');
-                        
+
                         // Registrar o empate
                         const jogadoresEsq = confronto.querySelector('.dupla:first-child')?.textContent || 'Dupla 1';
                         const jogadoresDir = confronto.querySelector('.dupla:last-child')?.textContent || 'Dupla 2';
@@ -1385,7 +1401,7 @@
                 }
             }
         });
-        
+
         return empatesEncontrados;
     };
 
@@ -1400,7 +1416,7 @@
                 btnSortear.disabled = true;
                 return;
             }
-            
+
             let numJogadores;
             if (modo === '16j') {
                 numJogadores = 16;
@@ -1413,23 +1429,23 @@
             } else {
                 numJogadores = 32;
             }
-            
+
             if (instrucoes) {
                 instrucoes.textContent = `Insira EXATAMENTE ${numJogadores} jogadores únicos separados por vírgula:`;
             }
             textarea.placeholder = `Jogador1, Jogador2, ..., Jogador${numJogadores}`;
             textarea.disabled = false;
             btnSortear.disabled = false;
-            
+
             // Força a validação do textarea
             textarea.dispatchEvent(new Event('input'));
         }
-        
+
         // Validação do textarea
-        textarea.addEventListener('input', function() {
+        textarea.addEventListener('input', function () {
             const modo = modoSelect.value;
             if (!modo) return;
-            
+
             let numEsperado;
             if (modo === '16j') {
                 numEsperado = 16;
@@ -1442,7 +1458,7 @@
             } else {
                 numEsperado = 32;
             }
-            
+
             const nomes = this.value.split(',')
                 .map(nome => nome.trim())
                 .filter(nome => nome !== '' && nome.replace(/\s/g, '').length > 0);
@@ -1456,26 +1472,26 @@
                 this.classList.add('is-invalid');
                 btnSortear.disabled = true;
             }
-            
+
             // Verifica duplicados
             const nomesLower = nomes.map(nome => nome.toLowerCase());
             const duplicados = [...new Set(
                 nomesLower.filter((nome, index) => nomesLower.indexOf(nome) !== index)
             )];
-            
+
             // Atualiza contador
             if (contador) {
                 contador.textContent = `${nomes.length}/${numEsperado} jogadores`;
-                
+
                 // Feedback visual
                 if (duplicados.length > 0) {
                     contador.innerHTML += ` <span style="color:var(--danger-color)">(Duplicados: ${duplicados.join(', ')})</span>`;
                     contador.style.color = 'var(--danger-color)';
                     btnSortear.disabled = true;
                 } else {
-                    contador.style.color = 
-                        nomes.length === numEsperado ? 'var(--success-color)' : 
-                        nomes.length > numEsperado ? 'var(--danger-color)' : 'var(--warning-color)';
+                    contador.style.color =
+                        nomes.length === numEsperado ? 'var(--success-color)' :
+                            nomes.length > numEsperado ? 'var(--danger-color)' : 'var(--warning-color)';
                     btnSortear.disabled = nomes.length !== numEsperado;
                 }
             }
@@ -1490,19 +1506,19 @@
 
     // Adiciona validação na entrada de valores dos confrontos
     document.querySelectorAll('.saldo-inputs-esq, .saldo-inputs-dir').forEach(input => {
-        input.addEventListener('change', function() {
+        input.addEventListener('change', function () {
             const confronto = this.closest('.confronto');
             if (!confronto) return;
-            
+
             const inputEsq = confronto.querySelector('.saldo-inputs-esq');
             const inputDir = confronto.querySelector('.saldo-inputs-dir');
-            
+
             if (!inputEsq || !inputDir) return;
-            
+
             if (inputEsq.value && inputDir.value) {
                 const valorEsq = parseInt(inputEsq.value);
                 const valorDir = parseInt(inputDir.value);
-                
+
                 if (valorEsq === valorDir) {
                     inputEsq.classList.add('erro-empate');
                     inputDir.classList.add('erro-empate');
@@ -1514,24 +1530,24 @@
             }
         });
     });
-    
+
     // Validação ao salvar o grupo
     document.querySelectorAll('.form-grupo').forEach(form => {
-        form.addEventListener('submit', function(e) {
+        form.addEventListener('submit', function (e) {
             const empates = window.validarSemEmpates();
-            
+
             if (empates.length > 0) {
                 e.preventDefault();
-                
+
                 // Montar mensagem de erro
                 let mensagem = '⚠️ Não é permitido empate nos confrontos:\n\n';
                 empates.forEach(empate => {
                     mensagem += `Confronto ${empate.confronto}: ${empate.jogadoresEsq} x ${empate.jogadoresDir} (${empate.placar})\n`;
                 });
                 mensagem += '\nPor favor, corrija os resultados antes de salvar.';
-                
+
                 alert(mensagem);
-                
+
                 // Rolar até o primeiro empate
                 const primeiroInputComErro = document.querySelector('.erro-empate');
                 if (primeiroInputComErro) {

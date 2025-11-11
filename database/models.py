@@ -57,6 +57,7 @@ class Torneio(db.Model):
     nome = db.Column(db.String(100))
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
     finalizado = db.Column(db.Boolean, default=False)
+    formato_eliminatoria = db.Column(db.String(20), default='separados')  # 'separados' ou 'mistos'
     jogadores = db.relationship('Jogador', backref='torneio', lazy=True)
     participacoes = db.relationship('ParticipacaoTorneio', backref='torneio', lazy=True)
 

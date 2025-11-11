@@ -92,9 +92,16 @@ def fase_eliminatoria():
                 if confronto.pontos_dupla_a == confronto.pontos_dupla_b:
                     flash(f"O Grupo {grupo_idx + 1}, Confronto {confronto.confronto_idx + 1} tem um empate ({confronto.pontos_dupla_a}x{confronto.pontos_dupla_b}). Não são permitidos empates.", "warning")
                     return redirect(url_for('main.novo_torneio'))
-                
-        modo = session.get('modo_torneio', '28j')
-        log_playoff_action("phase_accessed", f"Modo: {modo}")
+        
+        # Obter formato da eliminatória
+        formato_eliminatoria = session.get('formato_eliminatoria', 'separados')
+        
+        # Se não estiver na sessão, buscar do banco de dados
+        if not formato_eliminatoria and torneio:
+            formato_eliminatoria = torneio.formato_eliminatoria or 'separados'
+            session['formato_eliminatoria'] = formato_eliminatoria
+        
+        log_playoff_action("phase_accessed", f"Modo: {modo}, Formato: {formato_eliminatoria}")
 
         # Verificação inicial crítica
         if 'grupos' not in session or not session['grupos']:
@@ -114,75 +121,173 @@ def fase_eliminatoria():
         primeiros.sort(key=lambda x: (-x['vitorias'], -x['saldo_total']))
         segundos.sort(key=lambda x: (-x['vitorias'], -x['saldo_total']))
 
-        # Configuração centralizada para todos os modos
-        config = {
-            '16j': {
-                'semi_finais': [
-                    {'timeA': [get_jogador_safe(primeiros, 0), get_jogador_safe(primeiros, 1)],
-                     'timeB': [get_jogador_safe(segundos, 2), get_jogador_safe(segundos, 3)], 
-                     'jogo': 1},
-                    {'timeA': [get_jogador_safe(primeiros, 2), get_jogador_safe(primeiros, 3)],
-                     'timeB': [get_jogador_safe(segundos, 0), get_jogador_safe(segundos, 1)], 
-                     'jogo': 2},
-                ],
-                'required_players': {'primeiros': 4, 'segundos': 4},
-                'final_jogo': 3
-            },
-            '20j': {
-                'quartas': [
-                    {'timeA': [get_jogador_safe(segundos, 1), get_jogador_safe(segundos, 2)],
-                     'timeB': [get_jogador_safe(segundos, 3), get_jogador_safe(segundos, 4)], 
-                     'jogo': 1}
-                ],
-                'required_players': {'primeiros': 5, 'segundos': 5},
-                'final_jogo': 4
-            },
-            '24j': {
-                'quartas': [
-                    {'timeA': [get_jogador_safe(segundos, 0), get_jogador_safe(segundos, 1)],
-                     'timeB': [get_jogador_safe(segundos, 2), get_jogador_safe(segundos, 3)], 
-                     'jogo': 1},
-                    {'timeA': [get_jogador_safe(primeiros, 4), get_jogador_safe(primeiros, 5)],
-                     'timeB': [get_jogador_safe(segundos, 4), get_jogador_safe(segundos, 5)], 
-                     'jogo': 2}
-                ],
-                'required_players': {'primeiros': 6, 'segundos': 6},
-                'final_jogo': 5
-            },
-            '28j': {
-                'quartas': [
-                    {'timeA': [get_jogador_safe(primeiros, 6), get_jogador_safe(segundos, 0)],
-                     'timeB': [get_jogador_safe(segundos, 1), get_jogador_safe(segundos, 2)], 
-                     'jogo': 1},
-                    {'timeA': [get_jogador_safe(primeiros, 2), get_jogador_safe(primeiros, 3)],
-                     'timeB': [get_jogador_safe(segundos, 5), get_jogador_safe(segundos, 6)], 
-                     'jogo': 2},
-                    {'timeA': [get_jogador_safe(primeiros, 4), get_jogador_safe(primeiros, 5)],
-                     'timeB': [get_jogador_safe(segundos, 3), get_jogador_safe(segundos, 4)], 
-                     'jogo': 3}
-                ],
-                'required_players': {'primeiros': 7, 'segundos': 7},
-                'final_jogo': 6
-            },
-            '32j': {
-                'quartas': [
-                    {'timeA': [get_jogador_safe(primeiros, 0), get_jogador_safe(primeiros, 1)],
-                     'timeB': [get_jogador_safe(segundos, 6), get_jogador_safe(segundos, 7)], 
-                     'jogo': 1},
-                    {'timeA': [get_jogador_safe(primeiros, 2), get_jogador_safe(primeiros, 3)],
-                     'timeB': [get_jogador_safe(segundos, 4), get_jogador_safe(segundos, 5)], 
-                     'jogo': 2},
-                    {'timeA': [get_jogador_safe(primeiros, 4), get_jogador_safe(primeiros, 5)],
-                     'timeB': [get_jogador_safe(segundos, 2), get_jogador_safe(segundos, 3)], 
-                     'jogo': 3},
-                    {'timeA': [get_jogador_safe(primeiros, 6), get_jogador_safe(primeiros, 7)],
-                     'timeB': [get_jogador_safe(segundos, 0), get_jogador_safe(segundos, 1)], 
-                     'jogo': 4}
-                ],
-                'required_players': {'primeiros': 8, 'segundos': 8},
-                'final_jogo': 7
-            }
-        }.get(modo)
+        # ===================================================================
+        # CONFIGURAÇÃO COMPLETA PARA TODOS OS MODOS - SEPARADOS E MISTOS
+        # ===================================================================
+        
+        config = None
+        
+        if modo == '16j':
+            if formato_eliminatoria == 'mistos':
+                # Formato MISTOS para 16j
+                config = {
+                    'semi_finais': [
+                        {'timeA': [get_jogador_safe(primeiros, 0), get_jogador_safe(segundos, 0)],
+                         'timeB': [get_jogador_safe(primeiros, 3), get_jogador_safe(segundos, 3)], 
+                         'jogo': 1},
+                        {'timeA': [get_jogador_safe(primeiros, 1), get_jogador_safe(segundos, 1)],
+                         'timeB': [get_jogador_safe(primeiros, 2), get_jogador_safe(segundos, 2)], 
+                         'jogo': 2},
+                    ],
+                    'required_players': {'primeiros': 4, 'segundos': 4},
+                    'final_jogo': 3
+                }
+            else:
+                # Formato SEPARADOS para 16j (original)
+                config = {
+                    'semi_finais': [
+                        {'timeA': [get_jogador_safe(primeiros, 0), get_jogador_safe(primeiros, 1)],
+                         'timeB': [get_jogador_safe(segundos, 2), get_jogador_safe(segundos, 3)], 
+                         'jogo': 1},
+                        {'timeA': [get_jogador_safe(primeiros, 2), get_jogador_safe(primeiros, 3)],
+                         'timeB': [get_jogador_safe(segundos, 0), get_jogador_safe(segundos, 1)], 
+                         'jogo': 2},
+                    ],
+                    'required_players': {'primeiros': 4, 'segundos': 4},
+                    'final_jogo': 3
+                }
+        
+        elif modo == '20j':
+            if formato_eliminatoria == 'mistos':
+                # Formato MISTOS para 20j
+                config = {
+                    'quartas': [
+                        {'timeA': [get_jogador_safe(primeiros, 3), get_jogador_safe(segundos, 3)],
+                         'timeB': [get_jogador_safe(primeiros, 4), get_jogador_safe(segundos, 4)], 
+                         'jogo': 1}
+                    ],
+                    'required_players': {'primeiros': 5, 'segundos': 5},
+                    'final_jogo': 4
+                }
+            else:
+                # Formato SEPARADOS para 20j (original)
+                config = {
+                    'quartas': [
+                        {'timeA': [get_jogador_safe(segundos, 1), get_jogador_safe(segundos, 2)],
+                         'timeB': [get_jogador_safe(segundos, 3), get_jogador_safe(segundos, 4)], 
+                         'jogo': 1}
+                    ],
+                    'required_players': {'primeiros': 5, 'segundos': 5},
+                    'final_jogo': 4
+                }
+        
+        elif modo == '24j':
+            if formato_eliminatoria == 'mistos':
+                # Formato MISTOS para 24j
+                config = {
+                    'quartas': [
+                        {'timeA': [get_jogador_safe(primeiros, 3), get_jogador_safe(segundos, 3)],
+                         'timeB': [get_jogador_safe(primeiros, 4), get_jogador_safe(segundos, 4)], 
+                         'jogo': 1},
+                        {'timeA': [get_jogador_safe(primeiros, 2), get_jogador_safe(segundos, 2)],
+                         'timeB': [get_jogador_safe(primeiros, 5), get_jogador_safe(segundos, 5)], 
+                         'jogo': 2}
+                    ],
+                    'required_players': {'primeiros': 6, 'segundos': 6},
+                    'final_jogo': 5
+                }
+            else:
+                # Formato SEPARADOS para 24j (original)
+                config = {
+                    'quartas': [
+                        {'timeA': [get_jogador_safe(segundos, 0), get_jogador_safe(segundos, 1)],
+                         'timeB': [get_jogador_safe(segundos, 2), get_jogador_safe(segundos, 3)], 
+                         'jogo': 1},
+                        {'timeA': [get_jogador_safe(primeiros, 4), get_jogador_safe(primeiros, 5)],
+                         'timeB': [get_jogador_safe(segundos, 4), get_jogador_safe(segundos, 5)], 
+                         'jogo': 2}
+                    ],
+                    'required_players': {'primeiros': 6, 'segundos': 6},
+                    'final_jogo': 5
+                }
+        
+        elif modo == '28j':
+            if formato_eliminatoria == 'mistos':
+                # Formato MISTOS para 28j
+                config = {
+                    'quartas': [
+                        {'timeA': [get_jogador_safe(primeiros, 1), get_jogador_safe(segundos, 1)],
+                         'timeB': [get_jogador_safe(primeiros, 6), get_jogador_safe(segundos, 6)], 
+                         'jogo': 1},
+                        {'timeA': [get_jogador_safe(primeiros, 2), get_jogador_safe(segundos, 2)],
+                         'timeB': [get_jogador_safe(primeiros, 5), get_jogador_safe(segundos, 5)], 
+                         'jogo': 2},
+                        {'timeA': [get_jogador_safe(primeiros, 3), get_jogador_safe(segundos, 3)],
+                         'timeB': [get_jogador_safe(primeiros, 4), get_jogador_safe(segundos, 4)], 
+                         'jogo': 3}
+                    ],
+                    'required_players': {'primeiros': 7, 'segundos': 7},
+                    'final_jogo': 6
+                }
+            else:
+                # Formato SEPARADOS para 28j (original)
+                config = {
+                    'quartas': [
+                        {'timeA': [get_jogador_safe(primeiros, 6), get_jogador_safe(segundos, 0)],
+                         'timeB': [get_jogador_safe(segundos, 1), get_jogador_safe(segundos, 2)], 
+                         'jogo': 1},
+                        {'timeA': [get_jogador_safe(primeiros, 2), get_jogador_safe(primeiros, 3)],
+                         'timeB': [get_jogador_safe(segundos, 5), get_jogador_safe(segundos, 6)], 
+                         'jogo': 2},
+                        {'timeA': [get_jogador_safe(primeiros, 4), get_jogador_safe(primeiros, 5)],
+                         'timeB': [get_jogador_safe(segundos, 3), get_jogador_safe(segundos, 4)], 
+                         'jogo': 3}
+                    ],
+                    'required_players': {'primeiros': 7, 'segundos': 7},
+                    'final_jogo': 6
+                }
+        
+        elif modo == '32j':
+            if formato_eliminatoria == 'mistos':
+                # Formato MISTOS para 32j
+                config = {
+                    'quartas': [
+                        {'timeA': [get_jogador_safe(primeiros, 0), get_jogador_safe(segundos, 0)],
+                         'timeB': [get_jogador_safe(primeiros, 7), get_jogador_safe(segundos, 7)], 
+                         'jogo': 1},
+                        {'timeA': [get_jogador_safe(primeiros, 1), get_jogador_safe(segundos, 1)],
+                         'timeB': [get_jogador_safe(primeiros, 6), get_jogador_safe(segundos, 6)], 
+                         'jogo': 2},
+                        {'timeA': [get_jogador_safe(primeiros, 2), get_jogador_safe(segundos, 2)],
+                         'timeB': [get_jogador_safe(primeiros, 5), get_jogador_safe(segundos, 5)], 
+                         'jogo': 3},
+                        {'timeA': [get_jogador_safe(primeiros, 3), get_jogador_safe(segundos, 3)],
+                         'timeB': [get_jogador_safe(primeiros, 4), get_jogador_safe(segundos, 4)], 
+                         'jogo': 4}
+                    ],
+                    'required_players': {'primeiros': 8, 'segundos': 8},
+                    'final_jogo': 7
+                }
+            else:
+                # Formato SEPARADOS para 32j (original)
+                config = {
+                    'quartas': [
+                        {'timeA': [get_jogador_safe(primeiros, 0), get_jogador_safe(primeiros, 1)],
+                         'timeB': [get_jogador_safe(segundos, 6), get_jogador_safe(segundos, 7)], 
+                         'jogo': 1},
+                        {'timeA': [get_jogador_safe(primeiros, 6), get_jogador_safe(primeiros, 7)],
+                         'timeB': [get_jogador_safe(segundos, 0), get_jogador_safe(segundos, 1)], 
+                         'jogo': 2},
+                        {'timeA': [get_jogador_safe(primeiros, 4), get_jogador_safe(primeiros, 5)],
+                         'timeB': [get_jogador_safe(segundos, 2), get_jogador_safe(segundos, 3)], 
+                         'jogo': 3},
+                        {'timeA': [get_jogador_safe(primeiros, 2), get_jogador_safe(primeiros, 3)],
+                         'timeB': [get_jogador_safe(segundos, 4), get_jogador_safe(segundos, 5)],                          
+                         'jogo': 4}
+                    ],
+                    'required_players': {'primeiros': 8, 'segundos': 8},
+                    'final_jogo': 7
+                }
 
         if not config:
             current_app.logger.error(f"Modo de torneio inválido: {modo}")
@@ -240,54 +345,102 @@ def fase_eliminatoria():
             if all(f'eliminatoria_jogo{j["jogo"]}' in session for j in confrontos):
                 if modo == '20j':
                     vencedor_jogo1 = 'timeA' if session['eliminatoria_jogo1']['timeA'] > session['eliminatoria_jogo1']['timeB'] else 'timeB'
-                    
-                    semi_finais = [
-                        {
-                            'timeA': [get_jogador_safe(primeiros, 0), get_jogador_safe(primeiros, 1)],
-                            'timeB': confrontos[0][vencedor_jogo1],
-                            'jogo': 2
-                        },
-                        {
-                            'timeA': [get_jogador_safe(primeiros, 2), get_jogador_safe(primeiros, 3)],
-                            'timeB': [get_jogador_safe(primeiros, 4), get_jogador_safe(segundos, 0)],
-                            'jogo': 3
-                        }
-                    ]
+
+                    if formato_eliminatoria == 'mistos':
+                        # Formato MISTOS para 20j - Semi-finais
+                        semi_finais = [
+                            {
+                                'timeA': [get_jogador_safe(primeiros, 0), get_jogador_safe(segundos, 0)],
+                                'timeB': confrontos[0][vencedor_jogo1],
+                                'jogo': 2
+                            },
+                            {
+                                'timeA': [get_jogador_safe(primeiros, 1), get_jogador_safe(segundos, 1)],
+                                'timeB': [get_jogador_safe(primeiros, 2), get_jogador_safe(segundos, 2)],
+                                'jogo': 3
+                            }
+                        ]
+                    else:
+                        # Formato SEPARADOS para 20j - Semi-finais (original)
+                        semi_finais = [
+                            {
+                                'timeA': [get_jogador_safe(primeiros, 0), get_jogador_safe(primeiros, 1)],
+                                'timeB': confrontos[0][vencedor_jogo1],
+                                'jogo': 2
+                            },
+                            {
+                                'timeA': [get_jogador_safe(primeiros, 2), get_jogador_safe(primeiros, 3)],
+                                'timeB': [get_jogador_safe(primeiros, 4), get_jogador_safe(segundos, 0)],
+                                'jogo': 3
+                            }
+                        ]
 
                 elif modo == '24j':
                     vencedor_jogo1 = 'timeA' if session['eliminatoria_jogo1']['timeA'] > session['eliminatoria_jogo1']['timeB'] else 'timeB'
                     vencedor_jogo2 = 'timeA' if session['eliminatoria_jogo2']['timeA'] > session['eliminatoria_jogo2']['timeB'] else 'timeB'
-                    
-                    semi_finais = [
-                        {
-                            'timeA': [get_jogador_safe(primeiros, 0), get_jogador_safe(primeiros, 1)],
-                            'timeB': confrontos[0][vencedor_jogo1],
-                            'jogo': 3
-                        },
-                        {
-                            'timeA': [get_jogador_safe(primeiros, 2), get_jogador_safe(primeiros, 3)],
-                            'timeB': confrontos[1][vencedor_jogo2],
-                            'jogo': 4
-                        }
-                    ]
+
+                    if formato_eliminatoria == 'mistos':
+                        # Formato MISTOS para 24j - Semi-finais
+                        semi_finais = [
+                            {
+                                'timeA': [get_jogador_safe(primeiros, 0), get_jogador_safe(segundos, 0)],
+                                'timeB': confrontos[0][vencedor_jogo1],
+                                'jogo': 3
+                            },
+                            {
+                                'timeA': [get_jogador_safe(primeiros, 1), get_jogador_safe(segundos, 1)],
+                                'timeB': confrontos[1][vencedor_jogo2],
+                                'jogo': 4
+                            }
+                        ]
+                    else:
+                        # Formato SEPARADOS para 24j - Semi-finais (original)
+                        semi_finais = [
+                            {
+                                'timeA': [get_jogador_safe(primeiros, 0), get_jogador_safe(primeiros, 1)],
+                                'timeB': confrontos[0][vencedor_jogo1],
+                                'jogo': 3
+                            },
+                            {
+                                'timeA': [get_jogador_safe(primeiros, 2), get_jogador_safe(primeiros, 3)],
+                                'timeB': confrontos[1][vencedor_jogo2],
+                                'jogo': 4
+                            }
+                        ]
 
                 elif modo == '28j':
                     vencedor_jogo1 = 'timeA' if session['eliminatoria_jogo1']['timeA'] > session['eliminatoria_jogo1']['timeB'] else 'timeB'
                     vencedor_jogo2 = 'timeA' if session['eliminatoria_jogo2']['timeA'] > session['eliminatoria_jogo2']['timeB'] else 'timeB'
                     vencedor_jogo3 = 'timeA' if session['eliminatoria_jogo3']['timeA'] > session['eliminatoria_jogo3']['timeB'] else 'timeB'
-                    
-                    semi_finais = [
-                        {
-                            'timeA': [get_jogador_safe(primeiros, 0), get_jogador_safe(primeiros, 1)],
-                            'timeB': confrontos[0][vencedor_jogo1],
-                            'jogo': 4
-                        },
-                        {
-                            'timeA': confrontos[1][vencedor_jogo2],
-                            'timeB': confrontos[2][vencedor_jogo3],
-                            'jogo': 5
-                        }
-                    ]
+
+                    if formato_eliminatoria == 'mistos':
+                    # Formato MISTOS para 28j - Semi-finais
+                        semi_finais = [
+                            {
+                                'timeA': confrontos[0][vencedor_jogo1],
+                                'timeB': confrontos[1][vencedor_jogo2],
+                                'jogo': 4                                
+                            },
+                            {
+                                'timeA': [get_jogador_safe(primeiros, 0), get_jogador_safe(segundos, 0)],
+                                'timeB': confrontos[2][vencedor_jogo3],
+                                'jogo': 5
+                            }
+                        ]
+                    else:
+                        # Formato SEPARADOS para 28j - Semi-finais (original)
+                        semi_finais = [
+                            {
+                                'timeA': [get_jogador_safe(primeiros, 0), get_jogador_safe(primeiros, 1)],
+                                'timeB': confrontos[0][vencedor_jogo1],
+                                'jogo': 4
+                            },
+                            {
+                                'timeA': confrontos[1][vencedor_jogo2],
+                                'timeB': confrontos[2][vencedor_jogo3],
+                                'jogo': 5
+                            }
+                        ]
 
                 elif modo == '32j':
                     vencedor_jogo1 = 'timeA' if session['eliminatoria_jogo1']['timeA'] > session['eliminatoria_jogo1']['timeB'] else 'timeB'
@@ -295,18 +448,35 @@ def fase_eliminatoria():
                     vencedor_jogo3 = 'timeA' if session['eliminatoria_jogo3']['timeA'] > session['eliminatoria_jogo3']['timeB'] else 'timeB'
                     vencedor_jogo4 = 'timeA' if session['eliminatoria_jogo4']['timeA'] > session['eliminatoria_jogo4']['timeB'] else 'timeB'
                     
-                    semi_finais = [
-                        {
-                            'timeA': confrontos[0][vencedor_jogo1],
-                            'timeB': confrontos[1][vencedor_jogo2],
-                            'jogo': 5
-                        },
-                        {
-                            'timeA': confrontos[2][vencedor_jogo3],
-                            'timeB': confrontos[3][vencedor_jogo4],
-                            'jogo': 6
-                        }
-                    ]
+                    if formato_eliminatoria == 'mistos':
+                    # Formato MISTOS para 32j - Semi-finais
+                        semi_finais = [
+                            {
+                                'timeA': confrontos[0][vencedor_jogo1],
+                                'timeB': confrontos[3][vencedor_jogo4],
+                                'jogo': 5
+                            },
+                            {
+                                'timeA': confrontos[1][vencedor_jogo2],
+                                'timeB': confrontos[2][vencedor_jogo3],
+                                'jogo': 6
+                            }
+                        ]
+                    else:
+                        # Formato SEPARADOS para 32j - Semi-finais (original)
+                        semi_finais = [
+                            {
+                                'timeA': confrontos[0][vencedor_jogo1],
+                                'timeB': confrontos[1][vencedor_jogo2],
+                                'jogo': 5
+                            },
+                            {
+                                'timeA': confrontos[2][vencedor_jogo3],
+                                'timeB': confrontos[3][vencedor_jogo4],
+                                'jogo': 6
+                            }
+                        ]
+
 
         # Processa histórico das semi-finais (PARA TODOS OS MODOS)
         for jogo in semi_finais:

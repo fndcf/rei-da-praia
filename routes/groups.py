@@ -65,7 +65,9 @@ def sorteio():
             
         modo = request.form.get('modo_torneio', '28j')
         nome_torneio = request.form.get('nome_torneio', 'Torneio Sem Nome')
-        log_action("tournament_start", f"Iniciando sorteio - Modo: {modo}")
+        # NOVO: Obter formato para todas as eliminatórias
+        formato_eliminatoria = request.form.get('formato_eliminatoria', 'separados')
+        log_action("tournament_start", f"Iniciando sorteio - Modo: {modo}, Formato: {formato_eliminatoria}")
 
         # Armazenar o nome do torneio na sessão para uso posterior
         session['nome_torneio'] = nome_torneio
@@ -92,7 +94,7 @@ def sorteio():
             return redirect(url_for('main.novo_torneio'))
         
         # Cria novo torneio
-        novo_torneio = Torneio(nome=nome_torneio)
+        novo_torneio = Torneio(nome=nome_torneio, formato_eliminatoria=formato_eliminatoria)
         db.session.add(novo_torneio)
         db.session.flush()  # Para obter o ID sem fazer commit completo
         
@@ -150,6 +152,7 @@ def sorteio():
         session.update({
             'torneio_id': novo_torneio.id,
             'modo_torneio': modo,
+            'formato_eliminatoria': formato_eliminatoria,
             'jogadores': {
                 nome: {
                     'nome': jogador.nome,
