@@ -28,9 +28,8 @@ def criar_jogador(nome):
     log_action("player_created", f"Jogador: {nome}")
     return jogador
 
-def criar_grupos(jogadores, modo):
-    """Divide os jogadores em grupos de 4 com logging"""
-    random.shuffle(jogadores)
+def criar_grupos(jogadores, modo, cabecas_de_chave=None):
+    """Divide os jogadores em grupos de 4 com logging, considerando cabeças de chave"""
     num_groups = {
         '16j': (16, 4),
         '20j': (20, 5),
@@ -39,8 +38,31 @@ def criar_grupos(jogadores, modo):
         '32j': (32, 8)
     }.get(modo, (28, 7))
     
-    grupos = [jogadores[i:i+4] for i in range(0, num_groups[0], 4)]
-    log_action("groups_created", f"Modo: {modo} - {num_groups[1]} grupos criados")
+    num_jogadores, num_grupos = num_groups
+    grupos = [[] for _ in range(num_grupos)]
+    
+    # Se houver cabeças de chave, distribuir um por grupo primeiro
+    if cabecas_de_chave:
+        log_action("seeding_players", f"Distribuindo {len(cabecas_de_chave)} cabeças de chave")
+        for i, cabeca in enumerate(cabecas_de_chave):
+            if i < num_grupos:
+                grupos[i].append(cabeca)
+                log_action("seed_placed", f"Cabeça de chave {cabeca} no Grupo {i+1}")
+        
+        # Remover cabeças de chave da lista de jogadores
+        jogadores = [j for j in jogadores if j not in cabecas_de_chave]
+    
+    # Embaralhar os jogadores restantes
+    random.shuffle(jogadores)
+    
+    # Distribuir os jogadores restantes entre os grupos
+    jogador_idx = 0
+    for grupo in grupos:
+        while len(grupo) < 4 and jogador_idx < len(jogadores):
+            grupo.append(jogadores[jogador_idx])
+            jogador_idx += 1
+    
+    log_action("groups_created", f"Modo: {modo} - {num_grupos} grupos criados com cabeças de chave")
     return grupos
     
 def gerar_confrontos(grupo):
@@ -168,7 +190,27 @@ def sorteio():
             'valores_salvos': {}
         })
         
-        grupos_nomes = criar_grupos(list(nomes), modo)
+        # Processar cabeças de chave se fornecidas
+        cabecas_de_chave_nomes = []
+        if 'cabecas_de_chave' in request.form and request.form['cabecas_de_chave'].strip():
+            cabecas_input = request.form['cabecas_de_chave'].strip()
+            cabecas_de_chave_nomes = [nome.strip() for nome in cabecas_input.split(',') 
+                                      if nome.strip() and nome.strip() in nomes]
+            
+            # Validar número de cabeças de chave
+            num_grupos = {
+                '16j': 4, '20j': 5, '24j': 6, '28j': 7, '32j': 8
+            }.get(modo, 7)
+            
+            if len(cabecas_de_chave_nomes) > num_grupos:
+                error_msg = f"Número de cabeças de chave ({len(cabecas_de_chave_nomes)}) excede o número de grupos ({num_grupos})"
+                current_app.logger.error(error_msg)
+                session['erro_validacao'] = error_msg
+                return redirect(url_for('main.novo_torneio'))
+            
+            log_action("seeds_selected", f"Cabeças de chave: {', '.join(cabecas_de_chave_nomes)}")
+
+        grupos_nomes = criar_grupos(list(nomes), modo, cabecas_de_chave_nomes)
         for grupo_idx, grupo_nomes in enumerate(grupos_nomes):
             grupo = [session['jogadores'][nome] for nome in grupo_nomes]
             session['grupos'].append(grupo)

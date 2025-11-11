@@ -93,6 +93,25 @@
                 <textarea id="jogadores" name="jogadores" class="form-control" required oninput="this.value = this.value.replace(/[^a-zA-ZÀ-ú0-9\s,]/g, '')" placeholder="Jogador1, Jogador2, Jogador3, ..."></textarea>
                 <p id="contador-jogadores" class="counter">0 jogadores</p>
 
+                <!-- NOVO: Campo para Cabeças de Chave -->
+                <div class="form-group mt-3" id="cabecas-chave-container" style="display: none;">
+                    <label for="cabecas_de_chave" class="form-text">
+                        <strong>Cabeças de Chave</strong> (Opcional):
+                    </label>
+                    <p class="text-muted small mb-2">
+                        Insira os cabeças de chave separados por vírgula.
+                        <br>
+                        <strong>Máximo:</strong> <span id="max-cabecas">0</span> cabeças de chave
+                    </p>
+                    <textarea id="cabecas_de_chave" name="cabecas_de_chave" class="form-control" placeholder="Jogador1, Jogador2, ..." oninput="validarCabecasChave()"></textarea>
+                    <p id="contador-cabecas" class="counter">0 cabeças de chave</p>
+
+                    <!-- Botão para selecionar cabeças de chave da lista de jogadores -->
+                    <button type="button" id="btnSelecionarCabecas" class="btn mb-3 btn-secondary">
+                        Selecionar da Lista de Jogadores
+                    </button>
+                </div>
+
                 <!-- Novo botão para selecionar jogadores existentes -->
                 <button type="button" id="btnSelecionarJogadores" class="btn btn-info mb-3">
                     Selecionar Jogadores Existentes
@@ -394,6 +413,210 @@
         const buscarJogadorSubstituicao = document.getElementById('buscarJogadorSubstituicao');
         const novoJogadorNome = document.getElementById('novoJogadorNome');
         const validacaoNovoJogador = document.getElementById('validacao-novo-jogador');
+
+        // ===== FUNCIONALIDADE CABEÇAS DE CHAVE =====
+
+        const cabecasChaveContainer = document.getElementById('cabecas-chave-container');
+        const cabecasChaveTextarea = document.getElementById('cabecas_de_chave');
+        const contadorCabecas = document.getElementById('contador-cabecas');
+        const maxCabecasSpan = document.getElementById('max-cabecas');
+        const btnSelecionarCabecas = document.getElementById('btnSelecionarCabecas');
+
+        // Mostrar/ocultar campo de cabeças de chave baseado no modo selecionado
+        if (modoSelect && cabecasChaveContainer) {
+            modoSelect.addEventListener('change', function () {
+                if (this.value !== '') {
+                    const numGrupos = {
+                        '16j': 4, '20j': 5, '24j': 6, '28j': 7, '32j': 8
+                    }[this.value] || 0;
+
+                    maxCabecasSpan.textContent = numGrupos;
+                    cabecasChaveContainer.style.display = 'block';
+
+                    // Limpar campo ao mudar o modo
+                    cabecasChaveTextarea.value = '';
+                    validarCabecasChave();
+                } else {
+                    cabecasChaveContainer.style.display = 'none';
+                }
+            });
+
+            // Inicializar visibilidade
+            if (modoSelect.value !== '') {
+                const numGrupos = {
+                    '16j': 4, '20j': 5, '24j': 6, '28j': 7, '32j': 8
+                }[modoSelect.value] || 0;
+
+                maxCabecasSpan.textContent = numGrupos;
+                cabecasChaveContainer.style.display = 'block';
+            }
+        }
+
+        // Validar cabeças de chave
+        window.validarCabecasChave = function () {
+            if (!cabecasChaveTextarea || !contadorCabecas || !maxCabecasSpan) return;
+
+            const modo = modoSelect?.value;
+            if (!modo) return;
+
+            const maxCabecas = parseInt(maxCabecasSpan.textContent);
+
+            // Obter jogadores da textarea principal
+            const todosJogadores = textarea?.value.split(',')
+                .map(nome => nome.trim().toLowerCase())
+                .filter(nome => nome !== '') || [];
+
+            // Obter cabeças de chave
+            const cabecas = cabecasChaveTextarea.value.split(',')
+                .map(nome => nome.trim())
+                .filter(nome => nome !== '');
+
+            const cabecasLower = cabecas.map(c => c.toLowerCase());
+
+            // Validar se as cabeças de chave estão na lista de jogadores
+            const cabecasInvalidas = cabecas.filter(c =>
+                !todosJogadores.includes(c.toLowerCase())
+            );
+
+            // Verificar duplicados
+            const duplicados = [...new Set(
+                cabecasLower.filter((nome, index) => cabecasLower.indexOf(nome) !== index)
+            )];
+
+            // Atualizar contador
+            contadorCabecas.textContent = `${cabecas.length}/${maxCabecas} cabeças de chave`;
+
+            // Feedback visual
+            if (cabecas.length > maxCabecas) {
+                contadorCabecas.style.color = 'var(--danger-color)';
+                contadorCabecas.innerHTML += ` <span style="color:var(--danger-color)">(Máximo excedido!)</span>`;
+                cabecasChaveTextarea.classList.add('is-invalid');
+            } else if (cabecasInvalidas.length > 0) {
+                contadorCabecas.style.color = 'var(--danger-color)';
+                contadorCabecas.innerHTML += ` <span style="color:var(--danger-color)">(Jogadores não encontrados: ${cabecasInvalidas.join(', ')})</span>`;
+                cabecasChaveTextarea.classList.add('is-invalid');
+            } else if (duplicados.length > 0) {
+                contadorCabecas.style.color = 'var(--danger-color)';
+                contadorCabecas.innerHTML += ` <span style="color:var(--danger-color)">(Duplicados: ${duplicados.join(', ')})</span>`;
+                cabecasChaveTextarea.classList.add('is-invalid');
+            } else {
+                contadorCabecas.style.color = cabecas.length > 0 ? 'var(--success-color)' : 'var(--text-color)';
+                cabecasChaveTextarea.classList.remove('is-invalid');
+                if (cabecas.length > 0) {
+                    cabecasChaveTextarea.classList.add('is-valid');
+                } else {
+                    cabecasChaveTextarea.classList.remove('is-valid');
+                }
+            }
+        };
+
+        // Validar quando o usuário digita
+        if (cabecasChaveTextarea) {
+            cabecasChaveTextarea.addEventListener('input', validarCabecasChave);
+        }
+
+        // Também validar quando a textarea principal mudar
+        if (textarea) {
+            const originalInputHandler = textarea.oninput;
+            textarea.addEventListener('input', function () {
+                if (originalInputHandler) originalInputHandler.call(this);
+                validarCabecasChave();
+            });
+        }
+
+        // Botão para selecionar cabeças de chave da lista
+        if (btnSelecionarCabecas && textarea) {
+            btnSelecionarCabecas.addEventListener('click', function () {
+                const todosJogadores = textarea.value.split(',')
+                    .map(nome => nome.trim())
+                    .filter(nome => nome !== '');
+
+                if (todosJogadores.length === 0) {
+                    alert('Por favor, preencha primeiro a lista de jogadores.');
+                    return;
+                }
+
+                const modo = modoSelect?.value;
+                if (!modo) {
+                    alert('Por favor, selecione o formato do torneio primeiro.');
+                    return;
+                }
+
+                const numGrupos = {
+                    '16j': 4, '20j': 5, '24j': 6, '28j': 7, '32j': 8
+                }[modo];
+
+                // Criar modal personalizado para seleção
+                let html = `
+                <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                            background: rgba(0,0,0,0.5); display: flex; align-items: center; 
+                            justify-content: center; z-index: 10000;" id="modalCabecas">
+                    <div style="background: white; padding: 20px; border-radius: 10px; 
+                                max-width: 500px; max-height: 80vh; overflow-y: auto;">
+                        <h3>Selecionar Cabeças de Chave</h3>
+                        <p class="text-muted">Selecione até ${numGrupos} jogadores como cabeças de chave</p>
+                        <div id="listaCabecasSelecao" style="max-height: 400px; overflow-y: auto;">
+            `;
+
+                todosJogadores.forEach((jogador, idx) => {
+                    html += `
+                    <div style="padding: 10px; border-bottom: 1px solid #eee; cursor: pointer;" 
+                         class="jogador-cabeca-item" data-nome="${jogador}">
+                        <input type="checkbox" id="cabeca_${idx}" value="${jogador}">
+                        <label for="cabeca_${idx}" style="cursor: pointer; margin-left: 10px;">${jogador}</label>
+                    </div>
+                `;
+                });
+
+                html += `
+                        </div>
+                        <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+                            <button class="btn btn-secondary" onclick="document.getElementById('modalCabecas').remove()">Cancelar</button>
+                            <button class="btn btn-primary" id="btnConfirmarCabecas">Confirmar</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+                document.body.insertAdjacentHTML('beforeend', html);
+
+                // Marcar cabeças já selecionadas
+                const cabecasAtuais = cabecasChaveTextarea.value.split(',')
+                    .map(n => n.trim())
+                    .filter(n => n !== '');
+
+                cabecasAtuais.forEach(nome => {
+                    const checkbox = document.querySelector(`input[value="${nome}"]`);
+                    if (checkbox) checkbox.checked = true;
+                });
+
+                // Handler para confirmar seleção
+                document.getElementById('btnConfirmarCabecas').addEventListener('click', function () {
+                    const checkboxes = document.querySelectorAll('#listaCabecasSelecao input[type="checkbox"]:checked');
+
+                    if (checkboxes.length > numGrupos) {
+                        alert(`Você pode selecionar no máximo ${numGrupos} cabeças de chave.`);
+                        return;
+                    }
+
+                    const selecionados = Array.from(checkboxes).map(cb => cb.value);
+                    cabecasChaveTextarea.value = selecionados.join(', ');
+                    validarCabecasChave();
+
+                    document.getElementById('modalCabecas').remove();
+                });
+
+                // Click no item para marcar/desmarcar
+                document.querySelectorAll('.jogador-cabeca-item').forEach(item => {
+                    item.addEventListener('click', function (e) {
+                        if (e.target.type !== 'checkbox') {
+                            const checkbox = this.querySelector('input[type="checkbox"]');
+                            checkbox.checked = !checkbox.checked;
+                        }
+                    });
+                });
+            });
+        }
 
         // Mostrar/ocultar opção de formato baseado no modo selecionado
         const formatoEliminatoriaContainer = document.getElementById('formato-eliminatoria-container');
@@ -1056,6 +1279,54 @@
 
         // Código original do seu listener de submit
         formSorteio.addEventListener('submit', function (e) {
+
+            // Validar cabeças de chave antes de sortear
+            if (cabecasChaveTextarea && cabecasChaveTextarea.value.trim()) {
+                const modo = modoSelect.value;
+                const maxCabecas = {
+                    '16j': 4, '20j': 5, '24j': 6, '28j': 7, '32j': 8
+                }[modo];
+
+                const todosJogadores = textarea.value.split(',')
+                    .map(nome => nome.trim().toLowerCase())
+                    .filter(nome => nome !== '');
+
+                const cabecas = cabecasChaveTextarea.value.split(',')
+                    .map(nome => nome.trim())
+                    .filter(nome => nome !== '');
+
+                const cabecasLower = cabecas.map(c => c.toLowerCase());
+
+                // Validar número máximo
+                if (cabecas.length > maxCabecas) {
+                    alert(`Número máximo de cabeças de chave é ${maxCabecas}.`);
+                    e.preventDefault();
+                    return;
+                }
+
+                // Validar se estão na lista
+                const cabecasInvalidas = cabecas.filter(c =>
+                    !todosJogadores.includes(c.toLowerCase())
+                );
+
+                if (cabecasInvalidas.length > 0) {
+                    alert(`Os seguintes cabeças de chave não estão na lista de jogadores: ${cabecasInvalidas.join(', ')}`);
+                    e.preventDefault();
+                    return;
+                }
+
+                // Verificar duplicados
+                const duplicados = [...new Set(
+                    cabecasLower.filter((nome, index) => cabecasLower.indexOf(nome) !== index)
+                )];
+
+                if (duplicados.length > 0) {
+                    alert(`Cabeças de chave duplicados: ${duplicados.join(', ')}`);
+                    e.preventDefault();
+                    return;
+                }
+            }
+
             // Verifica se o formulário é válido
             if (this.checkValidity()) {
                 // Mostra o overlay de loading
