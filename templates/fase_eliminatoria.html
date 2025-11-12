@@ -105,7 +105,7 @@
                 {% if loop.first %}
                 <h3>Quartas de Final</h3>
                 {% endif %}
-                <div class="jogo-historico">
+                <div class="jogo-historico" style="position: relative;">
                     <div class="dupla-historico">
                         {{ jogo.timeA_nomes[0] }} & {{ jogo.timeA_nomes[1] }}
                     </div>
@@ -115,6 +115,14 @@
                     <div class="dupla-historico">
                         {{ jogo.timeB_nomes[0] }} & {{ jogo.timeB_nomes[1] }}
                     </div>
+                    
+                    <!-- NOVO: Botão de Editar -->
+                    {% set jogo_numero = key.split('Jogo ')[1]|int %}
+                    <a href="{{ url_for('playoffs.editar_confronto_por_jogo', torneio_id=session.get('torneio_id'), fase='quartas', jogo_numero=jogo_numero) }}" 
+                    class="btn btn-sm btn-warning" 
+                    style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%);">
+                        ✏️ Editar
+                    </a>
                 </div>
             </div>
             {% endfor %}
@@ -126,7 +134,7 @@
                 {% if loop.first %}
                 <h3>Semi-Finais</h3>
                 {% endif %}
-                <div class="jogo-historico">
+                <div class="jogo-historico" style="position: relative;">
                     <div class="dupla-historico">
                         {{ jogo.timeA_nomes[0] }} & {{ jogo.timeA_nomes[1] }}
                     </div>
@@ -136,6 +144,14 @@
                     <div class="dupla-historico">
                         {{ jogo.timeB_nomes[0] }} & {{ jogo.timeB_nomes[1] }}
                     </div>
+                    
+                    <!-- NOVO: Botão de Editar -->
+                    {% set jogo_numero = key.split('Jogo ')[1]|int %}
+                    <a href="{{ url_for('playoffs.editar_confronto_por_jogo', torneio_id=session.get('torneio_id'), fase='semi', jogo_numero=jogo_numero) }}" 
+                    class="btn btn-sm btn-warning"
+                    style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%);">
+                        ✏️ Editar
+                    </a>
                 </div>
             </div>
             {% endfor %}
@@ -144,7 +160,7 @@
             {% if 'Final' in historico_jogos %}
             <div class="fase-historico">
                 <h3>Final</h3>
-                <div class="jogo-historico final-historico">
+                <div class="jogo-historico final-historico" style="position: relative;">
                     <div class="dupla-historico">
                         {{ historico_jogos['Final'].timeA_nomes[0] }} & {{ historico_jogos['Final'].timeA_nomes[1] }}
                     </div>
@@ -154,6 +170,15 @@
                     <div class="dupla-historico">
                         {{ historico_jogos['Final'].timeB_nomes[0] }} & {{ historico_jogos['Final'].timeB_nomes[1] }}
                     </div>
+                    
+                    <!-- NOVO: Botão de Editar -->
+                    {% set modo = session.get('modo_torneio', '28j') %}
+                    {% set jogo_final = {'16j':3, '20j':4, '24j':5, '28j':6, '32j':7}.get(modo, 6) %}
+                    <a href="{{ url_for('playoffs.editar_confronto_por_jogo', torneio_id=session.get('torneio_id'), fase='final', jogo_numero=jogo_final) }}" 
+                    class="btn btn-sm btn-warning"
+                    style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%);">
+                        ✏️ Editar
+                    </a>
                 </div>
             </div>
             {% endif %}

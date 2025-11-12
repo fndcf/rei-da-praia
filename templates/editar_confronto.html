@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Resultado{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-warning">
+            <h2>✏️ Editar Resultado - {{ confronto.fase.capitalize() }} - Jogo {{ confronto.jogo_numero }}</h2>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                <div class="confronto-jogadores" style="display: flex; align-items: center; justify-content: center; gap: 20px; margin: 30px 0;">
+                    <div style="text-align: center;">
+                        <h4>{{ confronto.jogador_a1.nome }} & {{ confronto.jogador_a2.nome }}</h4>
+                        <input type="number" name="pontos_dupla_a" 
+                               value="{{ confronto.pontos_dupla_a }}" 
+                               class="form-control text-center" 
+                               style="width: 80px; font-size: 24px; font-weight: bold;"
+                               min="0" max="7" required>
+                    </div>
+                    
+                    <span style="font-size: 48px;">⚔️</span>
+                    
+                    <div style="text-align: center;">
+                        <h4>{{ confronto.jogador_b1.nome }} & {{ confronto.jogador_b2.nome }}</h4>
+                        <input type="number" name="pontos_dupla_b" 
+                               value="{{ confronto.pontos_dupla_b }}" 
+                               class="form-control text-center" 
+                               style="width: 80px; font-size: 24px; font-weight: bold;"
+                               min="0" max="7" required>
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning mt-3">
+                    <strong>⚠️ Atenção!</strong><br>
+                    {% if confronto.fase == 'quartas' %}
+                    Alterar este resultado irá <strong>resetar as semi-finais e final</strong>.
+                    {% elif confronto.fase == 'semi' %}
+                    Alterar este resultado irá <strong>resetar a final</strong>.
+                    {% else %}
+                    Você está editando o resultado da final.
+                    {% endif %}
+                </div>
+                
+                <div class="text-center mt-4">
+                    <button type="submit" class="btn btn-success btn-lg">💾 Salvar Alteração</button>
+                    <a href="{{ url_for('playoffs.fase_eliminatoria') }}" class="btn btn-secondary btn-lg">❌ Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

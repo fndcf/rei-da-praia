@@ -114,6 +114,8 @@ def carregar_eliminatorias_do_banco(torneio_id):
         current_app.logger.error(f"Erro ao carregar eliminatórias: {str(e)}", exc_info=True)
         return False
 
+    
+
 def log_playoff_action(action, details=""):
     """Log padronizado para ações da fase eliminatória"""
     current_app.logger.info(
@@ -766,6 +768,12 @@ def salvar_eliminatorias():
         if modo == '16j':
             return redirect(url_for('playoffs.fase_eliminatoria'))
 
+        # NOVO: Verificar se as semi-finais já existem
+        if verificar_fase_ja_existe(torneio_id, 'semi'):
+            log_playoff_action("semis_ja_existem", "Semi-finais já foram criadas - não sobrescrever")
+            flash("As semi-finais já foram geradas. Use o botão 'Resetar' se precisar refazer.", "warning")
+            return redirect(url_for('playoffs.fase_eliminatoria'))
+
         num_jogos = {'20j':1, '24j':2, '28j':3, '32j':4}.get(modo, 3)
         
         for jogo in range(1, num_jogos + 1):
@@ -846,6 +854,12 @@ def salvar_semi_finais():
         torneio_id = session.get('torneio_id')
 
         current_app.logger.info(f"Salvando semi-finais para modo: {modo}")
+
+        # NOVO: Verificar se a final já existe
+        if verificar_fase_ja_existe(torneio_id, 'final'):
+            log_playoff_action("final_ja_existe", "Final já foi criada - não sobrescrever")
+            flash("A final já foi gerada. Use o botão 'Resetar' se precisar refazer.", "warning")
+            return redirect(url_for('playoffs.fase_eliminatoria'))
 
         if modo == '16j':
             inicio_semis = 1
@@ -1183,6 +1197,125 @@ def obter_confrontos_eliminatorias_db(torneio_id):
     except Exception as e:
         log_playoff_action("confrontos_eliminatorias_load_error", f"Erro ao carregar confrontos: {str(e)}")
         return {}
+
+def verificar_fase_ja_existe(torneio_id, fase):
+    """Verifica se uma fase já foi criada no banco"""
+    try:
+        confrontos = ConfrontoEliminatoria.query.filter_by(
+            torneio_id=torneio_id,
+            fase=fase
+        ).count()
+        
+        return confrontos > 0
+    except Exception as e:
+        current_app.logger.error(f"Erro ao verificar fase: {str(e)}")
+        return False
+
+@bp.route('/editar_confronto/<int:confronto_id>', methods=['GET', 'POST'])
+def editar_confronto(confronto_id):
+    """Permite editar um confronto já salvo"""
+    try:
+        confronto = ConfrontoEliminatoria.query.get_or_404(confronto_id)
+        torneio_id = session.get('torneio_id')
+        
+        # Verificar se o confronto pertence ao torneio atual
+        if confronto.torneio_id != torneio_id:
+            flash("Este confronto não pertence ao torneio atual.", "error")
+            return redirect(url_for('playoffs.fase_eliminatoria'))
+        
+        if request.method == 'POST':
+            # Obter novos valores
+            novo_placar_a = int(request.form.get('pontos_dupla_a', 0))
+            novo_placar_b = int(request.form.get('pontos_dupla_b', 0))
+            
+            # Validar empate
+            if novo_placar_a == novo_placar_b:
+                flash("Não é permitido empate! Os placares devem ser diferentes.", "error")
+                return redirect(url_for('playoffs.editar_confronto', confronto_id=confronto_id))
+            
+            # Atualizar no banco
+            confronto.pontos_dupla_a = novo_placar_a
+            confronto.pontos_dupla_b = novo_placar_b
+            confronto.atualizado_em = datetime.now()
+            
+            # Atualizar na sessão também
+            session[f'eliminatoria_jogo{confronto.jogo_numero}'] = {
+                'timeA': novo_placar_a,
+                'timeB': novo_placar_b
+            }
+            session.modified = True
+            
+            db.session.commit()
+            
+            log_playoff_action("confronto_editado", 
+                             f"Jogo {confronto.jogo_numero} ({confronto.fase}): {novo_placar_a}x{novo_placar_b}")
+            
+            flash(f"Resultado do jogo {confronto.jogo_numero} atualizado com sucesso!", "success")
+            
+            # Se for quartas ou semi, verificar se precisa deletar fases posteriores
+            if confronto.fase == 'quartas':
+                # Deletar semi-finais e final
+                ConfrontoEliminatoria.query.filter_by(
+                    torneio_id=torneio_id,
+                    fase='semi'
+                ).delete()
+                ConfrontoEliminatoria.query.filter_by(
+                    torneio_id=torneio_id,
+                    fase='final'
+                ).delete()
+                
+                # Limpar sessão das fases posteriores
+                modo = session.get('modo_torneio', '28j')
+                jogos_para_limpar = range(1, 8)  # Limpar todos os jogos possíveis
+                for jogo in jogos_para_limpar:
+                    if jogo > confronto.jogo_numero:  # Só limpar jogos posteriores
+                        session.pop(f'eliminatoria_jogo{jogo}', None)
+                
+                db.session.commit()
+                flash("Semi-finais e final foram resetadas devido à alteração nas quartas.", "info")
+                
+            elif confronto.fase == 'semi':
+                # Deletar apenas a final
+                ConfrontoEliminatoria.query.filter_by(
+                    torneio_id=torneio_id,
+                    fase='final'
+                ).delete()
+                
+                # Limpar sessão da final
+                modo = session.get('modo_torneio', '28j')
+                jogo_final = {'16j':3, '20j':4, '24j':5, '28j':6, '32j':7}.get(modo, 6)
+                session.pop(f'eliminatoria_jogo{jogo_final}', None)
+                session.pop('final_dupla_timeA', None)
+                session.pop('final_dupla_timeB', None)
+                
+                db.session.commit()
+                flash("Final foi resetada devido à alteração nas semi-finais.", "info")
+            
+            return redirect(url_for('playoffs.fase_eliminatoria'))
+        
+        # GET: Mostrar formulário de edição
+        return render_template('editar_confronto.html', confronto=confronto)
+        
+    except Exception as e:
+        current_app.logger.error(f"Erro ao editar confronto: {str(e)}", exc_info=True)
+        flash("Erro ao editar confronto.", "error")
+        db.session.rollback()
+        return redirect(url_for('playoffs.fase_eliminatoria'))
+
+@bp.route('/editar_confronto_jogo/<int:torneio_id>/<fase>/<int:jogo_numero>')
+def editar_confronto_por_jogo(torneio_id, fase, jogo_numero):
+    """Helper para encontrar confronto por fase e número do jogo"""
+    try:
+        confronto = ConfrontoEliminatoria.query.filter_by(
+            torneio_id=torneio_id,
+            fase=fase,
+            jogo_numero=jogo_numero
+        ).first_or_404()
+        
+        return redirect(url_for('playoffs.editar_confronto', confronto_id=confronto.id))
+    except Exception as e:
+        flash("Confronto não encontrado.", "error")
+        return redirect(url_for('playoffs.fase_eliminatoria'))
 
 @bp.route('/resetar_eliminatorias', methods=['GET'])
 def resetar_eliminatorias():

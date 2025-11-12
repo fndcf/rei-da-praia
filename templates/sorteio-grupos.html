@@ -351,12 +351,21 @@
     </div>
     {% endif %}
 
+    
     <!-- Botão da Fase Eliminatória -->
     {% if grupos %}
     <div class="container text-center mt-4">
-        <button id="btnAbrirEliminatoria" class="btn btn-success">
-            <span id="btn-text">Abrir Fase Eliminatória</span>
+        {% if fase_eliminatoria_existe %}
+        <!-- APENAS quando JÁ EXISTE: Botão para IR -->
+        <a href="{{ url_for('playoffs.fase_eliminatoria') }}" class="btn btn-success ">
+            <span> Ir para Fase Eliminatória</span>
+        </a>
+        {% else %}
+        <!-- APENAS quando NÃO EXISTE: Botão para ABRIR -->
+        <button id="btnAbrirEliminatoria" class="btn btn-success ">
+            <span id="btn-text"> Abrir Fase Eliminatória</span>
         </button>
+        {% endif %}
     </div>
     {% endif %}
 </body>
