@@ -130,6 +130,118 @@ def home():
                           torneio_em_andamento=torneio_em_andamento,
                           modo_torneio_dict=modo_torneio_dict)
 
+def carregar_torneio_na_sessao(torneio_id):
+    """Carrega torneio do banco e popula a sessão"""
+    try:
+        torneio = Torneio.query.get(torneio_id)
+        if not torneio:
+            return False
+        
+        # Buscar jogadores
+        jogadores = Jogador.query.filter_by(torneio_id=torneio_id).all()
+        
+        # Determinar modo
+        num_jogadores = len(jogadores)
+        if num_jogadores <= 16:
+            modo, num_grupos = '16j', 4
+        elif num_jogadores <= 20:
+            modo, num_grupos = '20j', 5
+        elif num_jogadores <= 24:
+            modo, num_grupos = '24j', 6
+        elif num_jogadores <= 28:
+            modo, num_grupos = '28j', 7
+        else:
+            modo, num_grupos = '32j', 8
+        
+        # Organizar jogadores por grupo
+        jogadores_por_grupo = {}
+        for jogador in jogadores:
+            grupo_idx = jogador.grupo_idx
+            if grupo_idx not in jogadores_por_grupo:
+                jogadores_por_grupo[grupo_idx] = []
+            
+            jogadores_por_grupo[grupo_idx].append({
+                'nome': jogador.nome,
+                'id': jogador.id,
+                'vitorias': jogador.vitorias,
+                'saldo_a_favor': jogador.saldo_a_favor,
+                'saldo_contra': jogador.saldo_contra,
+                'saldo_total': jogador.saldo_total
+            })
+        
+        # Ordenar jogadores
+        for grupo_idx in jogadores_por_grupo:
+            jogadores_por_grupo[grupo_idx].sort(
+                key=lambda x: (-x['vitorias'], -x['saldo_total'])
+            )
+        
+        # Criar estrutura de grupos
+        grupos = []
+        for grupo_idx in sorted(jogadores_por_grupo.keys()):
+            grupos.append(jogadores_por_grupo[grupo_idx])
+        
+        # Criar dicionário de jogadores
+        jogadores_dict = {}
+        for jogador in jogadores:
+            jogadores_dict[jogador.nome] = {
+                'nome': jogador.nome,
+                'id': jogador.id,
+                'vitorias': jogador.vitorias,
+                'saldo_a_favor': jogador.saldo_a_favor,
+                'saldo_contra': jogador.saldo_contra,
+                'saldo_total': jogador.saldo_total
+            }
+        
+        # Buscar e organizar confrontos
+        confrontos_db = Confronto.query.filter_by(
+            torneio_id=torneio_id
+        ).order_by(Confronto.grupo_idx, Confronto.confronto_idx).all()
+        
+        confrontos = [[] for _ in range(num_grupos)]
+        valores_salvos = {}
+        
+        for confronto in confrontos_db:
+            grupo_idx = confronto.grupo_idx
+            confronto_idx = confronto.confronto_idx
+            
+            jogador_a1 = Jogador.query.get(confronto.jogador_a1_id)
+            jogador_a2 = Jogador.query.get(confronto.jogador_a2_id)
+            jogador_b1 = Jogador.query.get(confronto.jogador_b1_id)
+            jogador_b2 = Jogador.query.get(confronto.jogador_b2_id)
+            
+            if all([jogador_a1, jogador_a2, jogador_b1, jogador_b2]):
+                confrontos[grupo_idx].append((
+                    jogadores_dict[jogador_a1.nome],
+                    jogadores_dict[jogador_a2.nome],
+                    jogadores_dict[jogador_b1.nome],
+                    jogadores_dict[jogador_b2.nome]
+                ))
+                
+                if confronto.pontos_dupla_a is not None:
+                    campo_a = f"grupo_{grupo_idx}_confronto_{confronto_idx}_duplaA_favor"
+                    valores_salvos[campo_a] = str(confronto.pontos_dupla_a)
+                
+                if confronto.pontos_dupla_b is not None:
+                    campo_b = f"grupo_{grupo_idx}_confronto_{confronto_idx}_duplaB_favor"
+                    valores_salvos[campo_b] = str(confronto.pontos_dupla_b)
+        
+        # Popular sessão
+        session['torneio_id'] = torneio_id
+        session['nome_torneio'] = torneio.nome
+        session['modo_torneio'] = modo
+        session['formato_eliminatoria'] = torneio.formato_eliminatoria or 'separados'
+        session['jogadores'] = jogadores_dict
+        session['grupos'] = grupos
+        session['confrontos'] = confrontos
+        session['valores_salvos'] = valores_salvos
+        
+        current_app.logger.info(f"Torneio {torneio_id} carregado na sessão")
+        return True
+        
+    except Exception as e:
+        current_app.logger.error(f"Erro ao carregar torneio: {str(e)}", exc_info=True)
+        return False
+
 @bp.route('/novo-torneio')
 def novo_torneio():
     """Função para criar um novo torneio"""
@@ -152,12 +264,11 @@ def novo_torneio():
             torneio_id_sessao = session.get('torneio_id')
             
             if torneio_id_sessao != torneio_id:
-                current_app.logger.info(
-                    f"Carregando torneio em andamento na sessão: {torneio_id}"
-                )
-                # Atualizar sessão com o torneio em andamento
-                session['torneio_id'] = torneio_id
-                session['nome_torneio'] = nome_torneio
+                current_app.logger.info(...)
+                carregar_torneio_na_sessao(torneio_id)  # USAR A NOVA FUNÇÃO
+            elif not session.get('grupos'):
+                # Se tem torneio mas não tem grupos, carregar
+                carregar_torneio_na_sessao(torneio_id)
         else:
             # Se não há torneio em andamento no banco mas há ID na sessão, limpar
             torneio_id_sessao = session.get('torneio_id')
