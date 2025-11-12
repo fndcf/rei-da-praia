@@ -274,6 +274,14 @@ def novo_torneio():
         torneio_em_andamento_db = Torneio.query.filter_by(finalizado=False).first()
         torneio_em_andamento = torneio_em_andamento_db is not None
         nome_torneio = ""
+
+        # NOVO: Detectar se há fase eliminatória em andamento
+        fase_eliminatoria_existe = False
+        if torneio_em_andamento_db:
+            confrontos_elim = ConfrontoEliminatoria.query.filter_by(
+                torneio_id=torneio_em_andamento_db.id
+            ).first()
+            fase_eliminatoria_existe = confrontos_elim is not None
         
         if torneio_em_andamento_db:
             # Se existe torneio em andamento, carregar seus dados
@@ -333,6 +341,7 @@ def novo_torneio():
             modo_torneio=modo_atual,
             torneio_em_andamento=torneio_em_andamento,
             nome_torneio=nome_torneio,
+            fase_eliminatoria_existe=fase_eliminatoria_existe,
             modos_disponiveis=[
                 {'value': '16j', 'text': '16 Jogadores (4 grupos de 4)'},
                 {'value': '20j', 'text': '20 Jogadores (5 grupos de 4)'},
