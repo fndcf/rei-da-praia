@@ -79,6 +79,19 @@ def gerar_confrontos(grupo):
 def sorteio():
     """Função para fazer o sorteio do grupo"""
     try:
+
+        # Verificar se já existe um torneio não finalizado no banco
+        torneio_em_andamento = Torneio.query.filter_by(finalizado=False).first()
+
+        if torneio_em_andamento:
+            log_action("tournament_start_prevented", 
+                      f"Tentativa de novo sorteio com torneio {torneio_em_andamento.id} em andamento")
+            session['erro_validacao'] = (
+                f"Já existe um torneio em andamento: '{torneio_em_andamento.nome}'. "
+                f"Para realizar um novo sorteio, finalize ou cancele o torneio atual primeiro."
+            )
+            return redirect(url_for('main.novo_torneio'))
+
         # Verificar se já existem grupos sorteados
         if 'grupos' in session and session['grupos']:
             log_action("tournament_start_prevented", "Tentativa de novo sorteio com grupos existentes")

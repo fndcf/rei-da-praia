@@ -33,11 +33,10 @@ def home():
     # Buscar todos os torneios, ordenados pelo mais recente
     torneios = Torneio.query.order_by(Torneio.data_criacao.desc()).all()
     
-    # Verificar se há um torneio em andamento na sessão e se ele ainda existe no banco de dados
-    torneio_em_andamento = False
-    torneio_id_sessao = session.get('torneio_id')
-    modo_torneio_dict = {}  # Dicionário para armazenar o modo de cada torneio
-
+    torneio_em_andamento_db = Torneio.query.filter_by(finalizado=False).first()
+    torneio_em_andamento = torneio_em_andamento_db is not None
+    modo_torneio_dict = {}
+    
     # Define um mapeamento para o número de jogadores
     modos_descricao = {
         '16j': '16 Jogadores',
@@ -47,19 +46,26 @@ def home():
         '32j': '32 Jogadores'
     }
     
-    if torneio_id_sessao:
-        # Verificar se o torneio existe e não está finalizado
-        torneio_atual = Torneio.query.get(torneio_id_sessao)
-        if torneio_atual and not torneio_atual.finalizado:
-            torneio_em_andamento = True
-        else:
-            # Se o torneio não existe mais ou está finalizado, limpar a sessão
+    # Verificar se a sessão está sincronizada com o banco
+    torneio_id_sessao = session.get('torneio_id')
+    
+    if torneio_em_andamento_db:
+        # Se existe torneio em andamento no banco, garantir que está na sessão
+        if torneio_id_sessao != torneio_em_andamento_db.id:
+            current_app.logger.info(
+                f"Sincronizando sessão com torneio em andamento: {torneio_em_andamento_db.id}"
+            )
+            # Limpar sessão antiga se houver
+            for key in ['torneio_id', 'grupos', 'confrontos', 'jogadores', 'valores_salvos', 'nome_torneio']:
+                session.pop(key, None)
+    else:
+        # Se não há torneio em andamento no banco mas há ID na sessão, limpar
+        if torneio_id_sessao:
             current_app.logger.warning(
                 f"Torneio ID {torneio_id_sessao} não encontrado ou já finalizado. Limpando sessão."
             )
             for key in ['torneio_id', 'grupos', 'confrontos', 'jogadores', 'valores_salvos', 'nome_torneio']:
                 session.pop(key, None)
-            session['sucesso_validacao'] = "Sessão limpa automaticamente pois o torneio não existe mais ou já foi finalizado."
     
     # Para cada torneio, recuperar campeões e vice-campeões e modo do torneio
     for torneio in torneios:
@@ -133,27 +139,34 @@ def novo_torneio():
         modos_validos = ['16j','20j', '24j', '28j', '32j']
         modo_atual = session.get('modo_torneio', '28j')
         
-        # Verificar se existe um torneio em andamento
-        torneio_id = session.get('torneio_id')
-        torneio_em_andamento = False
+        torneio_em_andamento_db = Torneio.query.filter_by(finalizado=False).first()
+        torneio_em_andamento = torneio_em_andamento_db is not None
         nome_torneio = ""
         
-        if torneio_id:
-            # Buscar informações do torneio
-            torneio = Torneio.query.get(torneio_id)
-            if torneio and not torneio.finalizado:
-                torneio_em_andamento = True
-                nome_torneio = torneio.nome
-                # Salvar o nome do torneio na sessão para uso no formulário
+        if torneio_em_andamento_db:
+            # Se existe torneio em andamento, carregar seus dados
+            torneio_id = torneio_em_andamento_db.id
+            nome_torneio = torneio_em_andamento_db.nome
+            
+            # Sincronizar sessão com o torneio do banco
+            torneio_id_sessao = session.get('torneio_id')
+            
+            if torneio_id_sessao != torneio_id:
+                current_app.logger.info(
+                    f"Carregando torneio em andamento na sessão: {torneio_id}"
+                )
+                # Atualizar sessão com o torneio em andamento
+                session['torneio_id'] = torneio_id
                 session['nome_torneio'] = nome_torneio
-            else:
-                # Se o torneio não existe mais ou está finalizado, limpar a sessão
+        else:
+            # Se não há torneio em andamento no banco mas há ID na sessão, limpar
+            torneio_id_sessao = session.get('torneio_id')
+            if torneio_id_sessao:
                 current_app.logger.warning(
-                    f"Torneio ID {torneio_id} não encontrado ou já finalizado. Limpando sessão."
+                    f"Torneio ID {torneio_id_sessao} não encontrado ou já finalizado. Limpando sessão."
                 )
                 for key in ['torneio_id', 'grupos', 'confrontos', 'jogadores', 'valores_salvos', 'nome_torneio']:
                     session.pop(key, None)
-                # Não exibir mensagem aqui para evitar confusão ao entrar na página
         
         # Validação do modo
         if modo_atual not in modos_validos:
