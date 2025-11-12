@@ -11,15 +11,6 @@
     <div class="main-container">
         <h1 class="title">Reis da Praia</h1>
 
-        <!-- BOTÃO TEMPORÁRIO DE CORREÇÃO - REMOVER DEPOIS -->
-        {% if grupos and session.get('torneio_id') %}
-        <div class="text-center mb-3">
-            <a href="{{ url_for('groups.corrigir_grupos_torneio', torneio_id=session.get('torneio_id')) }}" class="btn btn-warning" onclick="return confirm('Deseja corrigir a atribuição de grupos para este torneio?\n\nIsso vai analisar os confrontos e atribuir cada jogador ao grupo correto.')">
-                🔧 Corrigir Grupos do Torneio Atual
-            </a>
-        </div>
-        {% endif %}
-
         <!-- Sistema de flash messages do Flask -->
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
