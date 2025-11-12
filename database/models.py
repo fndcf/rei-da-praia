@@ -51,6 +51,9 @@ class Jogador(db.Model):
     jogador_permanente_id = db.Column(db.Integer, db.ForeignKey('jogador_permanente.id'), nullable=True)
     jogador_permanente = db.relationship('JogadorPermanente', backref='jogadores_legados')
 
+    # NOVO: Campo para salvar a classificação geral (ordem do sorteio)
+    classificacao_geral = db.Column(db.Integer, default=0)
+
 class Torneio(db.Model):
     """Modelo para torneios"""
     id = db.Column(db.Integer, primary_key=True)

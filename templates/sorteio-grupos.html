@@ -1133,6 +1133,9 @@
     if (btnAbrirEliminatoria) {
         // Salvar o estado original do botão
         const textoOriginal = btnAbrirEliminatoria.textContent;
+        
+        // Verificar se já existe fase eliminatória
+        const faseEliminatoriaExiste = {% if fase_eliminatoria_existe %}true{% else %}false{% endif %};
 
         // Adicionar detector para quando a página é carregada do cache (botão voltar)
         window.onpageshow = function (event) {
@@ -1145,28 +1148,36 @@
                     btnAbrirEliminatoria.disabled = false;
                     btnAbrirEliminatoria.innerHTML = textoOriginal;
 
-                    // Resetar resultados da fase eliminatória (simular clique no botão resetar)
-                    fetch('/resetar_eliminatorias', {
-                        method: 'GET',
-                        headers: {
-                            'Cache-Control': 'no-cache',
-                            'Pragma': 'no-cache'
-                        }
-                    })
-                        .then(response => response.json())
-                        .then(data => {
-                            console.log("Resultados da eliminatória resetados com sucesso", data);
+                    // Só resetar se não existir fase eliminatória
+                    if (!faseEliminatoriaExiste) {
+                        fetch('/resetar_eliminatorias', {
+                            method: 'GET',
+                            headers: {
+                                'Cache-Control': 'no-cache',
+                                'Pragma': 'no-cache'
+                            }
                         })
-                        .catch(error => {
-                            console.error("Erro ao resetar resultados:", error);
-                        });
+                            .then(response => response.json())
+                            .then(data => {
+                                console.log("Resultados da eliminatória resetados com sucesso", data);
+                            })
+                            .catch(error => {
+                                console.error("Erro ao resetar resultados:", error);
+                            });
+                    }
                 }
             }
         };
 
-        // O código existente para o evento click
+        // O código para o evento click
         btnAbrirEliminatoria.addEventListener('click', function (e) {
-            e.preventDefault(); // Importante: previne o comportamento padrão
+            e.preventDefault();
+
+            // Se já existe fase eliminatória, apenas redirecionar SEM resetar
+            if (faseEliminatoriaExiste) {
+                window.location.href = "/fase_eliminatoria";
+                return;
+            }
 
             // Primeiro validar se não há empates
             const empates = (typeof validarSemEmpates === 'function') ? validarSemEmpates() : [];
@@ -1214,7 +1225,7 @@
             // Salvar em sessionStorage que o botão foi clicado
             sessionStorage.setItem('eliminatoria_clicked', 'true');
 
-            // IMPORTANTE: Primeiro resetar os dados da fase eliminatória
+            // IMPORTANTE: Primeiro resetar os dados da fase eliminatória (APENAS SE NÃO EXISTIR)
             fetch('/resetar_eliminatorias', {
                 method: 'GET',
                 headers: {
@@ -1230,9 +1241,8 @@
                 })
                 .then(data => {
                     if (data.success) {
-                        // Redirecionar com timestamp para evitar cache
-                        const timestamp = new Date().getTime();
-                        window.location.href = "/fase_eliminatoria?t=" + timestamp;
+                        // Redirecionar SEM timestamp
+                        window.location.href = "/fase_eliminatoria";
                     } else {
                         throw new Error('Erro ao preparar fase eliminatória: ' + (data.error || 'Erro desconhecido'));
                     }
@@ -1257,8 +1267,10 @@
             btnAbrirEliminatoria.disabled = false;
             btnAbrirEliminatoria.innerHTML = textoOriginal;
 
-            // Fazer reset automático dos resultados
-            fetch('/resetar_eliminatorias').then(r => r.json()).catch(e => console.error(e));
+            // Fazer reset automático dos resultados APENAS SE NÃO EXISTIR fase eliminatória
+            if (!faseEliminatoriaExiste) {
+                fetch('/resetar_eliminatorias').then(r => r.json()).catch(e => console.error(e));
+            }
         }
     }
 

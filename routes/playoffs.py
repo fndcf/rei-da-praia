@@ -7,6 +7,58 @@ from database.db import db
 
 bp = Blueprint('playoffs', __name__)
 
+def salvar_classificacao_geral(torneio_id, primeiros, segundos):
+    """Salva a classificação geral dos jogadores no banco de dados"""
+    try:
+        # Salvar ordem dos primeiros colocados (1, 2, 3, ...)
+        for i, jogador in enumerate(primeiros):
+            db_jogador = Jogador.query.get(jogador['id'])
+            if db_jogador:
+                db_jogador.classificacao_geral = i + 1
+                log_playoff_action("classificacao_salva", 
+                                 f"Primeiro: {jogador['nome']} - Classificação: {i + 1}")
+        
+        # Salvar ordem dos segundos colocados (101, 102, 103, ...)
+        # Usamos 100+ para diferenciar dos primeiros
+        for i, jogador in enumerate(segundos):
+            db_jogador = Jogador.query.get(jogador['id'])
+            if db_jogador:
+                db_jogador.classificacao_geral = 100 + i + 1
+                log_playoff_action("classificacao_salva", 
+                                 f"Segundo: {jogador['nome']} - Classificação: {100 + i + 1}")
+        
+        db.session.commit()
+        log_playoff_action("classificacao_completa", "Classificação geral salva com sucesso")
+        return True
+    except Exception as e:
+        log_playoff_action("classificacao_erro", f"Erro: {str(e)}")
+        db.session.rollback()
+        return False
+
+def carregar_classificacao_geral(torneio_id, primeiros, segundos):
+    """Carrega e aplica a classificação geral salva"""
+    try:
+        # Atualizar os dicionários com a classificação salva do banco
+        for jogador in primeiros:
+            db_jogador = Jogador.query.get(jogador['id'])
+            if db_jogador and db_jogador.classificacao_geral > 0:
+                jogador['classificacao_geral'] = db_jogador.classificacao_geral
+        
+        for jogador in segundos:
+            db_jogador = Jogador.query.get(jogador['id'])
+            if db_jogador and db_jogador.classificacao_geral > 0:
+                jogador['classificacao_geral'] = db_jogador.classificacao_geral
+        
+        # Reordenar usando a classificação salva
+        primeiros.sort(key=lambda x: x.get('classificacao_geral', 999))
+        segundos.sort(key=lambda x: x.get('classificacao_geral', 999))
+        
+        log_playoff_action("classificacao_carregada", "Ordem original restaurada do banco")
+        return True
+    except Exception as e:
+        log_playoff_action("classificacao_erro", f"Erro ao carregar: {str(e)}")
+        return False
+
 def log_playoff_action(action, details=""):
     """Log padronizado para ações da fase eliminatória"""
     current_app.logger.info(
@@ -118,8 +170,26 @@ def fase_eliminatoria():
             if len(grupo) > 1:
                 segundos.append(grupo[1])
 
+        # Ordenação inicial por desempenho
         primeiros.sort(key=lambda x: (-x['vitorias'], -x['saldo_total']))
         segundos.sort(key=lambda x: (-x['vitorias'], -x['saldo_total']))
+        
+        # NOVO: Verificar se já existe classificação salva
+        torneio_id = session.get('torneio_id')
+        ja_classificado = Jogador.query.filter_by(
+            torneio_id=torneio_id
+        ).filter(Jogador.classificacao_geral > 0).first()
+        
+        if ja_classificado:
+            # Já foi classificado antes: carregar a ordem salva
+            log_playoff_action("usando_classificacao_salva", 
+                             "Carregando ordem original da classificação")
+            carregar_classificacao_geral(torneio_id, primeiros, segundos)
+        else:
+            # Primeira vez: salvar a ordem atual (com possível sorteio)
+            log_playoff_action("primeira_classificacao", 
+                             "Salvando ordem da classificação pela primeira vez")
+            salvar_classificacao_geral(torneio_id, primeiros, segundos)
 
         # ===================================================================
         # CONFIGURAÇÃO COMPLETA PARA TODOS OS MODOS - SEPARADOS E MISTOS
