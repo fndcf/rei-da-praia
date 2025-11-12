@@ -59,6 +59,44 @@ def carregar_classificacao_geral(torneio_id, primeiros, segundos):
         log_playoff_action("classificacao_erro", f"Erro ao carregar: {str(e)}")
         return False
 
+def carregar_eliminatorias_do_banco(torneio_id):
+    """Carrega os resultados das eliminatórias do banco e popula a sessão"""
+    try:
+        # Buscar todos os confrontos eliminatórios do torneio
+        confrontos = ConfrontoEliminatoria.query.filter_by(
+            torneio_id=torneio_id
+        ).all()
+        
+        if not confrontos:
+            log_playoff_action("sem_confrontos_salvos", "Nenhum confronto eliminatório no banco")
+            return False
+        
+        # Popular a sessão com os dados do banco
+        for confronto in confrontos:
+            # Determinar o número do jogo baseado na fase
+            # Exemplo: quartas jogo 1, 2, 3, 4 / semi jogo 2-6 / final jogo 3-7
+            jogo_numero = confronto.jogo_numero
+            
+            # Salvar na sessão no formato esperado
+            session[f'eliminatoria_jogo{jogo_numero}'] = {
+                'timeA': confronto.pontos_dupla_a if confronto.pontos_dupla_a is not None else '',
+                'timeB': confronto.pontos_dupla_b if confronto.pontos_dupla_b is not None else ''
+            }
+            
+            log_playoff_action("confronto_carregado", 
+                             f"Jogo {jogo_numero} ({confronto.fase}): {confronto.pontos_dupla_a} x {confronto.pontos_dupla_b}")
+        
+        # Marcar sessão como modificada
+        session.modified = True
+        
+        log_playoff_action("eliminatorias_carregadas", f"{len(confrontos)} confrontos carregados do banco")
+        return True
+        
+    except Exception as e:
+        log_playoff_action("erro_carregar_eliminatorias", f"Erro: {str(e)}")
+        current_app.logger.error(f"Erro ao carregar eliminatórias: {str(e)}", exc_info=True)
+        return False
+
 def log_playoff_action(action, details=""):
     """Log padronizado para ações da fase eliminatória"""
     current_app.logger.info(
@@ -84,6 +122,15 @@ def fase_eliminatoria():
             # Se não tiver ID na sessão, redirecionar para home
             flash("Não há nenhum torneio em andamento. Por favor, inicie um novo torneio.", "warning")
             return redirect(url_for('main.home'))
+
+        # NOVO: Carregar confrontos eliminatórios do banco (se existirem)
+        confrontos_existentes = ConfrontoEliminatoria.query.filter_by(
+            torneio_id=torneio_id
+        ).first()
+        
+        if confrontos_existentes:
+            log_playoff_action("carregando_do_banco", "Confrontos existentes detectados")
+            carregar_eliminatorias_do_banco(torneio_id)
         
         # Verificar se o torneio existe e está ativo
         torneio = Torneio.query.get(torneio_id)
@@ -888,6 +935,60 @@ def salvar_final():
             'timeA': timeA,
             'timeB': timeB
         }
+
+        # VERIFICAR: Buscar IDs dos jogadores da sessão
+        if torneio_id and all([timeA_jogador1, timeA_jogador2, timeB_jogador1, timeB_jogador2]):
+            # Buscar IDs no dicionário de jogadores
+            jogadores_dict = session.get('jogadores', {})
+            
+            timeA_ids = [
+                jogadores_dict.get(timeA_jogador1, {}).get('id'),
+                jogadores_dict.get(timeA_jogador2, {}).get('id')
+            ]
+            timeB_ids = [
+                jogadores_dict.get(timeB_jogador1, {}).get('id'),
+                jogadores_dict.get(timeB_jogador2, {}).get('id')
+            ]
+            
+            # Verificar se todos os IDs foram encontrados
+            if all(timeA_ids) and all(timeB_ids):
+                # Verificar se já existe este confronto no banco
+                confronto_db = ConfrontoEliminatoria.query.filter_by(
+                    torneio_id=torneio_id,
+                    fase='final',
+                    jogo_numero=jogo_final
+                ).first()
+                
+                if confronto_db:
+                    # Atualizar confronto existente
+                    confronto_db.pontos_dupla_a = timeA
+                    confronto_db.pontos_dupla_b = timeB
+                    confronto_db.atualizado_em = datetime.now()
+                    log_playoff_action("final_atualizada", f"Final atualizada: {timeA}x{timeB}")
+                else:
+                    # Criar novo confronto
+                    confronto_db = ConfrontoEliminatoria(
+                        torneio_id=torneio_id,
+                        fase='final',
+                        jogo_numero=jogo_final,
+                        jogador_a1_id=timeA_ids[0],
+                        jogador_a2_id=timeA_ids[1],
+                        jogador_b1_id=timeB_ids[0],
+                        jogador_b2_id=timeB_ids[1],
+                        pontos_dupla_a=timeA,
+                        pontos_dupla_b=timeB
+                    )
+                    db.session.add(confronto_db)
+                    log_playoff_action("final_criada", f"Final criada: {timeA}x{timeB}")
+                
+                db.session.commit()
+                current_app.logger.info(f"✅ Final salva no banco: {timeA}x{timeB}")
+            else:
+                current_app.logger.warning(f"⚠️ IDs dos jogadores não encontrados para salvar final")
+                current_app.logger.warning(f"timeA_ids: {timeA_ids}, timeB_ids: {timeB_ids}")
+        
+        session.modified = True
+        return redirect(url_for('playoffs.fase_eliminatoria'))
         
         # Determina os campeões
         vencedor = 'timeA' if timeA > timeB else 'timeB'

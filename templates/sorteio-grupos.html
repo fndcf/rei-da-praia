@@ -38,13 +38,10 @@
 
         <!-- Botão para acessar fase eliminatória se ela existir -->
         {% if fase_eliminatoria_existe %}
-        <div class="card mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+        <div class="card mb-4" style="background: linear-gradient(...)">
             <div class="card-body text-center text-white">
-                <h2 style="margin: 0 0 15px 0; font-size: 1.8em;">🏆 Fase Eliminatória em Andamento</h2>
-                <p style="font-size: 1.1em; margin-bottom: 20px;">
-                    Este torneio já está na fase eliminatória.
-                </p>
-                <a href="{{ url_for('playoffs.fase_eliminatoria') }}" class="btn btn-lg" style="background-color: #fff; color: #667eea; font-weight: bold; padding: 15px 40px; font-size: 1.2em; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                <h2>🏆 Fase Eliminatória em Andamento</h2>
+                <a href="{{ url_for('playoffs.fase_eliminatoria') }}" class="btn btn-lg">
                     ⚔️ Ir para Fase Eliminatória
                 </a>
             </div>
