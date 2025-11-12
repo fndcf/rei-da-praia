@@ -68,8 +68,25 @@ def carregar_eliminatorias_do_banco(torneio_id):
         ).all()
         
         if not confrontos:
-            log_playoff_action("sem_confrontos_salvos", "Nenhum confronto eliminatório no banco")
+            log_playoff_action("limpando_sessao", "Nenhum confronto no banco - limpando sessão")
+
+            # Limpar todos os jogos salvos na sessão
+            keys_to_remove = [key for key in session.keys() if key.startswith('eliminatoria_jogo')]
+            for key in keys_to_remove:
+                session.pop(key, None)
+            
+            # Limpar duplas da final
+            session.pop('final_dupla_timeA', None)
+            session.pop('final_dupla_timeB', None)
+            session.pop('campea', None)
+            
+            session.modified = True
             return False
+
+        # NOVO: Antes de carregar novos dados, limpar sessão antiga
+        keys_to_remove = [key for key in session.keys() if key.startswith('eliminatoria_jogo')]
+        for key in keys_to_remove:
+            session.pop(key, None)
         
         # Popular a sessão com os dados do banco
         for confronto in confrontos:
@@ -123,14 +140,19 @@ def fase_eliminatoria():
             flash("Não há nenhum torneio em andamento. Por favor, inicie um novo torneio.", "warning")
             return redirect(url_for('main.home'))
 
-        # NOVO: Carregar confrontos eliminatórios do banco (se existirem)
+        # NOVO: SEMPRE verificar e sincronizar com o banco
         confrontos_existentes = ConfrontoEliminatoria.query.filter_by(
             torneio_id=torneio_id
-        ).first()
+        ).count()
         
-        if confrontos_existentes:
-            log_playoff_action("carregando_do_banco", "Confrontos existentes detectados")
+        # Se existem confrontos no banco, carregar
+        if confrontos_existentes > 0:
+            log_playoff_action("sincronizando_com_banco", f"{confrontos_existentes} confrontos no banco")
             carregar_eliminatorias_do_banco(torneio_id)
+        else:
+            # Se NÃO existem no banco, limpar sessão
+            log_playoff_action("limpando_sessao_sem_dados", "Sem confrontos no banco - limpando sessão")
+            carregar_eliminatorias_do_banco(torneio_id)  # Esta função já limpa se não houver dados
         
         # Verificar se o torneio existe e está ativo
         torneio = Torneio.query.get(torneio_id)
@@ -1184,6 +1206,9 @@ def resetar_eliminatorias():
         for key in ['final_dupla_timeA', 'final_dupla_timeB', 'campea', 'campeoes_finais']:
             if key in session:
                 session.pop(key, None)
+
+        # NOVO: Marcar a sessão como modificada
+        session.modified = True
         
         log_playoff_action("reset_eliminatorias", "Fase eliminatória resetada com sucesso")
         return jsonify({'success': True})
