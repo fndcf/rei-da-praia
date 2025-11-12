@@ -180,7 +180,7 @@ def sorteio():
             log_action("player_participation_created", 
                       f"Participação criada: {nome} - Jogador ID: {jogador.id}, Participação ID: {participacao.id}")
         
-        # Commit para garantir que todos os jogadores estejam salvos antes de gerar confrontos
+        # Commit intermediário para garantir que todos os jogadores estejam salvos
         db.session.commit()
         
         # Estrutura de dados na sessão
@@ -223,7 +223,16 @@ def sorteio():
             
             log_action("seeds_selected", f"Cabeças de chave: {', '.join(cabecas_de_chave_nomes)}")
 
+        # Criar grupos e mapeamento nome -> grupo_idx
         grupos_nomes = criar_grupos(list(nomes), modo, cabecas_de_chave_nomes)
+        
+        # NOVO: Criar mapeamento de nome para grupo_idx
+        nome_para_grupo = {}
+        for grupo_idx, grupo_nomes in enumerate(grupos_nomes):
+            for nome in grupo_nomes:
+                nome_para_grupo[nome] = grupo_idx
+        
+        # Processar grupos e confrontos
         for grupo_idx, grupo_nomes in enumerate(grupos_nomes):
             grupo = [session['jogadores'][nome] for nome in grupo_nomes]
             session['grupos'].append(grupo)
@@ -248,6 +257,22 @@ def sorteio():
                           f"{confronto[0]['nome']}&{confronto[1]['nome']} x "
                           f"{confronto[2]['nome']}&{confronto[3]['nome']}")
         
+        # NOVO: Atualizar jogadores e participações com o grupo_idx correto ANTES do commit final
+        for nome, jogador in jogadores_dict.items():
+            grupo_idx = nome_para_grupo.get(nome, 0)
+            jogador.grupo_idx = grupo_idx
+            jogador.posicao_grupo = 0  # Posição ainda não definida (será definida ao salvar resultados)
+            
+            # Atualizar também na participação
+            participacao = participacoes.get(nome)
+            if participacao:
+                participacao.grupo_idx = grupo_idx
+                participacao.posicao_grupo = 0
+            
+            log_action("jogador_grupo_assigned", 
+                      f"Jogador {nome} (ID: {jogador.id}) atribuído ao Grupo {grupo_idx + 1}")
+        
+        # Commit final com todos os dados
         db.session.commit()
         
         log_action("tournament_created", 
@@ -260,6 +285,76 @@ def sorteio():
         current_app.logger.error(error_msg, exc_info=True)
         session['erro_validacao'] = error_msg
         db.session.rollback()  # Importante: rollback no caso de erro
+        return redirect(url_for('main.novo_torneio'))
+    
+@bp.route('/corrigir_grupos_torneio/<int:torneio_id>', methods=['GET'])
+def corrigir_grupos_torneio(torneio_id):
+    """Função para corrigir o grupo_idx dos jogadores de um torneio existente"""
+    try:
+        log_action("correcao_grupos_start", f"Iniciando correção para torneio {torneio_id}")
+        
+        # Buscar o torneio
+        torneio = Torneio.query.get_or_404(torneio_id)
+        
+        # Buscar todos os confrontos do torneio
+        confrontos = Confronto.query.filter_by(torneio_id=torneio_id).all()
+        
+        if not confrontos:
+            session['erro_validacao'] = "Não há confrontos para este torneio."
+            return redirect(url_for('main.novo_torneio'))
+        
+        # Criar um mapeamento de jogador_id -> grupo_idx baseado nos confrontos
+        jogador_para_grupo = {}
+        
+        for confronto in confrontos:
+            grupo_idx = confronto.grupo_idx
+            
+            # Adicionar todos os jogadores deste confronto ao grupo correto
+            jogadores_ids = [
+                confronto.jogador_a1_id,
+                confronto.jogador_a2_id,
+                confronto.jogador_b1_id,
+                confronto.jogador_b2_id
+            ]
+            
+            for jogador_id in jogadores_ids:
+                if jogador_id not in jogador_para_grupo:
+                    jogador_para_grupo[jogador_id] = grupo_idx
+        
+        # Atualizar os jogadores no banco
+        jogadores_atualizados = 0
+        for jogador_id, grupo_idx in jogador_para_grupo.items():
+            jogador = Jogador.query.get(jogador_id)
+            if jogador:
+                jogador.grupo_idx = grupo_idx
+                jogadores_atualizados += 1
+                
+                # Atualizar também a participação
+                if jogador.jogador_permanente_id:
+                    participacao = ParticipacaoTorneio.query.filter_by(
+                        jogador_permanente_id=jogador.jogador_permanente_id,
+                        torneio_id=torneio_id
+                    ).first()
+                    
+                    if participacao:
+                        participacao.grupo_idx = grupo_idx
+                
+                log_action("jogador_grupo_corrigido", 
+                          f"Jogador {jogador.nome} (ID: {jogador_id}) atribuído ao Grupo {grupo_idx + 1}")
+        
+        db.session.commit()
+        
+        log_action("correcao_grupos_success", 
+                  f"{jogadores_atualizados} jogadores corrigidos para o torneio {torneio_id}")
+        
+        session['sucesso_validacao'] = f"Grupos corrigidos com sucesso! {jogadores_atualizados} jogadores atualizados."
+        return redirect(url_for('main.novo_torneio'))
+    
+    except Exception as e:
+        error_msg = f"Erro ao corrigir grupos: {str(e)}"
+        current_app.logger.error(error_msg, exc_info=True)
+        session['erro_validacao'] = error_msg
+        db.session.rollback()
         return redirect(url_for('main.novo_torneio'))
     
 @bp.route('/salvar_grupo/<int:grupo_idx>', methods=['POST'])
