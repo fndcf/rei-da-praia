@@ -133,12 +133,16 @@ def home():
 def carregar_torneio_na_sessao(torneio_id):
     """Carrega torneio do banco e popula a sessão"""
     try:
+        current_app.logger.info(f"🔄 Iniciando carregamento do torneio {torneio_id} na sessão")
+        
         torneio = Torneio.query.get(torneio_id)
         if not torneio:
+            current_app.logger.error(f"❌ Torneio {torneio_id} não encontrado")
             return False
         
         # Buscar jogadores
         jogadores = Jogador.query.filter_by(torneio_id=torneio_id).all()
+        current_app.logger.info(f"📊 Encontrados {len(jogadores)} jogadores")
         
         # Determinar modo
         num_jogadores = len(jogadores)
@@ -169,6 +173,8 @@ def carregar_torneio_na_sessao(torneio_id):
                 'saldo_total': jogador.saldo_total
             })
         
+        current_app.logger.info(f"👥 Grupos organizados: {len(jogadores_por_grupo)} grupos")
+        
         # Ordenar jogadores
         for grupo_idx in jogadores_por_grupo:
             jogadores_por_grupo[grupo_idx].sort(
@@ -197,8 +203,11 @@ def carregar_torneio_na_sessao(torneio_id):
             torneio_id=torneio_id
         ).order_by(Confronto.grupo_idx, Confronto.confronto_idx).all()
         
+        current_app.logger.info(f"⚔️ Encontrados {len(confrontos_db)} confrontos")
+        
         confrontos = [[] for _ in range(num_grupos)]
         valores_salvos = {}
+        resultados_carregados = 0
         
         for confronto in confrontos_db:
             grupo_idx = confronto.grupo_idx
@@ -220,10 +229,14 @@ def carregar_torneio_na_sessao(torneio_id):
                 if confronto.pontos_dupla_a is not None:
                     campo_a = f"grupo_{grupo_idx}_confronto_{confronto_idx}_duplaA_favor"
                     valores_salvos[campo_a] = str(confronto.pontos_dupla_a)
+                    resultados_carregados += 1
                 
                 if confronto.pontos_dupla_b is not None:
                     campo_b = f"grupo_{grupo_idx}_confronto_{confronto_idx}_duplaB_favor"
                     valores_salvos[campo_b] = str(confronto.pontos_dupla_b)
+                    resultados_carregados += 1
+        
+        current_app.logger.info(f"📝 {resultados_carregados} resultados carregados")
         
         # Popular sessão
         session['torneio_id'] = torneio_id
@@ -235,11 +248,18 @@ def carregar_torneio_na_sessao(torneio_id):
         session['confrontos'] = confrontos
         session['valores_salvos'] = valores_salvos
         
-        current_app.logger.info(f"Torneio {torneio_id} carregado na sessão")
+        # ⚠️ CRÍTICO: Marcar a sessão como modificada
+        session.modified = True
+        
+        current_app.logger.info(f"✅ Torneio {torneio_id} carregado na sessão com sucesso!")
+        current_app.logger.info(f"   - {len(grupos)} grupos")
+        current_app.logger.info(f"   - {len(jogadores_dict)} jogadores")
+        current_app.logger.info(f"   - {len(valores_salvos)} valores salvos")
+        
         return True
         
     except Exception as e:
-        current_app.logger.error(f"Erro ao carregar torneio: {str(e)}", exc_info=True)
+        current_app.logger.error(f"❌ Erro ao carregar torneio {torneio_id}: {str(e)}", exc_info=True)
         return False
 
 @bp.route('/novo-torneio')
@@ -264,11 +284,18 @@ def novo_torneio():
             torneio_id_sessao = session.get('torneio_id')
             
             if torneio_id_sessao != torneio_id:
-                current_app.logger.info(...)
-                carregar_torneio_na_sessao(torneio_id)  # USAR A NOVA FUNÇÃO
+                current_app.logger.info(f"🔄 Sessão desatualizada. Sessão: {torneio_id_sessao}, Banco: {torneio_id}")
+                sucesso = carregar_torneio_na_sessao(torneio_id)
+                if sucesso:
+                    current_app.logger.info(f"✅ Torneio {torneio_id} sincronizado com sucesso")
+                else:
+                    current_app.logger.error(f"❌ Falha ao sincronizar torneio {torneio_id}")
             elif not session.get('grupos'):
                 # Se tem torneio mas não tem grupos, carregar
+                current_app.logger.info(f"🔄 Torneio {torneio_id} na sessão mas grupos vazios. Recarregando...")
                 carregar_torneio_na_sessao(torneio_id)
+            else:
+                current_app.logger.info(f"✅ Sessão já sincronizada com torneio {torneio_id}")
         else:
             # Se não há torneio em andamento no banco mas há ID na sessão, limpar
             torneio_id_sessao = session.get('torneio_id')

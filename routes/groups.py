@@ -546,6 +546,8 @@ def salvar_grupo(grupo_idx):
         
         log_action("group_saved", 
                   f"Grupo {grupo_idx + 1} salvo - Resultados: {session['grupos'][grupo_idx]}")
+        current_app.logger.info(f"✅ Grupo {grupo_idx + 1} salvo com sucesso no banco")
+        session.modified = True  # ⚠️ ADICIONAR ESTA LINHA
         return redirect(url_for('main.novo_torneio'))
     
     except Exception as e:
@@ -744,6 +746,8 @@ def salvar_todos_grupos():
         # Commit final
         db.session.commit()
         log_action("all_groups_saved", f"Todos os {len(session['grupos'])} grupos salvos com sucesso")
+        current_app.logger.info(f"✅ Todos os {len(session['grupos'])} grupos salvos no banco")
+        session.modified = True  # ⚠️ ADICIONAR ESTA LINHA
         return redirect(url_for('main.novo_torneio'))
     
     except Exception as e:
